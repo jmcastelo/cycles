@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from conversion_functions import lcoords_to_int
-from cycle_division_functions import partition_level
+from functions.conversion_functions import lcoords_to_int
+from functions.cycle_division_functions import partition_level
 
 # Sector plots
 

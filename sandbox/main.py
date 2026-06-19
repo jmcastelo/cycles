@@ -1,5 +1,4 @@
-from cycle_division_functions import compute_level
-from sector_plots import plot_circle_diagram
+from functions.cycle_division_functions import compute_level
 
 if __name__ == "__main__":
     # Compute levels

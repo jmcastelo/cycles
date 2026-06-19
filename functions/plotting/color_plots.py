@@ -1,24 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import colorsys as csys
-import papersize as ps
 
-from measure_functions import dharma_measure, purity_measure
+from helpers import save_plot
+from functions.measure_functions import dharma_measure, purity_measure
+
 
 # Color plots
 
-def save_plot(fig: plt.Figure, fig_data: tuple[str, str, str, int]):
-    paper_type, orientation_type, fig_path, dpi = fig_data
-
-    orientation = ps.LANDSCAPE
-    if orientation_type.lower() == 'portrait':
-        orientation = ps.PORTRAIT
-
-    psize = ps.rotate(ps.parse_papersize(paper_type, 'in'), orientation)
-    figsize = (float(psize[0]), float(psize[1]))
-
-    fig.set_size_inches(figsize)
-    fig.savefig(fig_path, dpi=dpi)
 
 def plot_level_bar(ax, index: int, level: tuple):
     _, durations, starts, rgb, _ = level
@@ -34,6 +23,7 @@ def plot_level_bar(ax, index: int, level: tuple):
     ax.yaxis.set_visible(False)
     ax.xaxis.set_visible(False)
     ax.margins(x=0, y=0)
+
 
 def plot_level_bars(levels: list[tuple], save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
     fig, axs = plt.subplots(nrows=len(levels), ncols=1, sharex=True)
@@ -52,87 +42,6 @@ def plot_level_bars(levels: list[tuple], save_fig: bool=False, fig_data: tuple[s
     if fig_data is not None and save_fig:
         save_plot(fig, fig_data)
 
-def plot_cmyk_graph(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
-    _, durations, starts, _, cmyk = level
-
-    t = starts + durations / 2
-
-    fig, ax = plt.subplots()
-    for i, (l, c) in enumerate(zip(['Cyan', 'Magenta', 'Yellow', 'Black'], [(0, 1, 1), (1, 0, 1), (1, 1, 0), (0, 0, 0)])):
-        ax.plot(t, cmyk[:, i], color=c, label=l, lw=0.5)
-
-    ax.set_xlabel('Time (norm. units)')
-    ax.set_ylabel('Component intensity')
-    ax.set_xlim(0.0, 1.0)
-    ax.set_ylim(0.0, 1.0)
-    ax.legend(loc='center left')
-
-    plt.tight_layout()
-    plt.show()
-
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
-
-def plot_rgb_graph(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
-    _, durations, starts, rgb, _ = level
-
-    t = starts + durations / 2
-
-    fig, ax = plt.subplots()
-    for i, c in enumerate(['red', 'green', 'blue']):
-        ax.plot(t, rgb[:, i], color=c, label=c, lw=0.5)
-
-    ax.set_xlabel('Time (norm. units)')
-    ax.set_ylabel('Component intensity')
-    ax.set_xlim(0.0, 1.0)
-    ax.set_ylim(0.0, 1.0)
-    ax.legend(loc='center left')
-
-    plt.tight_layout()
-    plt.show()
-
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
-
-def plot_hsv_graph(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
-    _, durations, starts, rgb, _ = level
-
-    t = starts + durations / 2
-
-    hsv = np.array([csys.rgb_to_hsv(c[0], c[1], c[2]) for c in rgb])
-
-    fig, axs = plt.subplots(nrows=3, sharex='col')
-    for i, label in enumerate(['Hue', 'Saturation', 'Value']):
-        axs[i].plot(t, hsv[:, i], lw=0.5)
-        axs[i].set_xlabel('Time (norm. units)')
-        axs[i].set_ylabel(label)
-
-    plt.tight_layout()
-    plt.subplots_adjust(hspace=0)
-    plt.show()
-
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
-
-def plot_hls_graph(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
-    _, durations, starts, rgb, _ = level
-
-    t = starts + durations / 2
-
-    hls = np.array([csys.rgb_to_hls(c[0], c[1], c[2]) for c in rgb])
-
-    fig, axs = plt.subplots(nrows=3, sharex='col')
-    for i, label in enumerate(['Hue', 'Lightness', 'Saturation']):
-        axs[i].plot(t, hls[:, i], lw=0.5)
-        axs[i].set_xlabel('Time (norm. units)')
-        axs[i].set_ylabel(label)
-
-    plt.tight_layout()
-    plt.subplots_adjust(hspace=0)
-    plt.show()
-
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
 
 def plot_duration_bars(
     levels: list[tuple],
@@ -171,6 +80,238 @@ def plot_duration_bars(
 
     if fig_data is not None and save_fig:
         save_plot(fig, fig_data)
+
+
+def plot_cmyk_vs_time(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
+    lcoords, durations, starts, _, cmyk = level
+
+    depth = len(lcoords[0])
+    t = starts + durations / 2
+
+    fig, ax = plt.subplots()
+    for i, (l, c) in enumerate(zip(['Cyan', 'Magenta', 'Yellow', 'Black'], [(0, 1, 1), (1, 0, 1), (1, 1, 0), (0, 0, 0)])):
+        ax.plot(t, cmyk[:, i], color=c, label=l, lw=0.5)
+
+    ax.set_title(f"CMYK for level: {depth}")
+    ax.set_xlabel('Time (norm. units)')
+    ax.set_ylabel('Component intensity')
+    ax.set_xlim(0.0, 1.0)
+    ax.set_ylim(0.0, 1.0)
+    ax.legend(loc='center left')
+
+    plt.tight_layout()
+    plt.show()
+
+    if fig_data is not None and save_fig:
+        save_plot(fig, fig_data)
+
+
+def plot_cmyk_vs_index(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
+    lcoords, _, _, _, cmyk = level
+
+    depth = len(lcoords[0])
+    indices = [n for n in range(len(lcoords))]
+
+    fig, ax = plt.subplots()
+    for i, (l, c) in enumerate(zip(['Cyan', 'Magenta', 'Yellow', 'Black'], [(0, 1, 1), (1, 0, 1), (1, 1, 0), (0, 0, 0)])):
+        ax.plot(indices, cmyk[:, i], color=c, label=l, lw=0.5)
+
+    ax.set_title(f"CMYK for level: {depth}")
+    ax.set_xlabel('Index')
+    ax.set_ylabel('Component intensity')
+    ax.set_ylim(0.0, 1.0)
+    ax.legend(loc='center left')
+
+    plt.tight_layout()
+    plt.show()
+
+    if fig_data is not None and save_fig:
+        save_plot(fig, fig_data)
+
+
+def plot_rgb_vs_time(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
+    lcoords, durations, starts, rgb, _ = level
+
+    depth = len(lcoords[0])
+    t = starts + durations / 2
+
+    fig, ax = plt.subplots()
+    for i, c in enumerate(['red', 'green', 'blue']):
+        ax.plot(t, rgb[:, i], color=c, label=c, lw=0.5)
+
+    ax.set_title(f"RGB for level: {depth}")
+    ax.set_xlabel('Time (norm. units)')
+    ax.set_ylabel('Component intensity')
+    ax.set_xlim(0.0, 1.0)
+    ax.set_ylim(0.0, 1.0)
+    ax.legend(loc='center left')
+
+    plt.tight_layout()
+    plt.show()
+
+    if fig_data is not None and save_fig:
+        save_plot(fig, fig_data)
+
+
+def plot_rgb_vs_index(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
+    lcoords, _, _, rgb, _ = level
+
+    depth = len(lcoords[0])
+    indices = [n for n in range(len(lcoords))]
+
+    fig, ax = plt.subplots()
+    for i, c in enumerate(['red', 'green', 'blue']):
+        ax.plot(indices, rgb[:, i], color=c, label=c, lw=0.5)
+
+    ax.set_title(f"RGB for level: {depth}")
+    ax.set_xlabel('Index')
+    ax.set_ylabel('Component intensity')
+    ax.set_ylim(0.0, 1.0)
+    ax.legend(loc='center left')
+
+    plt.tight_layout()
+    plt.show()
+
+    if fig_data is not None and save_fig:
+        save_plot(fig, fig_data)
+
+
+def plot_hsv_vs_time(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
+    lcoords, durations, starts, rgb, _ = level
+
+    depth = len(lcoords[0])
+    t = starts + durations / 2
+
+    hsv = np.array([csys.rgb_to_hsv(c[0], c[1], c[2]) for c in rgb])
+
+    fig, axs = plt.subplots(nrows=3, sharex='col')
+    for i, label in enumerate(['Hue', 'Saturation', 'Value']):
+        axs[i].plot(t, hsv[:, i], lw=0.5)
+        axs[i].set_xlabel('Time (norm. units)')
+        axs[i].set_ylabel(label)
+
+    axs[0].set_title(f"HSV for level: {depth}")
+    plt.tight_layout()
+    plt.subplots_adjust(hspace=0)
+    plt.show()
+
+    if fig_data is not None and save_fig:
+        save_plot(fig, fig_data)
+
+
+def plot_hsv_vs_index(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
+    lcoords, _, _, rgb, _ = level
+
+    depth = len(lcoords[0])
+    indices = [n for n in range(len(lcoords))]
+
+    hsv = np.array([csys.rgb_to_hsv(c[0], c[1], c[2]) for c in rgb])
+
+    fig, axs = plt.subplots(nrows=3, sharex='col')
+    for i, label in enumerate(['Hue', 'Saturation', 'Value']):
+        axs[i].plot(indices, hsv[:, i], lw=0.5)
+        axs[i].set_xlabel('Index')
+        axs[i].set_ylabel(label)
+
+    axs[0].set_title(f"HSV for level: {depth}")
+    plt.tight_layout()
+    plt.subplots_adjust(hspace=0)
+    plt.show()
+
+    if fig_data is not None and save_fig:
+        save_plot(fig, fig_data)
+
+
+def plot_hls_vs_time(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
+    lcoords, durations, starts, rgb, _ = level
+
+    depth = len(lcoords[0])
+    t = starts + durations / 2
+
+    hls = np.array([csys.rgb_to_hls(c[0], c[1], c[2]) for c in rgb])
+
+    fig, axs = plt.subplots(nrows=3, sharex='col')
+    for i, label in enumerate(['Hue', 'Lightness', 'Saturation']):
+        axs[i].plot(t, hls[:, i], lw=0.5)
+        axs[i].set_xlabel('Time (norm. units)')
+        axs[i].set_ylabel(label)
+
+    axs[0].set_title(f"HLS for level: {depth}")
+    plt.tight_layout()
+    plt.subplots_adjust(hspace=0)
+    plt.show()
+
+    if fig_data is not None and save_fig:
+        save_plot(fig, fig_data)
+
+
+def plot_hls_vs_index(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
+    lcoords, _, _, rgb, _ = level
+
+    depth = len(lcoords[0])
+    indices = [n for n in range(len(lcoords))]
+
+    hls = np.array([csys.rgb_to_hls(c[0], c[1], c[2]) for c in rgb])
+
+    fig, axs = plt.subplots(nrows=3, sharex='col')
+    for i, label in enumerate(['Hue', 'Lightness', 'Saturation']):
+        axs[i].plot(indices, hls[:, i], lw=0.5)
+        axs[i].set_xlabel('Time (norm. units)')
+        axs[i].set_ylabel(label)
+
+    axs[0].set_title(f"HLS for level: {depth}")
+    plt.tight_layout()
+    plt.subplots_adjust(hspace=0)
+    plt.show()
+
+    if fig_data is not None and save_fig:
+        save_plot(fig, fig_data)
+
+
+def plot_dharma_vs_time(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
+    lcoords, durations, starts, _, cmyk = level
+
+    depth = len(lcoords[0])
+    t = starts + durations / 2
+
+    dharma = np.array([dharma_measure(c) for c in cmyk])
+
+    fig, ax = plt.subplots()
+
+    ax.plot(t, dharma, lw=0.5)
+    ax.set_title(f"Dharma for level: {depth}")
+    ax.set_xlabel('Time (norm. units)')
+    ax.set_ylabel('Dharma')
+    ax.set_xlim(0.0, 1.0)
+
+    plt.tight_layout()
+    plt.show()
+
+    if fig_data is not None and save_fig:
+        save_plot(fig, fig_data)
+
+
+def plot_dharma_vs_index(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
+    lcoords, _, _, _, cmyk = level
+
+    depth = len(lcoords[0])
+    indices = [n for n in range(len(lcoords))]
+
+    dharma = np.array([dharma_measure(c) for c in cmyk])
+
+    fig, ax = plt.subplots()
+
+    ax.plot(indices, dharma, lw=0.5)
+    ax.set_title(f"Dharma for level: {depth}")
+    ax.set_xlabel('Index')
+    ax.set_ylabel('Dharma')
+
+    plt.tight_layout()
+    plt.show()
+
+    if fig_data is not None and save_fig:
+        save_plot(fig, fig_data)
+
 
 def plot_purity_vs_dharma(level: tuple) -> plt.Figure:
     fig, ax = plt.subplots()
@@ -254,14 +395,17 @@ def plot_quality_scatter_3d(level: tuple) -> plt.Figure:
 
     return fig
 
+
 def plot_rgb_scatter_3d(
     level: tuple,
     views: list[tuple],
     save_fig: bool=False,
     fig_data: tuple[str, str, str, int]|None=None
 ):
-    lcoords, _, _, rgb, _ = level
-    depth = len(lcoords[0])
+    _, durations, _, rgb, _ = level
+
+
+    sizes = 100 * durations / np.max(durations, axis=0)
 
     nrows = int(np.sqrt(len(views)))
     ncols = int(len(views) / nrows)
@@ -276,7 +420,7 @@ def plot_rgb_scatter_3d(
                 ys=rgb[:, 1],
                 zs=rgb[:, 2],
                 c=rgb,
-                s=100.0 / np.log2(2 + depth**2),
+                s=sizes,
                 alpha=0.8,
                 lw=0
             )
@@ -294,12 +438,15 @@ def plot_rgb_scatter_3d(
     if fig_data is not None and save_fig:
         save_plot(fig, fig_data)
 
+
 def plot_rgb_lines_3d(
-    partitions: list[tuple],
+    level: tuple,
     views: list[tuple],
     save_fig: bool=False,
     fig_data: tuple[str, str, str, int]|None=None
 ):
+    _, _, _, rgb, _ = level
+
     nrows = int(np.sqrt(len(views)))
     ncols = int(len(views) / nrows)
 
@@ -308,23 +455,14 @@ def plot_rgb_lines_3d(
     for i in range(nrows):
         for j in range(ncols):
             ax = fig.add_subplot(nrows, ncols, k+1, projection='3d')
-            for part in partitions:
-                _, _, _, rgb, _ = part
-                for n in range(2, len(rgb) + 2):
-                    ax.plot(
-                        xs=rgb[n - 2:n, 0],
-                        ys=rgb[n - 2:n, 1],
-                        zs=rgb[n - 2:n, 2],
-                        c=rgb[n - 2],
-                        lw=0.5
-                    )
-                # ax.plot(
-                #     xs=rgb[:, 0],
-                #     ys=rgb[:, 1],
-                #     zs=rgb[:, 2],
-                #     c=rgb[0, :],
-                #     lw=0.75
-                # )
+            for n in range(2, len(rgb) + 2):
+                ax.plot(
+                    xs=rgb[n - 2:n, 0],
+                    ys=rgb[n - 2:n, 1],
+                    zs=rgb[n - 2:n, 2],
+                    c=rgb[n - 2],
+                    lw=0.5
+                )
 
             ax.axis('off')
             ax.set_aspect('equal')

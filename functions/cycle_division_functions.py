@@ -1,8 +1,8 @@
 import numpy as np
 import itertools as itools
 
-from conversion_functions import int_to_lcoords, lcoords_to_int
-from color_functions import lcoords_to_rgb, lcoords_to_cmyk
+from cycles import int_to_lcoords, lcoords_to_int
+from cycles import lcoords_to_rgb, lcoords_to_cmyk
 
 # Cycle subdivision functions
 
