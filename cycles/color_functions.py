@@ -1,6 +1,6 @@
 import numpy as np
 
-# Color functions
+# Color cycles
 
 def indicator_vector(i: int, lcoords: np.ndarray) -> np.ndarray:
     return np.array([int(i == c) for c in lcoords], dtype=int)

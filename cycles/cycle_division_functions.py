@@ -1,22 +1,28 @@
 import numpy as np
 import itertools as itools
 
-from cycles import int_to_lcoords, lcoords_to_int
-from cycles import lcoords_to_rgb, lcoords_to_cmyk
+from cycles.conversion_functions import int_to_lcoords, lcoords_to_int
+from cycles.color_functions import lcoords_to_rgb, lcoords_to_cmyk
+
 
 # Cycle subdivision functions
+
 
 proportions = np.array([0.4, 0.3, 0.2, 0.1], dtype=float)
 offsets = np.insert(np.cumsum(proportions[:-1], dtype=float), 0, 0)
 
+
 def weights(base: int, depth: int) -> np.ndarray:
     return np.array([base ** (-k) for k in range(1, depth + 1)])
+
 
 def compute_duration(lcoords: list[int]) -> float:
     return np.prod(proportions[lcoords], dtype=float)
 
+
 def compute_start(lcoords: list[int]) -> float:
     return np.dot(offsets[lcoords], np.insert(np.cumprod(proportions[lcoords][:-1]), 0, 1))
+
 
 # def compute_level(depth: int, bases: list[int], subtraction_factor: float | None = None) -> tuple:
 #     lcoords = np.array([int_to_lcoords(i, bases[0], depth) for i in range(bases[0]**depth)], dtype=int)
@@ -31,6 +37,7 @@ def compute_start(lcoords: list[int]) -> float:
 #
 #     return lcoords, durations, starts, colors
 
+
 def compute_level(depth: int, bases: list[int], total_duration: float | None=None) -> tuple:
     lcoords = np.array([int_to_lcoords(i, bases[0], depth) for i in range(bases[0]**depth)], dtype=int)
 
@@ -42,6 +49,7 @@ def compute_level(depth: int, bases: list[int], total_duration: float | None=Non
     if total_duration is not None:
         return lcoords, total_duration * durations, total_duration * starts, rgb, cmyk
     return lcoords, durations, starts, rgb, cmyk
+
 
 def compute_deeper_subcycles(parent_coords: list[int], extra_depth: int, bases: list[int]) -> tuple:
     start_index = lcoords_to_int(parent_coords + [0] * extra_depth)
@@ -58,6 +66,7 @@ def compute_deeper_subcycles(parent_coords: list[int], extra_depth: int, bases: 
 
     return lcoords, durations, starts, colors
 
+
 def select_subcycle(prefix_coords: list[int], level: tuple) -> tuple:
     depth = len(prefix_coords)
     if depth == 0:
@@ -66,11 +75,13 @@ def select_subcycle(prefix_coords: list[int], level: tuple) -> tuple:
     sel_coords = [i for i, lcoord in enumerate(lcoords) if (lcoord[:depth] == prefix_coords).all()]
     return lcoords[sel_coords], durations[sel_coords], starts[sel_coords], colors[sel_coords]
 
-def find_identical(a: np.ndarray, decimals: int) -> list:
+
+def find_identical(a: np.ndarray, decimals: int=10) -> list:
     arounded = np.round(a, decimals)
     u, uidx, uinv = np.unique(arounded, axis=0, return_index=True, return_inverse=True)
     uu = uidx[uinv]
     return [(arounded[x], [i for i in range(len(uu)) if uu[i] == x]) for x in uidx]
+
 
 def find_identical_colors(colors: list[list[float]], decimals: int) -> list:
     colors_rounded = np.round(colors, decimals)
@@ -78,8 +89,10 @@ def find_identical_colors(colors: list[list[float]], decimals: int) -> list:
     uu = uidx[uinv]
     return [(colors_rounded[x], [i for i in range(len(uu)) if uu[i] == x]) for x in uidx]
 
+
 def subdivision_map(i: int, u: float) -> float:
     return proportions[i] * u + offsets[i]
+
 
 def find_lcoords(x: float, depth: int) -> np.ndarray:
     lcoords = []
@@ -91,8 +104,10 @@ def find_lcoords(x: float, depth: int) -> np.ndarray:
         x = (x - offsets[lcoords[-1]]) / proportions[lcoords[-1]]
     return np.array(lcoords)
 
+
 def indentical_duration_lcoords(lcoords: list[int]):
     return set(itools.permutations(lcoords))
+
 
 def partition_level(level: tuple, subdepth: int, base: int) -> list[tuple]:
     lcoords, durations, starts, rgb, cmyk = level

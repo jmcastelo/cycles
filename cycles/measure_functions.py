@@ -1,6 +1,6 @@
 import numpy as np
 
-# Measure functions
+# Measure cycles
 
 def dharma_measure(cmyk: np.ndarray) -> float:
     return np.dot([1, 3/4, 1/2, 1/4], cmyk)

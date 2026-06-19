@@ -1,6 +1,6 @@
 import numpy as np
 
-# Conversion functions
+# Conversion cycles
 
 def lcoords_to_int(lcoords: list[int]) -> int:
     return int(''.join(str(d) for d in lcoords), base=4)

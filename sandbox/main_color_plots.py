@@ -1,5 +1,5 @@
-from functions.cycle_division_functions import compute_level
-from functions.plotting.color_plots import *
+from cycles.cycle_division_functions import compute_level
+from cycles.plotting.color_plots import *
 
 if __name__ == "__main__":
     # Compute levels

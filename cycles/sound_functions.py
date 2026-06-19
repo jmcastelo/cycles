@@ -6,7 +6,7 @@ import matplotlib.colors as mcolors
 from conversion_functions import lcoords_to_fractional, int_to_lcoords
 from measure_functions import dharma_measure
 
-# Sound functions
+# Sound cycles
 
 def cmyk_to_tone(cmyk: np.ndarray, lcoords: np.ndarray, f0: float=440.0, duration: float=2.0, srate: int=44100, alpha: float=1.5) -> np.ndarray:
     t = np.linspace(0, duration, int(srate * duration), endpoint=False)

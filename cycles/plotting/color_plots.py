@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import colorsys as csys
 
 from helpers import save_plot
-from functions.measure_functions import dharma_measure, purity_measure
+from cycles.measure_functions import dharma_measure, purity_measure
 
 
 # Color plots
