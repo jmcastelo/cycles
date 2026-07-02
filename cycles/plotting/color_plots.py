@@ -2,84 +2,134 @@ import numpy as np
 import matplotlib.pyplot as plt
 import colorsys as csys
 
-from helpers import save_plot
+from cycles.plotting.helpers import format_plot
 from cycles.measure_functions import dharma_measure, purity_measure
 
 
-# Color plots
-
-
-def plot_level_bar(ax, index: int, level: tuple):
-    _, durations, starts, rgb, _ = level
-
+def plot_level_bar(
+    ax,
+    index: int,
+    durations: np.ndarray,
+    starts: np.ndarray,
+    colors: np.ndarray
+):
     ax.barh(
         y=index,
         width=durations,
         left=starts,
         height=1,
         align='center',
-        color=rgb
+        color=colors
     )
     ax.yaxis.set_visible(False)
     ax.xaxis.set_visible(False)
     ax.margins(x=0, y=0)
 
 
-def plot_level_bars(levels: list[tuple], save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
-    fig, axs = plt.subplots(nrows=len(levels), ncols=1, sharex=True)
+def plot_level_bars(
+    durations: tuple[np.ndarray],
+    starts: tuple[np.ndarray],
+    colors: list[np.ndarray],
+    save_fig: bool=False,
+    fig_data: tuple[str, str, str, int, bool]|None=None
+):
+    depth = len(durations)
+    fig, axs = plt.subplots(nrows=depth, ncols=1, sharex=True)
 
-    for i, ax in enumerate(axs):
-        plot_level_bar(ax, i, levels[i])
+    for i, (ax, d, s, c) in enumerate(zip(axs, durations, starts, colors)):
+        plot_level_bar(ax, i, d, s, c)
 
-    axs[0].set_title(f"Cycle subdivisions down to depth {len(levels)}")
+    axs[0].set_title(f"Cycle subdivisions down to depth {depth}")
     axs[-1].xaxis.set_visible(True)
     axs[-1].set_xlabel('Time (norm. units)')
+
+    if fig_data is not None:
+        format_plot(fig, fig_data, save_fig)
 
     plt.tight_layout()
     plt.subplots_adjust(hspace=0)
     plt.show()
 
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
 
-
-def plot_duration_bars(
-    levels: list[tuple],
-    l1: int,
-    l2: int,
-    aspect: tuple[int, int]=(408, 577),
+def plot_colors_scatter_3d(
+    colors: list[np.ndarray],
+    rgbs: np.ndarray,
+    durations: np.ndarray,
+    views: list[tuple],
     save_fig: bool=False,
-    fig_data: tuple[str, str, str, int]|None=None
+    fig_data: tuple[str, str, str, int, bool]|None=None
 ):
-    fig, ax = plt.subplots()
+    sizes = 100 * durations / np.max(durations, axis=0)
 
-    for level in levels[l1-1:l2+1]:
-        _, durations, starts, rgb, _ = level
-        ax.barh(
-            y=0,
-            width=durations,
-            left=starts,
-            height=durations,
-            align='edge',
-            color=rgb,
-            edgecolor='gray',
-            linewidth=0.1
-        )
+    nrows = int(np.sqrt(len(views)))
+    ncols = int(len(views) / nrows)
 
-    ax.set_title(f"Cycle subdivisions: {l1} to {l2}")
-    ax.set_xlabel('Time (norm. units)')
-    ax.set_ylabel('Subcycle Duration (norm. units)')
-    ax.margins(x=0, y=0)
-    if aspect == (0, 0):
-        ax.set_aspect('auto')
-    else:
-        ax.set_aspect(float(aspect[0]/aspect[1]))
+    fig = plt.figure()
+    k = 0
+    for i in range(nrows):
+        for j in range(ncols):
+            ax = fig.add_subplot(nrows, ncols, k+1, projection='3d')
+            ax.scatter(
+                xs=colors[0],
+                ys=colors[1],
+                zs=colors[2],
+                c=rgbs,
+                s=sizes,
+                alpha=0.8,
+                lw=0.3,
+                edgecolors='gray'
+            )
+
+            ax.axis('off')
+            ax.set_aspect('equal')
+            ax.set_proj_type('ortho')
+            ax.view_init(*views[k])
+            k += 1
+
+    fig.tight_layout()
+    if fig_data is not None:
+        format_plot(fig, fig_data, save_fig)
 
     plt.tight_layout()
+    plt.subplots_adjust(hspace=0, wspace=0)
     plt.show()
 
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
+
+def plot_rgb_lines_3d(
+    rgb: np.ndarray,
+    views: list[tuple],
+    save_fig: bool=False,
+    fig_data: tuple[str, str, str, int, bool]|None=None
+):
+    nrows = int(np.sqrt(len(views)))
+    ncols = int(len(views) / nrows)
+
+    fig = plt.figure()
+    k = 0
+    for i in range(nrows):
+        for j in range(ncols):
+            ax = fig.add_subplot(nrows, ncols, k+1, projection='3d')
+            for n in range(2, len(rgb) + 2):
+                ax.plot(
+                    xs=rgb[n - 2:n, 0],
+                    ys=rgb[n - 2:n, 1],
+                    zs=rgb[n - 2:n, 2],
+                    c=rgb[n - 2],
+                    lw=0.5
+                )
+
+            ax.axis('off')
+            ax.set_aspect('equal')
+            ax.set_proj_type('ortho')
+            ax.view_init(*views[k])
+            k += 1
+
+    if fig_data is not None:
+        format_plot(fig, fig_data, save_fig)
+
+    plt.tight_layout()
+    plt.subplots_adjust(hspace=0, wspace=0)
+    plt.show()
 
 
 def plot_cmyk_vs_time(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
@@ -99,11 +149,11 @@ def plot_cmyk_vs_time(level: tuple, save_fig: bool=False, fig_data: tuple[str, s
     ax.set_ylim(0.0, 1.0)
     ax.legend(loc='center left')
 
+    if fig_data is not None:
+        format_plot(fig, fig_data, save_fig)
+
     plt.tight_layout()
     plt.show()
-
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
 
 
 def plot_cmyk_vs_index(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
@@ -122,11 +172,11 @@ def plot_cmyk_vs_index(level: tuple, save_fig: bool=False, fig_data: tuple[str, 
     ax.set_ylim(0.0, 1.0)
     ax.legend(loc='center left')
 
+    if fig_data is not None:
+        format_plot(fig, fig_data, save_fig)
+
     plt.tight_layout()
     plt.show()
-
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
 
 
 def plot_rgb_vs_time(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
@@ -146,11 +196,11 @@ def plot_rgb_vs_time(level: tuple, save_fig: bool=False, fig_data: tuple[str, st
     ax.set_ylim(0.0, 1.0)
     ax.legend(loc='center left')
 
+    if fig_data is not None:
+        format_plot(fig, fig_data, save_fig)
+
     plt.tight_layout()
     plt.show()
-
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
 
 
 def plot_rgb_vs_index(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
@@ -169,11 +219,11 @@ def plot_rgb_vs_index(level: tuple, save_fig: bool=False, fig_data: tuple[str, s
     ax.set_ylim(0.0, 1.0)
     ax.legend(loc='center left')
 
+    if fig_data is not None:
+        format_plot(fig, fig_data, save_fig)
+
     plt.tight_layout()
     plt.show()
-
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
 
 
 def plot_hsv_vs_time(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
@@ -191,12 +241,13 @@ def plot_hsv_vs_time(level: tuple, save_fig: bool=False, fig_data: tuple[str, st
         axs[i].set_ylabel(label)
 
     axs[0].set_title(f"HSV for level: {depth}")
+
+    if fig_data is not None:
+        format_plot(fig, fig_data, save_fig)
+
     plt.tight_layout()
     plt.subplots_adjust(hspace=0)
     plt.show()
-
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
 
 
 def plot_hsv_vs_index(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
@@ -214,12 +265,13 @@ def plot_hsv_vs_index(level: tuple, save_fig: bool=False, fig_data: tuple[str, s
         axs[i].set_ylabel(label)
 
     axs[0].set_title(f"HSV for level: {depth}")
+
+    if fig_data is not None:
+        format_plot(fig, fig_data, save_fig)
+
     plt.tight_layout()
     plt.subplots_adjust(hspace=0)
     plt.show()
-
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
 
 
 def plot_hls_vs_time(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
@@ -237,12 +289,13 @@ def plot_hls_vs_time(level: tuple, save_fig: bool=False, fig_data: tuple[str, st
         axs[i].set_ylabel(label)
 
     axs[0].set_title(f"HLS for level: {depth}")
+
+    if fig_data is not None:
+        format_plot(fig, fig_data, save_fig)
+
     plt.tight_layout()
     plt.subplots_adjust(hspace=0)
     plt.show()
-
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
 
 
 def plot_hls_vs_index(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
@@ -260,35 +313,13 @@ def plot_hls_vs_index(level: tuple, save_fig: bool=False, fig_data: tuple[str, s
         axs[i].set_ylabel(label)
 
     axs[0].set_title(f"HLS for level: {depth}")
+
+    if fig_data is not None:
+        format_plot(fig, fig_data, save_fig)
+
     plt.tight_layout()
     plt.subplots_adjust(hspace=0)
     plt.show()
-
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
-
-
-def plot_dharma_vs_time(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
-    lcoords, durations, starts, _, cmyk = level
-
-    depth = len(lcoords[0])
-    t = starts + durations / 2
-
-    dharma = np.array([dharma_measure(c) for c in cmyk])
-
-    fig, ax = plt.subplots()
-
-    ax.plot(t, dharma, lw=0.5)
-    ax.set_title(f"Dharma for level: {depth}")
-    ax.set_xlabel('Time (norm. units)')
-    ax.set_ylabel('Dharma')
-    ax.set_xlim(0.0, 1.0)
-
-    plt.tight_layout()
-    plt.show()
-
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
 
 
 def plot_dharma_vs_index(level: tuple, save_fig: bool=False, fig_data: tuple[str, str, str, int]|None=None):
@@ -306,11 +337,11 @@ def plot_dharma_vs_index(level: tuple, save_fig: bool=False, fig_data: tuple[str
     ax.set_xlabel('Index')
     ax.set_ylabel('Dharma')
 
+    if fig_data is not None:
+        format_plot(fig, fig_data, save_fig)
+
     plt.tight_layout()
     plt.show()
-
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
 
 
 def plot_purity_vs_dharma(level: tuple) -> plt.Figure:
@@ -340,6 +371,7 @@ def plot_purity_and_dharma(ax, level: tuple):
     ax.set_ylabel('Purity')
     ax.label_outer()
     ax.grid(False)
+
 
 def plot_quality_grid(levels: list[tuple]):
     ncols = int(np.sqrt(len(levels)))
@@ -394,85 +426,3 @@ def plot_quality_scatter_3d(level: tuple) -> plt.Figure:
     plt.show()
 
     return fig
-
-
-def plot_rgb_scatter_3d(
-    level: tuple,
-    views: list[tuple],
-    save_fig: bool=False,
-    fig_data: tuple[str, str, str, int]|None=None
-):
-    _, durations, _, rgb, _ = level
-
-
-    sizes = 100 * durations / np.max(durations, axis=0)
-
-    nrows = int(np.sqrt(len(views)))
-    ncols = int(len(views) / nrows)
-
-    fig = plt.figure()
-    k = 0
-    for i in range(nrows):
-        for j in range(ncols):
-            ax = fig.add_subplot(nrows, ncols, k+1, projection='3d')
-            ax.scatter(
-                xs=rgb[:, 0],
-                ys=rgb[:, 1],
-                zs=rgb[:, 2],
-                c=rgb,
-                s=sizes,
-                alpha=0.8,
-                lw=0
-            )
-
-            ax.axis('off')
-            ax.set_aspect('equal')
-            ax.set_proj_type('ortho')
-            ax.view_init(*views[k])
-            k += 1
-
-    plt.tight_layout()
-    plt.subplots_adjust(hspace=0, wspace=0)
-    plt.show()
-
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)
-
-
-def plot_rgb_lines_3d(
-    level: tuple,
-    views: list[tuple],
-    save_fig: bool=False,
-    fig_data: tuple[str, str, str, int]|None=None
-):
-    _, _, _, rgb, _ = level
-
-    nrows = int(np.sqrt(len(views)))
-    ncols = int(len(views) / nrows)
-
-    fig = plt.figure()
-    k = 0
-    for i in range(nrows):
-        for j in range(ncols):
-            ax = fig.add_subplot(nrows, ncols, k+1, projection='3d')
-            for n in range(2, len(rgb) + 2):
-                ax.plot(
-                    xs=rgb[n - 2:n, 0],
-                    ys=rgb[n - 2:n, 1],
-                    zs=rgb[n - 2:n, 2],
-                    c=rgb[n - 2],
-                    lw=0.5
-                )
-
-            ax.axis('off')
-            ax.set_aspect('equal')
-            ax.set_proj_type('ortho')
-            ax.view_init(*views[k])
-            k += 1
-
-    plt.tight_layout()
-    plt.subplots_adjust(hspace=0, wspace=0)
-    plt.show()
-
-    if fig_data is not None and save_fig:
-        save_plot(fig, fig_data)

@@ -2,10 +2,8 @@ import numpy as np
 import itertools as itools
 
 from cycles.conversion_functions import int_to_lcoords, lcoords_to_int
-from cycles.color_functions import lcoords_to_rgb, lcoords_to_cmyk
-
-
-# Cycle subdivision functions
+from cycles.color_functions import lcoords_to_cmyk, cmyk_to_rgb
+from cycles.measure_functions import dharma_measure, purity_measure
 
 
 proportions = np.array([0.4, 0.3, 0.2, 0.1], dtype=float)
@@ -16,39 +14,29 @@ def weights(base: int, depth: int) -> np.ndarray:
     return np.array([base ** (-k) for k in range(1, depth + 1)])
 
 
-def compute_duration(lcoords: list[int]) -> float:
+def compute_duration(lcoords: np.ndarray) -> float:
     return np.prod(proportions[lcoords], dtype=float)
 
 
-def compute_start(lcoords: list[int]) -> float:
+def compute_start(lcoords: np.ndarray) -> float:
     return np.dot(offsets[lcoords], np.insert(np.cumprod(proportions[lcoords][:-1]), 0, 1))
 
 
-# def compute_level(depth: int, bases: list[int], subtraction_factor: float | None = None) -> tuple:
-#     lcoords = np.array([int_to_lcoords(i, bases[0], depth) for i in range(bases[0]**depth)], dtype=int)
-#
-#     durations = np.array([compute_duration(lcoord) for lcoord in lcoords], dtype=float)
-#     starts = np.array([compute_start(lcoord) for lcoord in lcoords], dtype=float)
-#
-#     weights = np.array([bases[1] ** (-k) for k in range(1, depth + 1)])
-#     if subtraction_factor is None:
-#         subtraction_factor = (bases[1] - 1) / (1 - bases[1]**(-depth))
-#     colors = np.array([lcoords_to_color(lcoord, weights, subtraction_factor) for lcoord in lcoords], dtype=float)
-#
-#     return lcoords, durations, starts, colors
-
-
-def compute_level(depth: int, bases: list[int], total_duration: float | None=None) -> tuple:
+def compute_level(depth: int, bases: list[int]) -> tuple:
     lcoords = np.array([int_to_lcoords(i, bases[0], depth) for i in range(bases[0]**depth)], dtype=int)
 
-    durations = np.array([compute_duration(lcoord) for lcoord in lcoords], dtype=float)
-    starts = np.array([compute_start(lcoord) for lcoord in lcoords], dtype=float)
-    rgb = np.array([lcoords_to_rgb(lcoord, weights(bases[1], depth)) for lcoord in lcoords], dtype=float)
-    cmyk = np.array([lcoords_to_cmyk(lcoord, weights(bases[1], depth)) for lcoord in lcoords], dtype=float)
+    durations = np.apply_along_axis(compute_duration, 1, lcoords)
+    starts = np.apply_along_axis(compute_start, 1, lcoords)
 
-    if total_duration is not None:
-        return lcoords, total_duration * durations, total_duration * starts, rgb, cmyk
-    return lcoords, durations, starts, rgb, cmyk
+    w1 = weights(bases[1], depth)
+    cmyks = np.array([lcoords_to_cmyk(lcoord, w1) for lcoord in lcoords], dtype=float)
+    rgbs = np.apply_along_axis(cmyk_to_rgb, 2, cmyks)
+    dharmas = np.array([dharma_measure(lcoord, w1) for lcoord in lcoords])
+
+    w2 = weights(bases[2], depth)
+    purities = np.array([purity_measure(lcoord, w2) for lcoord in lcoords])
+
+    return lcoords, durations, starts, cmyks, rgbs, dharmas, purities
 
 
 def compute_deeper_subcycles(parent_coords: list[int], extra_depth: int, bases: list[int]) -> tuple:
@@ -62,9 +50,9 @@ def compute_deeper_subcycles(parent_coords: list[int], extra_depth: int, bases: 
 
     durations = np.array([compute_duration(lcoord) for lcoord in lcoords], dtype=float)
     starts = np.array([compute_start(lcoord) for lcoord in lcoords], dtype=float)
-    colors = np.array([lcoords_to_rgb(lcoord, weights(bases[1], depth)) for lcoord in lcoords], dtype=float)
+    rgbs = np.array([lcoords_to_rgb(lcoord, weights(bases[1], depth)) for lcoord in lcoords], dtype=float)
 
-    return lcoords, durations, starts, colors
+    return lcoords, durations, starts, rgbs
 
 
 def select_subcycle(prefix_coords: list[int], level: tuple) -> tuple:
@@ -105,6 +93,45 @@ def find_lcoords(x: float, depth: int) -> np.ndarray:
     return np.array(lcoords)
 
 
+def find_total_lcoords(x: float, dt: float, t: float) -> np.ndarray:
+    lcoords = []
+    while dt <= t:
+        for coord, (x1, x2) in enumerate(zip(offsets, offsets + proportions)):
+            if x1 <= x / t < x2:
+                lcoords.append(coord)
+                break
+        x = (x - t * offsets[lcoords[-1]]) / proportions[lcoords[-1]]
+        dt /= proportions[lcoords[-1]]
+    return np.array(lcoords)
+
+
+def fill_partition(t1: float, t2: float, t: float, dt: float, dt_min: float) -> tuple:
+    x, dx = t1, dt
+    lcoords = []
+    locs = []
+    durs = []
+    ddurs = []
+    loc = x
+    n = 0
+    while loc < t2:
+        x = loc
+        while dx > dt_min:
+            coords = find_total_lcoords(x, dx, t)
+            lcoords.append(coords)
+            locs.append(x)
+            d = t * compute_duration(coords)
+            durs.append(d)
+            x += d
+            dx -= d
+        ddurs.append((x, dx))
+        lcoords.append(None)
+        durs.append(dx)
+        loc += dt
+        dx = dt
+        n += 1
+    return lcoords, locs, durs, ddurs, n
+
+
 def indentical_duration_lcoords(lcoords: list[int]):
     return set(itools.permutations(lcoords))
 
@@ -118,3 +145,61 @@ def partition_level(level: tuple, subdepth: int, base: int) -> list[tuple]:
     else:
         return [level]
     return [(lcoords[index], durations[index], starts[index], rgb[index], cmyk[index]) for index in indices]
+
+
+def count_digits(lcoord: np.ndarray, base: int=4) -> np.ndarray:
+    return np.array([np.count_nonzero(lcoord == n) for n in range(base)])
+
+
+def duration_quotient(cdiff: np.ndarray) -> np.ndarray:
+    return 2.0 ** (cdiff[0] + cdiff[2]) * 3.0 ** cdiff[1]
+
+
+def equality_test(cdiff: np.ndarray) -> int:
+    if 2 * cdiff[0] + cdiff[2] == 0 and cdiff[1] == 0:
+        return 1
+    return 0
+
+
+def same_duration(lcoord1: np.ndarray, lcoord2: np.ndarray, base: int=4) -> bool:
+    cdiff = count_digits(lcoord1, base) - count_digits(lcoord2, base)
+    return 2 * cdiff[0] + cdiff[2] == 0 and cdiff[1] == 0
+
+
+def same_digit_counts(lcoord1: np.ndarray, lcoord2: np.ndarray, base: int=4) -> bool:
+    return np.all(count_digits(lcoord1, base) == count_digits(lcoord2, base), axis=0)
+
+
+def compute_all_distances(starts: np.ndarray, indices: list[int]) -> tuple:
+    idx_pairs = np.array([[indices[j], indices[i]] for i in range(1, len(indices)) for j in range(i+1, len(indices))], dtype=int)
+    dists = np.array([starts[indices[j]] - starts[indices[i]] for i in range(1, len(indices)) for j in range(i+1, len(indices))], dtype=float)
+    mdist = np.max(dists) if len(dists) > 0 else 1
+    norm_dists = dists / mdist
+    sort_indices = np.argsort(norm_dists)
+    return idx_pairs[sort_indices], dists[sort_indices], norm_dists[sort_indices]
+
+
+def compute_consecutive_distances(starts: np.ndarray, indices: list[int]) -> tuple:
+    idx_pairs = np.array([[indices[i], indices[(i + 1) % len(indices)]] for i in range(len(indices))], dtype=int)
+    if len(indices) > 1:
+        dists = starts[indices[1:]] - starts[indices[:-1]]
+        mdist = starts[indices[-1]] - starts[indices[0]]
+        norm_dists = dists / mdist
+        ratios = dists[:-1] / dists[1:]
+        return idx_pairs, dists, norm_dists, ratios
+    else:
+        return idx_pairs, np.array([0], dtype=float), np.array([0], dtype=float), np.array([0], dtype=float)
+
+
+def compute_sorted_consecutive_distances(starts: np.ndarray, indices: list[int]) -> tuple:
+    idx_pairs = np.array([[indices[i], indices[(i + 1) % len(indices)]] for i in range(len(indices))], dtype=int)
+    if len(indices) > 1:
+        dists = starts[indices[1:]] - starts[indices[:-1]]
+        sort_indices = np.argsort(dists, axis=0)[::-1]
+        sorted_dists = dists[sort_indices]
+        mdist = starts[indices[-1]] - starts[indices[0]]
+        norm_dists = dists / mdist
+        ratios = sorted_dists[:-1] / sorted_dists[1:]
+        return idx_pairs[sort_indices], sorted_dists, norm_dists[sort_indices], ratios
+    else:
+        return idx_pairs, np.array([0], dtype=float), np.array([0], dtype=float), np.array([0], dtype=float)

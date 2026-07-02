@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from cycles.conversion_functions import lcoords_to_int
 from cycles.cycle_division_functions import partition_level
 
-# Sector plots
 
 def fix_pie_labels(wedges, texts, mode="radial"):
     """
@@ -24,6 +23,7 @@ def fix_pie_labels(wedges, texts, mode="radial"):
         text.set_rotation_mode("anchor")
         text.set_ha("center")
         text.set_va("center")
+
 
 def plot_comparison_graph(subcycles: list):
     fig, ax = plt.subplots(figsize=(25, 25))
@@ -52,6 +52,7 @@ def plot_comparison_graph(subcycles: list):
     ax.set_aspect(1)
     fig.tight_layout()
     plt.show()
+
 
 def plot_identical_graph(ax, level: tuple, identical: list, ref_level: tuple|None=None, one_to_many: bool=False, show_labels=True):
     lcoords, durations, starts, rgb, cmyk = level
@@ -147,6 +148,7 @@ def plot_identical_graph(ax, level: tuple, identical: list, ref_level: tuple|Non
     ax.set_aspect(1)
     # fig.tight_layout()
     # plt.show()
+
 
 def plot_circle_diagram(levels: list[tuple], base: int):
     fig, ax = plt.subplots()
