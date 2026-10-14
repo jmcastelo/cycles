@@ -1,16 +1,18 @@
-from cycles.functions.cycle_division import compute_level
+from cycles.functions.cycle_division import compute_level, compute_duration, compute_start
 
 if __name__ == "__main__":
     # Compute levels
     # manvantara = 64800
-    bases = [4, 2]
+    # bases = [4, 2]
 
     # nrows = 3
     # ncols = 3
     # num_levels = nrows * ncols
-    num_levels = 3
-    levels = [compute_level(depth, bases) for depth in range(1, num_levels+1)]
+    # num_levels = 3
+    # levels = [compute_level(depth, bases) for depth in range(1, num_levels+1)]
     # levels = [compute_level(depth, bases, manvantara) for depth in range(1, num_levels + 1)]
+
+    print(compute_start((0,0,1)))
 
     # Uniqueness of colors
     # print([len(np.unique(level[3], axis=0)) == len(level[3]) for level in levels])

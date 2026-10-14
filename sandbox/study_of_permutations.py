@@ -1,26 +1,26 @@
 import numpy as np
 
 
-def compositions(depth: int) -> list[tuple]:
+def compositions(depth: int) -> np.ndarray:
     comps = []
     for n3 in range(depth + 1):
         for n2 in range(depth - n3 + 1):
             for n1 in range(depth - n3 - n2 + 1):
                 n0 = depth - n3 - n2 - n1
-                comps.append((n0, n1, n2, n3))
-    return comps
+                comps.append([n0, n1, n2, n3])
+    return np.array(comps)
 
-def duration_equivalent_compositions(composition: tuple) -> list[tuple]:
+def duration_equivalent_compositions(composition: np.ndarray) -> np.ndarray:
     tmin = int(np.max([-composition[0], -composition[3]]))
     tmax = int(np.floor(composition[2] / 2))
 
     comps = []
     for t in range(tmin, tmax + 1):
-        comps.append((composition[0] + t, composition[1], composition[2] - 2 * t, composition[3] + t))
-    return comps
+        comps.append(composition + [t, 0, -2 * t, t])
+    return np.array(comps)
 
-def lexmin_enumeration(composition: tuple) -> list[tuple]:
-    lexmin = (0,) * composition[0] + (1,) * composition[1] + (2,) * composition[2] + (3,) * composition[3]
+def lexmin_enumeration(composition: np.ndarray) -> np.ndarray:
+    lexmin = np.array((0,) * composition[0] + (1,) * composition[1] + (2,) * composition[2] + (3,) * composition[3], dtype=int)
     enumeration = [lexmin]
     depth = len(lexmin)
 
@@ -41,15 +41,18 @@ def lexmin_enumeration(composition: tuple) -> list[tuple]:
                 j = k
                 break
 
-        tmp = prev[:i] + (prev[j],) + prev[i+1:j] + (prev[i],) + prev[j+1:]
-        enumeration.append(tmp[:i+1] + tmp[depth-1:i:-1])
+        prev[i], prev[j] = prev[j], prev[i]
+        prev[i+1::] = prev[depth-1:i:-1]
+        enumeration.append(prev)
 
-    return enumeration
+    return np.array(enumeration)
 
 if __name__ == "__main__":
     comps = compositions(3)
     for c in comps:
-        print(c, duration_equivalent_compositions(c), lexmin_enumeration(c))
+        print(c)
+        print(duration_equivalent_compositions(c))
+        print(lexmin_enumeration(c))
 
 
     '''

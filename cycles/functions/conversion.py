@@ -5,18 +5,18 @@ def kronecker_vector(i: int, lcoords: np.ndarray) -> np.ndarray:
     return np.array([int(i == c) for c in lcoords], dtype=int)
 
 
-def lcoords_to_int(lcoords: tuple, reverse: bool=False) -> int:
+def lcoords_to_int(lcoords: np.ndarray, reverse: bool=False) -> int:
     if reverse:
         return int(''.join(str(d) for d in lcoords[::-1]), base=4)
     else:
         return int(''.join(str(d) for d in lcoords), base=4)
 
 
-def int_to_lcoords(x: int, base: int, depth: int) -> tuple:
+def int_to_lcoords(x: int, base: int, depth: int) -> np.ndarray:
     padding = max(0, depth - len(np.base_repr(x, base=base)))
     if x == 0:
         padding += 1
-    return tuple(int(d) for d in np.base_repr(x, base=base, padding=padding))
+    return np.array(int(d) for d in np.base_repr(x, base=base, padding=padding))
 
 
 def fractional_to_lcoords(x: float, base: int, max_depth: int = 10) -> list[int]:
