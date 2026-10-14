@@ -1,9 +1,9 @@
 import numpy as np
 import itertools as itools
 
-from cycles.conversion_functions import int_to_lcoords, lcoords_to_int
-from cycles.color_functions import lcoords_to_cmyk, cmyk_to_rgb
-from cycles.measure_functions import dharma_measure, purity_measure
+from cycles.functions.conversion import int_to_lcoords, lcoords_to_int
+from cycles.functions.color import lcoords_to_cmyk, cmyk_to_rgb
+from cycles.functions.measure import dharma_measure, purity_measure
 
 
 proportions = np.array([0.4, 0.3, 0.2, 0.1], dtype=float)

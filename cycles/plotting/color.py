@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import colorsys as csys
 
 from cycles.plotting.helpers import format_plot
-from cycles.measure_functions import dharma_measure, purity_measure
+from cycles.functions.measure import dharma_measure, purity_measure
 
 
 def plot_level_bar(

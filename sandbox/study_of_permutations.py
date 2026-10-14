@@ -1,8 +1,5 @@
 import numpy as np
-from itertools import groupby
-from symmetrymath.groups import SymmetricGroup
 
-from cycles.conversion_functions import int_to_lcoords, lcoords_to_int
 
 def compositions(depth: int) -> list[tuple]:
     comps = []
@@ -52,7 +49,7 @@ def lexmin_enumeration(composition: tuple) -> list[tuple]:
 if __name__ == "__main__":
     comps = compositions(3)
     for c in comps:
-        print(c, lexmin_enumeration(c))
+        print(c, duration_equivalent_compositions(c), lexmin_enumeration(c))
 
 
     '''

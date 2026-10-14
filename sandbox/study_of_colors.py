@@ -1,8 +1,8 @@
-from cycles.cycle_division_functions import compute_level
-from cycles.color_functions import lcoords_to_lrgb
-from cycles.plotting.color_plots import *
-from cycles.plotting.generic_plots import *
-from cycles.view_functions import top_view, camera_view_angles
+from cycles.functions.cycle_division import compute_level
+from cycles.functions.color import lcoords_to_lrgb
+from cycles.plotting.color import *
+from cycles.plotting.generic import *
+from cycles.functions.view import top_view, camera_view_angles
 
 if __name__ == "__main__":
     # Let's compute several levels.

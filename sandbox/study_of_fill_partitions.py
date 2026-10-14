@@ -1,8 +1,8 @@
 import numpy as np
 
-from cycles.cycle_division_functions import find_total_lcoords, compute_duration, compute_start, fill_partition, weights
-from cycles.color_functions import lcoords_to_cmyk, cmyk_to_rgb, lcoords_to_lrgb
-from cycles.plotting.partition_plots import plot_partition_sectors
+from cycles.functions.cycle_division import fill_partition
+from cycles.functions.color import lcoords_to_lrgb
+from cycles.plotting.partition import plot_partition_sectors
 
 if __name__ == "__main__":
     t = 64800

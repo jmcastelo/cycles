@@ -1,6 +1,6 @@
 import numpy as np
 
-from cycles.conversion_functions import kronecker_vector
+from cycles.functions.conversion import kronecker_vector
 
 
 def lcoords_to_cmyk(lcoords: np.ndarray, weights: np.ndarray) -> np.ndarray:

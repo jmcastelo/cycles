@@ -1,13 +1,8 @@
-import numpy as np
-
-from cycles.cycle_division_functions import compute_level, find_identical, count_digits, equality_test, \
-    duration_quotient, compute_all_distances, compute_consecutive_distances
-from cycles.measure_functions import dharma_measure
-from cycles.plotting.duration_plots import *
-from cycles.plotting.generic_plots import *
-from cycles.color_functions import lcoords_to_lrgb
-from cycles.analysis_functions import autocorrelation
-from cycles.conversion_functions import lcoords_to_int
+from cycles.functions.cycle_division import compute_level, find_identical
+from cycles.plotting.generic import *
+from cycles.functions.color import lcoords_to_lrgb
+from cycles.functions.analysis import autocorrelation
+from cycles.functions.conversion import lcoords_to_int
 
 
 if __name__ == "__main__":

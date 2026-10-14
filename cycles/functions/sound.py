@@ -3,8 +3,8 @@ import pywt
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
-from conversion_functions import lcoords_to_fractional, int_to_lcoords
-from measure_functions import dharma_measure
+from cycles.functions.conversion import lcoords_to_fractional, int_to_lcoords
+from cycles.functions.measure import dharma_measure
 
 # Sound cycles
 

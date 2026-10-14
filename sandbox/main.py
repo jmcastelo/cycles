@@ -1,4 +1,4 @@
-from cycles.cycle_division_functions import compute_level
+from cycles.functions.cycle_division import compute_level
 
 if __name__ == "__main__":
     # Compute levels

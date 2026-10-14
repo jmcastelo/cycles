@@ -5,7 +5,7 @@ from matplotlib import colormaps
 from matplotlib.ticker import MaxNLocator
 
 from cycles.plotting.helpers import format_plot
-from cycles.cycle_division_functions import same_digit_counts
+from cycles.functions.cycle_division import same_digit_counts
 
 
 def plot_bars(
