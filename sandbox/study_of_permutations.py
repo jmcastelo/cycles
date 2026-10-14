@@ -14,18 +14,45 @@ def compositions(depth: int) -> list[tuple]:
     return comps
 
 def duration_equivalent_compositions(composition: tuple) -> list[tuple]:
-    tmin = np.max([-composition[0], -composition[3]])
-    tmax = np.floor(composition[2] / 2)
+    tmin = int(np.max([-composition[0], -composition[3]]))
+    tmax = int(np.floor(composition[2] / 2))
 
     comps = []
-    for t in range(int(tmin), int(tmax) + 1):
+    for t in range(tmin, tmax + 1):
         comps.append((composition[0] + t, composition[1], composition[2] - 2 * t, composition[3] + t))
     return comps
+
+def lexmin_enumeration(composition: tuple) -> list[tuple]:
+    lexmin = (0,) * composition[0] + (1,) * composition[1] + (2,) * composition[2] + (3,) * composition[3]
+    enumeration = [lexmin]
+    depth = len(lexmin)
+
+    while True:
+        prev = enumeration[-1]
+
+        i = -1
+        for k in range(depth - 2, -1, -1):
+            if prev[k] < prev[k + 1]:
+                i = k
+                break
+        if i == -1:
+            break
+
+        j = -1
+        for k in range(depth - 1, i, -1):
+            if prev[k] > prev[i]:
+                j = k
+                break
+
+        tmp = prev[:i] + (prev[j],) + prev[i+1:j] + (prev[i],) + prev[j+1:]
+        enumeration.append(tmp[:i+1] + tmp[depth-1:i:-1])
+
+    return enumeration
 
 if __name__ == "__main__":
     comps = compositions(3)
     for c in comps:
-        print(c, duration_equivalent_compositions(c))
+        print(c, lexmin_enumeration(c))
 
 
     '''
