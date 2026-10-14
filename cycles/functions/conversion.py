@@ -16,7 +16,7 @@ def int_to_lcoords(x: int, base: int, depth: int) -> np.ndarray:
     padding = max(0, depth - len(np.base_repr(x, base=base)))
     if x == 0:
         padding += 1
-    return np.array(int(d) for d in np.base_repr(x, base=base, padding=padding))
+    return np.array([int(d) for d in np.base_repr(x, base=base, padding=padding)])
 
 
 def fractional_to_lcoords(x: float, base: int, max_depth: int = 10) -> list[int]:

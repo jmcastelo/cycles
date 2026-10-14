@@ -1,5 +1,6 @@
 from cycles.functions.cycle_division import compute_level, find_identical
 from cycles.plotting.generic import *
+from cycles.plotting.duration import *
 from cycles.functions.color import lcoords_to_lrgb
 from cycles.functions.analysis import autocorrelation
 from cycles.functions.conversion import lcoords_to_int
@@ -7,8 +8,8 @@ from cycles.functions.conversion import lcoords_to_int
 
 if __name__ == "__main__":
     # Let's compute several levels.
-    bases = [4, 2, 1]
-    max_depth = 6
+    bases = [4, 2, 2]
+    max_depth = 4
     levels = [compute_level(depth, bases) for depth in range(1, max_depth + 1)]
     lcoords, durations, starts, cmyks, rgbs, dharmas, purities = zip(*levels)
 
@@ -24,18 +25,17 @@ if __name__ == "__main__":
         'purity': purity_colors
     }
 
-    color_key = 'lrgb'
+    color_key = 'cmyk'
 
     idurations = [find_identical(durs) for durs in durations]
 
     base_dir = f"./plots/study_of_durations"
 
-    '''
     for depth, (idd, coords, durs, strs, clrs) in enumerate(zip(idurations, lcoords, durations, starts, colors[color_key]), 1):
         title = f"Location and count of subcycle durations. Total of {4 ** depth} subcycles at depth {depth}"
-        fig_data = ('a3', 'landscape', f"{base_dir}/trigraphs/{color_key}/trigraph_at_depth_{depth}.png", 300)
+        fig_data = ('a3', 'landscape', f"{base_dir}/trigraphs/{color_key}/trigraph_at_depth_{depth}.png", 300, False)
         plot_durations_trigraph(idd, coords, durs, strs, clrs, title, True, fig_data)
-    '''
+
     '''
     # Let's sort the subcycle durations and plot them as bars
     for depth, (durs, colors) in enumerate(zip(durations, colors[color_key]), 1):
@@ -86,6 +86,7 @@ if __name__ == "__main__":
         return_plot(duration, max_delay, color, title, label, False, True, fig_data)
     '''
 
+    '''
     indices = [[lcoords_to_int(coord, True) for coord in coords] for coords in lcoords]
     print(durations[1])
     print(durations[1][indices[1]])
@@ -103,6 +104,7 @@ if __name__ == "__main__":
     )
     grid_of_plots(lags, acorrs, title, labels, 'Lag', (0, 1), False, fig_data)
     # plot_auto_correlations(durations, title, labels, True, fig_data)
+    '''
 
     # There are no subcycles of different depth with equal durations:
     # 1. We find unique subcycle durations for each level.

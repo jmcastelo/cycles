@@ -1,5 +1,8 @@
 import numpy as np
 
+from cycles.functions.conversion import lcoords_to_int
+from cycles.functions.cycle_division import compute_duration
+
 
 def compositions(depth: int) -> np.ndarray:
     comps = []
@@ -20,12 +23,12 @@ def duration_equivalent_compositions(composition: np.ndarray) -> np.ndarray:
     return np.array(comps)
 
 def lexmin_enumeration(composition: np.ndarray) -> np.ndarray:
-    lexmin = np.array((0,) * composition[0] + (1,) * composition[1] + (2,) * composition[2] + (3,) * composition[3], dtype=int)
+    depth = np.sum(composition)
+    lexmin = np.concatenate([np.repeat(k, composition[k]) for k in range(4) if composition[k] > 0])
     enumeration = [lexmin]
-    depth = len(lexmin)
 
     while True:
-        prev = enumeration[-1]
+        prev = np.array(enumeration[-1])
 
         i = -1
         for k in range(depth - 2, -1, -1):
@@ -41,18 +44,18 @@ def lexmin_enumeration(composition: np.ndarray) -> np.ndarray:
                 j = k
                 break
 
-        prev[i], prev[j] = prev[j], prev[i]
-        prev[i+1::] = prev[depth-1:i:-1]
+        prev[[i,j]] = prev[[j,i]]
+        prev[i+1:] = prev[depth-1:i:-1]
         enumeration.append(prev)
 
     return np.array(enumeration)
 
 if __name__ == "__main__":
-    comps = compositions(3)
-    for c in comps:
-        print(c)
-        print(duration_equivalent_compositions(c))
-        print(lexmin_enumeration(c))
+    eq_comps = [duration_equivalent_compositions(c) for c in compositions(2)]
+    for eqc in eq_comps:
+        print([c for c in eqc])
+        for c in eqc:
+            print([[lcoords_to_int(lcoord), lcoord, compute_duration(lcoord)] for lcoord in lexmin_enumeration(c)])
 
 
     '''

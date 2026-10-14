@@ -206,7 +206,6 @@ def side_view(axis=(0, 0, 1), angle=0.0, degrees=False):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
 
     rng = np.random.default_rng(42)
 

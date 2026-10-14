@@ -1,7 +1,7 @@
 import numpy as np
 import itertools as itools
 
-from cycles.functions.conversion import int_to_lcoords, lcoords_to_int
+from cycles.functions.conversion import int_to_lcoords
 from cycles.functions.color import lcoords_to_cmyk, cmyk_to_rgb
 from cycles.functions.measure import dharma_measure, purity_measure
 
@@ -39,6 +39,7 @@ def compute_level(depth: int, bases: list[int]) -> tuple:
     return lcoords, durations, starts, cmyks, rgbs, dharmas, purities
 
 
+'''
 def compute_deeper_subcycles(parent_coords: list[int], extra_depth: int, bases: list[int]) -> tuple:
     start_index = lcoords_to_int(parent_coords + [0] * extra_depth)
     end_index = start_index + bases[0]**extra_depth - 1
@@ -53,6 +54,7 @@ def compute_deeper_subcycles(parent_coords: list[int], extra_depth: int, bases: 
     rgbs = np.array([lcoords_to_rgb(lcoord, weights(bases[1], depth)) for lcoord in lcoords], dtype=float)
 
     return lcoords, durations, starts, rgbs
+'''
 
 
 def select_subcycle(prefix_coords: list[int], level: tuple) -> tuple:

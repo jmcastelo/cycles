@@ -4,6 +4,7 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib import colormaps
 from matplotlib.ticker import MaxNLocator
 
+from cycles.functions.conversion import lcoords_to_int
 from cycles.plotting.helpers import format_plot
 from cycles.functions.cycle_division import same_digit_counts
 
@@ -207,7 +208,7 @@ def plot_durations_trigraph(
     colors: np.ndarray,
     title: str = '',
     save_fig: bool=False,
-    fig_data: tuple[str, str, str, int]|None=None
+    fig_data: tuple[str, str, str, int, bool]|None=None
 ):
     fig, axs = plt.subplots(
         nrows=2,
@@ -216,7 +217,8 @@ def plot_durations_trigraph(
         sharey=False,
         height_ratios=[10, 1],
         width_ratios=[4, 1],
-        gridspec_kw=dict(hspace=0.01, wspace=0.01)
+        gridspec_kw={'hspace': 0, 'wspace': 0},
+        layout='tight'
     )
 
     fig.suptitle(title)
@@ -286,10 +288,18 @@ def plot_durations_trigraph(
                 linewidth=0.1,
                 edgecolor='gray',
                 hatch=hatch,
-                hatchcolor=(1-colors[idx[j]]) * 0.5
+                hatchcolor=(1-colors[idx[j]])
             )
-            label = ''.join([str(c) for c in coords[idx[j]]])
-            axs[0, 1].bar_label(bar, labels=[label], label_type='center', fontsize=8/len(label), rotation=-90)
+            # label = ''.join([str(c) for c in coords[idx[j]]])
+            label = lcoords_to_int(coords[idx[j]])
+            axs[0, 1].bar_label(
+                bar,
+                labels=[label],
+                label_type='center',
+                fontsize=7,
+                rotation=-90,
+                color=(1-colors[idx[j]])
+            )
 
     axs[0, 1].xaxis.set_visible(False)
 
