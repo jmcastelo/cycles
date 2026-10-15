@@ -6,7 +6,7 @@ from matplotlib.ticker import MaxNLocator
 
 from cycles.functions.conversion import lcoords_to_int
 from cycles.plotting.helpers import format_plot
-from cycles.functions.cycle_division import same_digit_counts
+from cycles.functions.cycle_division import same_digit_counts, count_digits
 
 
 def plot_bars(
@@ -52,7 +52,7 @@ def plot_stacked_bars(
     xlabel: str='',
     ylabel: str='',
     save_fig: bool=False,
-    fig_data: tuple[str, str, str, int]|None=None
+    fig_data: tuple[str, str, str, int, bool]|None=None
 ):
     fig, ax = plt.subplots()
 
@@ -97,7 +97,7 @@ def plot_stacked_counts(
     xlabel: str = '',
     ylabel: str = '',
     save_fig: bool=False,
-    fig_data: tuple[str, str, str, int]|None=None
+    fig_data: tuple[str, str, str, int, bool]|None=None
 ):
     fig, ax = plt.subplots()
 
@@ -149,7 +149,7 @@ def plot_stacked_spaced_bars(
     xlabel: str = '',
     ylabel: str = '',
     save_fig: bool=False,
-    fig_data: tuple[str, str, str, int]|None=None
+    fig_data: tuple[str, str, str, int, bool]|None=None
 ):
     fig, axs = plt.subplots(
         nrows=2,
@@ -226,9 +226,9 @@ def plot_durations_trigraph(
     # Unique durations at their location
     for i, (dur, idx) in enumerate(idd):
         for j in range(len(idx)):
-            hatch = '///'
-            if same_digit_counts(coords[idx[0]], coords[idx[j]]):
-                hatch = None
+            # hatch = '///'
+            # if same_digit_counts(coords[idx[0]], coords[idx[j]]):
+            #     hatch = None
             axs[0, 0].barh(
                 y=i+1,
                 width=dur,
@@ -236,10 +236,10 @@ def plot_durations_trigraph(
                 left=starts[idx[j]],
                 align='center',
                 color=colors[idx[j]],
-                linewidth=0.1,
-                edgecolor='gray',
-                hatch=hatch,
-                hatchcolor=(1-colors[idx[j]]) * 0.5
+                linewidth=0.0,
+                # edgecolor='gray',
+                # hatch=hatch,
+                # hatchcolor=(1-colors[idx[j]])
             )
 
     axs[0, 0].xaxis.set_visible(False)
@@ -252,7 +252,7 @@ def plot_durations_trigraph(
     formatted_labels = [f"{val:.3e}" for val, _ in idd]
     axs[0, 0].set_yticklabels(formatted_labels, rotation=0, ha='right', va='center', fontsize=9)
 
-    # Time line
+    # Timeline
     axs[1, 0].barh(
         y=0,
         width=durations,
@@ -275,9 +275,9 @@ def plot_durations_trigraph(
     # Counts
     for i, (dur, idx) in enumerate(idd):
         for j in range(len(idx)):
-            hatch = '///'
-            if same_digit_counts(coords[idx[0]], coords[idx[j]]):
-                hatch = None
+            # hatch = '///'
+            # if same_digit_counts(coords[idx[0]], coords[idx[j]]):
+            #     hatch = None
             bar = axs[0, 1].barh(
                 y=i+1,
                 height=1,
@@ -285,18 +285,19 @@ def plot_durations_trigraph(
                 left=j,
                 align='center',
                 color=colors[idx[j]],
-                linewidth=0.1,
-                edgecolor='gray',
-                hatch=hatch,
-                hatchcolor=(1-colors[idx[j]])
+                linewidth=0.0,
+                # edgecolor='gray',
+                # hatch=hatch,
+                # hatchcolor=(1-colors[idx[j]])
             )
             # label = ''.join([str(c) for c in coords[idx[j]]])
-            label = lcoords_to_int(coords[idx[j]])
+            # label = lcoords_to_int(coords[idx[j]])
+            label = ''.join(str(c) for c in count_digits(coords[idx[j]]))
             axs[0, 1].bar_label(
                 bar,
                 labels=[label],
                 label_type='center',
-                fontsize=7,
+                fontsize=6,
                 rotation=-90,
                 color=(1-colors[idx[j]])
             )
@@ -362,7 +363,7 @@ def plot_duration_bars(
     l2: int,
     aspect: tuple[int, int]=(408, 577),
     save_fig: bool=False,
-    fig_data: tuple[str, str, str, int]|None=None
+    fig_data: tuple[str, str, str, int, bool]|None=None
 ):
     fig, ax = plt.subplots()
 

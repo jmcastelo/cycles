@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     for depth, (idd, coords, durs, strs, clrs) in enumerate(zip(idurations, lcoords, durations, starts, colors[color_key]), 1):
         title = f"Location and count of subcycle durations. Total of {4 ** depth} subcycles at depth {depth}"
-        fig_data = ('a3', 'landscape', f"{base_dir}/trigraphs/{color_key}/trigraph_at_depth_{depth}.png", 300, False)
+        fig_data = ('a3', 'landscape', f"{base_dir}/trigraphs/{color_key}/trigraph_at_depth_{depth}.png", 600, False)
         plot_durations_trigraph(idd, coords, durs, strs, clrs, title, True, fig_data)
 
     '''
