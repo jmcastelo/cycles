@@ -10,7 +10,8 @@ if __name__ == "__main__":
     # Let's compute several levels.
     bases = [4, 2, 2]
     max_depth = 4
-    levels = [compute_level(depth, bases) for depth in range(1, max_depth + 1)]
+    scale = 2/3
+    levels = [compute_level(depth, bases, scale) for depth in range(1, max_depth + 1)]
     lcoords, durations, starts, cmyks, rgbs, dharmas, purities = zip(*levels)
 
     lrgbs = [np.apply_along_axis(lcoords_to_lrgb, 1, coords) for coords in lcoords]
@@ -19,13 +20,16 @@ if __name__ == "__main__":
 
     colors = {
         'cmyk': [rgb[:, 0] for rgb in rgbs],
-        'wcmy': [rgb[:, 1] for rgb in rgbs],
+        'cmyk_normalised': [rgb[:, 1] for rgb in rgbs],
+        'cmyk_scaled': [rgb[:, 2] for rgb in rgbs],
+        'cmyk_kscaled': [rgb[:, 3] for rgb in rgbs],
+        'wcmy': [rgb[:, 4] for rgb in rgbs],
         'lrgb': [lrgb[:, -1] for lrgb in lrgbs],
         'dharma': dharma_colors,
         'purity': purity_colors
     }
 
-    color_key = 'cmyk'
+    color_key = 'cmyk_kscaled'
 
     idurations = [find_identical(durs) for durs in durations]
 

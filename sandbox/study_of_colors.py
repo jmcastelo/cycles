@@ -8,7 +8,8 @@ if __name__ == "__main__":
     # Let's compute several levels.
     bases = [4, 2, 1]
     max_depth = 5
-    levels = [compute_level(depth, bases) for depth in range(1, max_depth + 1)]
+    scale = 2/3
+    levels = [compute_level(depth, bases, scale) for depth in range(1, max_depth + 1)]
     lcoords, durations, starts, cmyks, rgbs, dharmas, purities = zip(*levels)
 
     lrgbs = [np.apply_along_axis(lcoords_to_lrgb, 1, coords) for coords in lcoords]
@@ -18,7 +19,10 @@ if __name__ == "__main__":
     colors = {
         'rgb': {
             'cmyk': [rgb[:, 0] for rgb in rgbs],
-            'wcmy': [rgb[:, 1] for rgb in rgbs],
+            'cmyk_normalised': [rgb[:, 1] for rgb in rgbs],
+            'cmyk_scaled': [rgb[:, 2] for rgb in rgbs],
+            'cmyk_kscaled': [rgb[:, 3] for rgb in rgbs],
+            'wcmy': [rgb[:, 4] for rgb in rgbs],
             'lrgb': [lrgb[:, -1] for lrgb in lrgbs],
             'dharma': dharma_colors,
             'purity': purity_colors
@@ -29,13 +33,13 @@ if __name__ == "__main__":
         }
     }
 
-    rgb_key = 'cmyk'
+    rgb_key = 'cmyk_kscaled'
     cmyk_key = 'wcmy'
 
     base_dir = f"./plots/study_of_colors"
 
     plot = {
-        'level_bars': False,
+        'level_bars': True,
         'rgb_scatter_3d': False,
         'rgb_lines_3d': False,
         'cmyk_scatter_3d': False,
@@ -43,7 +47,7 @@ if __name__ == "__main__":
         'dharma_vs_index': False,
         'purity_vs_time': False,
         'purity_vs_index': False,
-        'cmyk_vs_time': True
+        'cmyk_vs_time': False
     }
 
     if plot['level_bars']:
@@ -51,9 +55,9 @@ if __name__ == "__main__":
             durations,
             starts,
             colors['rgb'][rgb_key],
-            save_fig=False,
+            save_fig=True,
             fig_data=(
-                'a4',
+                'a3',
                 'landscape',
                 f"{base_dir}/levels/{rgb_key}/base_{bases[1]}/levels_down_to_{max_depth}.png",
                 600,

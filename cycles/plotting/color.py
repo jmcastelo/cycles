@@ -34,20 +34,20 @@ def plot_level_bars(
     fig_data: tuple[str, str, str, int, bool]|None=None
 ):
     depth = len(durations)
-    fig, axs = plt.subplots(nrows=depth, ncols=1, sharex=True)
+    fig, axs = plt.subplots(nrows=depth, ncols=1, sharex=True, gridspec_kw={'hspace': 0, 'wspace': 0}, layout='tight')
 
     for i, (ax, d, s, c) in enumerate(zip(axs, durations, starts, colors)):
         plot_level_bar(ax, i, d, s, c)
 
     axs[0].set_title(f"Cycle subdivisions down to depth {depth}")
-    axs[-1].xaxis.set_visible(True)
+    # axs[-1].xaxis.set_visible(True)
     axs[-1].set_xlabel('Time (norm. units)')
 
     if fig_data is not None:
         format_plot(fig, fig_data, save_fig)
 
     plt.tight_layout()
-    plt.subplots_adjust(hspace=0)
+    plt.subplots_adjust(hspace=0, wspace=0)
     plt.show()
 
 

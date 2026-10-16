@@ -22,14 +22,14 @@ def compute_start(lcoords: np.ndarray) -> float:
     return np.dot(offsets[lcoords], np.insert(np.cumprod(proportions[lcoords][:-1]), 0, 1))
 
 
-def compute_level(depth: int, bases: list[int]) -> tuple:
+def compute_level(depth: int, bases: list[int], scale: float) -> tuple:
     lcoords = np.array([int_to_lcoords(i, bases[0], depth) for i in range(bases[0]**depth)], dtype=int)
 
     durations = np.apply_along_axis(compute_duration, 1, lcoords)
     starts = np.apply_along_axis(compute_start, 1, lcoords)
 
     w1 = weights(bases[1], depth)
-    cmyks = np.array([lcoords_to_cmyk(lcoord, w1) for lcoord in lcoords], dtype=float)
+    cmyks = np.array([lcoords_to_cmyk(lcoord, w1, scale) for lcoord in lcoords], dtype=float)
     rgbs = np.apply_along_axis(cmyk_to_rgb, 2, cmyks)
     dharmas = np.array([dharma_measure(lcoord, w1) for lcoord in lcoords])
 
