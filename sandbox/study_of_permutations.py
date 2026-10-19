@@ -51,7 +51,7 @@ def lexmin_enumeration(composition: np.ndarray) -> np.ndarray:
     return np.array(enumeration)
 
 if __name__ == "__main__":
-    eq_comps = [duration_equivalent_compositions(c) for c in compositions(2)]
+    eq_comps = [duration_equivalent_compositions(c) for c in compositions(5)]
     for eqc in eq_comps:
         print([c for c in eqc])
         for c in eqc:

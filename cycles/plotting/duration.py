@@ -6,7 +6,7 @@ from matplotlib.ticker import MaxNLocator
 
 from cycles.functions.conversion import lcoords_to_int
 from cycles.plotting.helpers import format_plot
-from cycles.functions.cycle_division import same_digit_counts, count_digits
+from cycles.functions.duration import count_digits, same_digit_counts
 
 
 def plot_bars(
@@ -285,8 +285,8 @@ def plot_durations_trigraph(
                 left=j,
                 align='center',
                 color=colors[idx[j]],
-                linewidth=0.0,
-                # edgecolor='gray',
+                linewidth=0.1,
+                edgecolor='gray',
                 # hatch=hatch,
                 # hatchcolor=(1-colors[idx[j]])
             )

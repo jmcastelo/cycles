@@ -22,7 +22,8 @@ if __name__ == "__main__":
             'cmyk_normalised': [rgb[:, 1] for rgb in rgbs],
             'cmyk_scaled': [rgb[:, 2] for rgb in rgbs],
             'cmyk_kscaled': [rgb[:, 3] for rgb in rgbs],
-            'wcmy': [rgb[:, 4] for rgb in rgbs],
+            'cmyk_composition': [rgb[:, 4] for rgb in rgbs],
+            'wcmy': [rgb[:, 5] for rgb in rgbs],
             'lrgb': [lrgb[:, -1] for lrgb in lrgbs],
             'dharma': dharma_colors,
             'purity': purity_colors
@@ -33,7 +34,7 @@ if __name__ == "__main__":
         }
     }
 
-    rgb_key = 'cmyk_kscaled'
+    rgb_key = 'cmyk_composition'
     cmyk_key = 'wcmy'
 
     base_dir = f"./plots/study_of_colors"

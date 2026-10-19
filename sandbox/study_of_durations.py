@@ -23,13 +23,14 @@ if __name__ == "__main__":
         'cmyk_normalised': [rgb[:, 1] for rgb in rgbs],
         'cmyk_scaled': [rgb[:, 2] for rgb in rgbs],
         'cmyk_kscaled': [rgb[:, 3] for rgb in rgbs],
-        'wcmy': [rgb[:, 4] for rgb in rgbs],
+        'cmyk_composition': [rgb[:, 4] for rgb in rgbs],
+        'wcmy': [rgb[:, 5] for rgb in rgbs],
         'lrgb': [lrgb[:, -1] for lrgb in lrgbs],
         'dharma': dharma_colors,
         'purity': purity_colors
     }
 
-    color_key = 'cmyk_kscaled'
+    color_key = 'cmyk_scaled'
 
     idurations = [find_identical(durs) for durs in durations]
 
@@ -38,7 +39,7 @@ if __name__ == "__main__":
     for depth, (idd, coords, durs, strs, clrs) in enumerate(zip(idurations, lcoords, durations, starts, colors[color_key]), 1):
         title = f"Location and count of subcycle durations. Total of {4 ** depth} subcycles at depth {depth}"
         fig_data = ('a3', 'landscape', f"{base_dir}/trigraphs/{color_key}/trigraph_at_depth_{depth}.png", 600, False)
-        plot_durations_trigraph(idd, coords, durs, strs, clrs, title, True, fig_data)
+        plot_durations_trigraph(idd, coords, durs, strs, clrs, title, False, fig_data)
 
     '''
     # Let's sort the subcycle durations and plot them as bars
