@@ -15,23 +15,22 @@ def plot_timeline_permutations(
     fig_data: tuple[str, str, str, int, bool]|None=None
 ):
     height = 1
-    hspace = 1
+    hspace = 2
 
     fig, ax = plt.subplots(nrows=1, ncols=1)
 
     ax.set_title(title)
-    ax.yaxis.set_visible(False)
-    ax.xaxis.set_visible(False)
+    ax.set_axis_off()
     ax.margins(x=0, y=0)
 
     for i, idx in enumerate(indices):
         ax.barh(
             y=i * (height + hspace),
-            width=durations,
-            left=starts,
+            width=durations[idx],
+            left=starts[idx],
             height=height,
-            align='center',
-            color=colors[idx]
+            align='edge',
+            color=colors
         )
 
     for i in range(len(indices) - 1):
@@ -41,16 +40,15 @@ def plot_timeline_permutations(
         for j in range(len(x0)):
             ax.annotate(
                 text='',
-                xy=(x0[j], i * (height + hspace) + height / 2),
-                xytext=(x1[j], (i + 1) * (height + hspace) - height / 2),
-                annotation_clip=False,
+                xy=(x1[j], (i + 1) * (height + hspace)),
+                xytext=(x0[j], i * (height + hspace) + height),
                 arrowprops=dict(
                     arrowstyle='-',
-                    color='k',
-                    linewidth=0.5,
+                    color=colors[j],
+                    linewidth=0.7,
+                    antialiased=True,
                     shrinkA=0,
-                    shrinkB=0,
-                    antialiased=True
+                    shrinkB=0
                 )
             )
 

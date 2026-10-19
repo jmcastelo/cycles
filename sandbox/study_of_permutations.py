@@ -30,25 +30,27 @@ if __name__ == "__main__":
         'wcmy': rgbs[:, 5]
     }
 
-    color_key = 'cmyk_composition'
+    color_key = 'cmyk_kscaled'
 
     base_dir = f"./plots/study_of_permutations"
 
-    S3 = SymmetricGroup(depth)
-    elements = list(S3.elements)
+    SG = SymmetricGroup(depth)
+    element = (0,1,3,2)
+    tcoord_perm_pow = np.array([
+        [lcoords_to_int(np.array(SG.operation(tuple(lcoord), p))) for lcoord in lcoords]
+        for p in SG.powers(element)
+    ])
 
-    for element in elements:
-        tcoord_perm_pow = np.array([[lcoords_to_int(np.array(S3.operation(tuple(lcoord), p))) for lcoord in lcoords] for p in S3.powers(element)])
+    title = f"Permutation {SG.identity} → {element} of level coordinates at depth {depth}"
+    relpath = f"{base_dir}/powers/{color_key}/depth_{depth}_permutation_{''.join(str(element))}.png"
+    fig_data = ('a3', 'landscape', relpath, 600, True)
 
-        title = f"Permutation {element}"
-        fig_data = ('a3', 'landscape', f"{base_dir}/trigraphs/{color_key}/trigraph_at_depth_{depth}.png", 600, True)
-
-        plot_timeline_permutations(
-            durations,
-            starts,
-            colors[color_key],
-            tcoord_perm_pow,
-            title,
-            False,
-            fig_data
-        )
+    plot_timeline_permutations(
+        durations,
+        starts,
+        colors[color_key],
+        tcoord_perm_pow,
+        title,
+        False,
+        fig_data
+    )
