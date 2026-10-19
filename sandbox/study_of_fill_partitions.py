@@ -1,6 +1,6 @@
 import numpy as np
 
-from cycles.functions.cycle_division import fill_partition
+from cycles.functions.division import fill_partition
 from cycles.functions.color import lcoords_to_lrgb
 from cycles.plotting.partition import plot_partition_sectors
 

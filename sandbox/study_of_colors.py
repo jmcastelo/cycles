@@ -1,4 +1,4 @@
-from cycles.functions.cycle_division import compute_level
+from cycles.functions.division import compute_level
 from cycles.functions.color import lcoords_to_lrgb
 from cycles.plotting.color import *
 from cycles.plotting.generic import *

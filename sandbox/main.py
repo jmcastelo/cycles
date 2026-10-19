@@ -1,4 +1,4 @@
-from cycles.functions.cycle_division import compute_level, compute_duration, compute_start
+from cycles.functions.division import compute_level, compute_duration, compute_start
 
 if __name__ == "__main__":
     # Compute levels

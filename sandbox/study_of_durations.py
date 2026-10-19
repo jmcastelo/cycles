@@ -1,4 +1,4 @@
-from cycles.functions.cycle_division import compute_level, find_identical
+from cycles.functions.division import compute_level, find_identical
 from cycles.plotting.generic import *
 from cycles.plotting.duration import *
 from cycles.functions.color import lcoords_to_lrgb

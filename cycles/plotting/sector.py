@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from cycles.functions.conversion import lcoords_to_int
-from cycles.functions.cycle_division import partition_level
+from cycles.functions.division import partition_level
 
 
 def fix_pie_labels(wedges, texts, mode="radial"):
