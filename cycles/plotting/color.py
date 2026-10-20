@@ -400,6 +400,7 @@ def plot_quality_grid(levels: list[tuple]):
     plt.subplots_adjust(hspace=0, wspace=0)
     plt.show()
 
+
 def plot_quality_scatter_3d(level: tuple) -> plt.Figure:
     _, durations, starts, rgb, cmyk = level
 

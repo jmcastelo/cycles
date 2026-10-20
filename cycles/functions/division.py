@@ -1,7 +1,7 @@
 import numpy as np
 import itertools as itools
 
-from cycles.functions.conversion import int_to_lcoords
+from cycles.functions.conversion import tcoords_to_lcoords
 from cycles.functions.color import lcoords_to_cmyk, cmyk_to_rgb
 from cycles.functions.measure import dharma_measure, purity_measure
 
@@ -23,7 +23,7 @@ def compute_start(lcoords: np.ndarray) -> float:
 
 
 def compute_level(depth: int, bases: list[int], scale: float) -> tuple:
-    lcoords = np.array([int_to_lcoords(i, bases[0], depth) for i in range(bases[0]**depth)], dtype=int)
+    lcoords = np.array([tcoords_to_lcoords(i, bases[0], depth) for i in range(bases[0] ** depth)], dtype=int)
 
     durations = np.apply_along_axis(compute_duration, 1, lcoords)
     starts = np.apply_along_axis(compute_start, 1, lcoords)

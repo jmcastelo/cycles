@@ -3,7 +3,7 @@ from cycles.plotting.generic import *
 from cycles.plotting.duration import *
 from cycles.functions.color import lcoords_to_lrgb
 from cycles.functions.analysis import autocorrelation
-from cycles.functions.conversion import lcoords_to_int
+from cycles.functions.conversion import lcoords_to_tcoords
 
 
 if __name__ == "__main__":

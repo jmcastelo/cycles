@@ -4,7 +4,7 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib import colormaps
 from matplotlib.ticker import MaxNLocator
 
-from cycles.functions.conversion import lcoords_to_int
+from cycles.functions.conversion import lcoords_to_tcoords
 from cycles.plotting.helpers import format_plot
 from cycles.functions.duration import count_digits, same_digit_counts
 
