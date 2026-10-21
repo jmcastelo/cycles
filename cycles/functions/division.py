@@ -1,8 +1,8 @@
 import numpy as np
 import itertools as itools
 
-from cycles.functions.conversion import tcoords_to_lcoords
-from cycles.functions.color import lcoords_to_cmyk, cmyk_to_rgb
+from cycles.functions.conversion import tcoord_to_lcoords
+from cycles.functions.color import lcoords_to_cmyk, cmyk_to_rgb, lcoords_to_lrgb
 from cycles.functions.measure import dharma_measure, purity_measure
 
 
@@ -23,7 +23,7 @@ def compute_start(lcoords: np.ndarray) -> float:
 
 
 def compute_level(depth: int, bases: list[int], scale: float) -> tuple:
-    lcoords = np.array([tcoords_to_lcoords(i, bases[0], depth) for i in range(bases[0] ** depth)], dtype=int)
+    lcoords = np.array([tcoord_to_lcoords(i, bases[0], depth) for i in range(bases[0] ** depth)], dtype=int)
 
     durations = np.apply_along_axis(compute_duration, 1, lcoords)
     starts = np.apply_along_axis(compute_start, 1, lcoords)
@@ -37,6 +37,56 @@ def compute_level(depth: int, bases: list[int], scale: float) -> tuple:
     purities = np.array([purity_measure(lcoord, w2) for lcoord in lcoords])
 
     return lcoords, durations, starts, cmyks, rgbs, dharmas, purities
+
+
+def compute_levels_by_duration(depths: list[int], bases: list[int], scale: float) -> dict:
+    subcycles = {}
+
+    for depth in depths:
+        for tcoord in range(bases[0] ** depth):
+            lcoords = tcoord_to_lcoords(tcoord, bases[0], depth)
+            duration = compute_duration(lcoords)
+            start = compute_start(lcoords)
+
+            w1 = weights(bases[1], depth)
+            cmyks = lcoords_to_cmyk(lcoords, w1, scale)
+            rgbs = [cmyk_to_rgb(cmyk) for cmyk in cmyks]
+            lrgb = lcoords_to_lrgb(lcoords)
+
+            dharma = dharma_measure(lcoords, w1)
+            dharma_color = np.full(3, dharma)
+
+            w2 = weights(bases[2], depth)
+            purity = purity_measure(lcoords, w2)
+            purity_color = np.full(3, purity)
+
+            value = {
+                    'depth': depth,
+                    'tcoord': tcoord,
+                    'lcoords': lcoords,
+                    'duration': duration,
+                    'start': start,
+                    'dharma': dharma,
+                    'purity': purity,
+                    'colors': {
+                        'cmyk': rgbs[0],
+                        'cmyk_normalised': rgbs[1],
+                        'cmyk_scaled': rgbs[2],
+                        'cmyk_kscaled': rgbs[3],
+                        'cmyk_composition': rgbs[4],
+                        'wcmy': rgbs[5],
+                        'lrgb': lrgb,
+                        'dharma': dharma_color,
+                        'purity': purity_color
+                    }
+                }
+            key = np.round(duration, 10)
+            if key in subcycles.keys():
+                subcycles[key].append(value)
+            else:
+                subcycles[key] = [value]
+
+    return subcycles
 
 
 '''

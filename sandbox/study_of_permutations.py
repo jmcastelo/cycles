@@ -1,7 +1,6 @@
 from symmetrymath import SymmetricGroup
 
-from cycles.functions.composition import *
-from cycles.functions.conversion import lcoords_to_tcoords
+from cycles.functions.conversion import lcoords_to_tcoord
 from cycles.functions.division import compute_level, compute_duration
 from cycles.functions.permutation import permutation_matrix
 from cycles.plotting.permutation import plot_timeline_permutations, plot_permutation_matrices
@@ -31,17 +30,9 @@ if __name__ == "__main__":
     base_dir = f"./plots/study_of_permutations"
 
     study = {
-        'duration_equivalent_compositions': False,
         'plot_timeline_permutations': True,
         'permutation_matrices': False
     }
-
-    if study['duration_equivalent_compositions']:
-        eq_comps = [duration_equivalent_compositions(c) for c in compositions(5)]
-        for eqc in eq_comps:
-            print([c for c in eqc])
-            for c in eqc:
-                print([[lcoords_to_tcoords(lcoord), lcoord, compute_duration(lcoord)] for lcoord in lexmin_enumeration(c)])
 
     if study['plot_timeline_permutations']:
         SG = SymmetricGroup(depth)
@@ -49,7 +40,7 @@ if __name__ == "__main__":
         element = (0, 2, 1)
 
         tcoord_perm_pow = np.array([
-            [lcoords_to_tcoords(np.array(SG.operation(tuple(lcoord), p))) for lcoord in lcoords]
+            [lcoords_to_tcoord(np.array(SG.operation(tuple(lcoord), p))) for lcoord in lcoords]
             for p in SG.powers(element)
         ])
 

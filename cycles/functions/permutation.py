@@ -1,13 +1,13 @@
 import numpy as np
 from symmetrymath import SymmetricGroup
 
-from cycles.functions.conversion import lcoords_to_tcoords
+from cycles.functions.conversion import lcoords_to_tcoord
 
 
 def permutation_matrix(permutation: tuple, lcoords: np.ndarray) -> np.ndarray:
     depth = len(lcoords[0])
     SG = SymmetricGroup(depth)
-    perm_tcoords = np.array([lcoords_to_tcoords(np.array(SG.operation(tuple(lcoord), permutation))) for lcoord in lcoords])
+    perm_tcoords = np.array([lcoords_to_tcoord(np.array(SG.operation(tuple(lcoord), permutation))) for lcoord in lcoords])
 
     ones = np.array([[perm_tcoords[i], i] for i in range(len(perm_tcoords))])
 

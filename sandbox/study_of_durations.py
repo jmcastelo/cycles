@@ -1,16 +1,15 @@
-from cycles.functions.division import compute_level, find_identical
-from cycles.plotting.generic import *
-from cycles.plotting.duration import *
+from cycles.functions.division import compute_level, find_identical, compute_duration
 from cycles.functions.color import lcoords_to_lrgb
 from cycles.functions.analysis import autocorrelation
-from cycles.functions.conversion import lcoords_to_tcoords
+from cycles.functions.conversion import lcoords_to_tcoord
+from cycles.plotting.duration import *
+from cycles.plotting.generic import *
 
 
 if __name__ == "__main__":
-    # Let's compute several levels.
     bases = [4, 2, 2]
     max_depth = 4
-    scale = 2/3
+    scale = 2 / 3
     levels = [compute_level(depth, bases, scale) for depth in range(1, max_depth + 1)]
     lcoords, durations, starts, cmyks, rgbs, dharmas, purities = zip(*levels)
 
@@ -36,10 +35,15 @@ if __name__ == "__main__":
 
     base_dir = f"./plots/study_of_durations"
 
-    for depth, (idd, coords, durs, strs, clrs) in enumerate(zip(idurations, lcoords, durations, starts, colors[color_key]), 1):
-        title = f"Location and count of subcycle durations. Total of {4 ** depth} subcycles at depth {depth}"
-        fig_data = ('a3', 'landscape', f"{base_dir}/trigraphs/{color_key}/trigraph_at_depth_{depth}.png", 600, False)
-        plot_durations_trigraph(idd, coords, durs, strs, clrs, title, False, fig_data)
+    study = {
+        'plot_durations_trigraph': False
+    }
+
+    if study['plot_durations_trigraph']:
+        for depth, (idd, coords, durs, strs, clrs) in enumerate(zip(idurations, lcoords, durations, starts, colors[color_key]), 1):
+            title = f"Location and count of subcycle durations. Total of {4 ** depth} subcycles at depth {depth}"
+            fig_data = ('a3', 'landscape', f"{base_dir}/trigraphs/{color_key}/trigraph_at_depth_{depth}.png", 600, False)
+            plot_durations_trigraph(idd, coords, durs, strs, clrs, title, False, fig_data)
 
     '''
     # Let's sort the subcycle durations and plot them as bars

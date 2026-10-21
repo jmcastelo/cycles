@@ -4,7 +4,7 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib import colormaps
 from matplotlib.ticker import MaxNLocator
 
-from cycles.functions.conversion import lcoords_to_tcoords
+from cycles.functions.conversion import lcoords_to_tcoord
 from cycles.plotting.helpers import format_plot
 from cycles.functions.duration import count_digits, same_digit_counts
 
@@ -388,6 +388,51 @@ def plot_duration_bars(
         ax.set_aspect('auto')
     else:
         ax.set_aspect(float(aspect[0]/aspect[1]))
+
+    if fig_data is not None:
+        format_plot(fig, fig_data, save_fig)
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_multilevel_duration_equivalences(
+    subcycles: dict,
+    color_key: str,
+    title: str = '',
+    save_fig: bool = False,
+    fig_data: tuple[str, str, str, int, bool] | None = None
+):
+    fig, ax = plt.subplots()
+
+    fig.suptitle(title)
+
+    indices = np.argsort(list(subcycles.keys()))
+    ordered_keys = np.array(list(subcycles.keys()))[indices]
+    for i, key in enumerate(ordered_keys):
+        for sc in subcycles[key]:
+            ax.barh(
+                y=i,
+                width=sc['duration'],
+                height=1,
+                left=sc['start'],
+                align='edge',
+                color=sc['colors'][color_key],
+                linewidth=0.0
+            )
+
+    ax.set_xlabel('Time (norm. units)')
+    ax.set_ylabel('Duration (norm. units)')
+    ax.margins(x=0, y=0)
+
+    ax.set_yticks([x for x in np.arange(0.5, len(list(subcycles.keys())) + 0.5)])
+    formatted_labels = [f"{val:.3e}" for val in ordered_keys]
+    ax.set_yticklabels(formatted_labels, rotation=0, ha='right', va='center', fontsize=9)
+
+    times = [0.0, 0.4, 0.7, 0.9, 1.0]
+    ax.set_xticks(times)
+    formatted_labels = [f"{t:.1f}" for t in times]
+    ax.set_xticklabels(formatted_labels, rotation=0, ha='center', va='top', fontsize=9)
 
     if fig_data is not None:
         format_plot(fig, fig_data, save_fig)

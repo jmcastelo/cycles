@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from cycles.functions.conversion import lcoords_to_tcoords
+from cycles.functions.conversion import lcoords_to_tcoord
 from cycles.functions.division import partition_level
 
 
@@ -33,7 +33,7 @@ def plot_comparison_graph(subcycles: list):
     width = scale / num_indices
 
     for i, (lcoords, durations, starts, colors) in enumerate(subcycles):
-        labels = [f"{starts[j]:.1f} ({durations[j]:.2f}): {lcoords_to_tcoords(lcoords[j]) + 1}" for j in range(len(lcoords))]
+        labels = [f"{starts[j]:.1f} ({durations[j]:.2f}): {lcoords_to_tcoord(lcoords[j]) + 1}" for j in range(len(lcoords))]
 
         radius = width * (i + 1.0)
         labeldistance = 1.0 - 0.6 * width / radius
@@ -58,7 +58,7 @@ def plot_identical_graph(ax, level: tuple, identical: list, ref_level: tuple|Non
     lcoords, durations, starts, rgb, cmyk = level
 
     if show_labels:
-        labels = [f"{starts[j]:.1f} ({durations[j]:.2f}): {lcoords_to_tcoords(lcoords[j]) + 1}" for j in range(len(lcoords))]
+        labels = [f"{starts[j]:.1f} ({durations[j]:.2f}): {lcoords_to_tcoord(lcoords[j]) + 1}" for j in range(len(lcoords))]
     else:
         labels = ['' for _ in range(len(lcoords))]
 
@@ -72,7 +72,7 @@ def plot_identical_graph(ax, level: tuple, identical: list, ref_level: tuple|Non
 
     if ref_level is not None:
         ref_lcoords, ref_durations, ref_starts, ref_rgb, ref_cmyk = ref_level
-        ref_labels = [f"{ref_starts[j]:.1f} ({ref_durations[j]:.2f}): {lcoords_to_tcoords(ref_lcoords[j]) + 1}" for j in range(len(ref_lcoords))]
+        ref_labels = [f"{ref_starts[j]:.1f} ({ref_durations[j]:.2f}): {lcoords_to_tcoord(ref_lcoords[j]) + 1}" for j in range(len(ref_lcoords))]
 
         ref_radius = radius + width
         ref_width = width

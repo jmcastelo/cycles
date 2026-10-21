@@ -3,7 +3,7 @@ import pywt
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
-from cycles.functions.conversion import lcoords_to_fractional, tcoords_to_lcoords
+from cycles.functions.conversion import lcoords_to_fractional, tcoord_to_lcoords
 from cycles.functions.measure import dharma_measure
 
 # Sound cycles
@@ -68,7 +68,7 @@ def fractal_wavelet_synthesis_v01(level: tuple, total_duration: float, f0: float
         gauss = np.exp(-0.5 * ((t - tmid) / a) ** 2)
         tone = np.zeros_like(t)
         for n in range(1, 9):
-            amp = np.prod(cmyk[tcoords_to_lcoords(n, 4, depth)])
+            amp = np.prod(cmyk[tcoord_to_lcoords(n, 4, depth)])
             tone += amp * np.cos(2 * np.pi * n * f * (t - tmid))
         s += tone * gauss
 
