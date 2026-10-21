@@ -17,7 +17,7 @@ def plot_timeline_permutations(
     height = 1
     hspace = 2
 
-    fig, axs = plt.subplots(nrows=1, ncols=2, width_ratios=[5, 1])
+    fig, axs = plt.subplots(nrows=2, ncols=1, height_ratios=[7, 1])
 
     axs[0].set_title(title)
     axs[0].set_axis_off()
@@ -57,7 +57,8 @@ def plot_timeline_permutations(
         np.arange(0, permutation_matrix.shape[1], 1),
         permutation_matrix
     )
-    axs[1].set_aspect('equal')
+    axs[1].axis('off')
+    # axs[1].set_aspect('equal')
 
     if fig_data is not None:
         format_plot(fig, fig_data, save_fig)
@@ -86,7 +87,7 @@ def plot_permutation_matrices(
                 matrices[k]
             )
             ax.set_title(permutation_labels[k])
-            # ax.axis('off')
+            ax.axis('off')
             ax.set_aspect('equal')
             k += 1
 

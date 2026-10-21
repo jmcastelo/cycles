@@ -8,11 +8,14 @@ from cycles.plotting.permutation import plot_timeline_permutations, plot_permuta
 
 
 if __name__ == "__main__":
-    depth = 4
+    depth = 3
     bases = [4, 2, 2]
     scale = 2/3
 
     lcoords, durations, starts, cmyks, rgbs, dharmas, purities = compute_level(depth, bases, scale)
+
+    fdurations = np.ones(4 ** depth)
+    fstarts = np.cumsum(fdurations)
 
     colors = {
         'cmyk': rgbs[:, 0],
@@ -43,7 +46,7 @@ if __name__ == "__main__":
     if study['plot_timeline_permutations']:
         SG = SymmetricGroup(depth)
 
-        element = (3, 2, 1, 0)
+        element = (0, 2, 1)
 
         tcoord_perm_pow = np.array([
             [lcoords_to_tcoords(np.array(SG.operation(tuple(lcoord), p))) for lcoord in lcoords]
@@ -57,8 +60,8 @@ if __name__ == "__main__":
         fig_data = ('a2', 'landscape', relpath, 600, True)
 
         plot_timeline_permutations(
-            durations,
-            starts,
+            fdurations,
+            fstarts,
             colors[color_key],
             tcoord_perm_pow,
             perm_matrix,
