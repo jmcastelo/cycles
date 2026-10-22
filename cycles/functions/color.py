@@ -19,7 +19,8 @@ def lcoords_to_cmyk(lcoords: np.ndarray, weights: np.ndarray, scale: float) -> n
 
 
 def cmyk_to_rgb(cmyk: np.ndarray) -> np.ndarray:
-    return (np.ones(3) - cmyk[:3]) * (1 - cmyk[3])
+    # return (np.ones(3) - cmyk[:3]) * (1 - cmyk[3])
+    return (np.ones(3) - np.array([cmyk[0], cmyk[2], cmyk[1]])) * (1 - cmyk[3])
 
 
 def lcoords_to_lrgb(lcoords: np.ndarray) -> np.ndarray:

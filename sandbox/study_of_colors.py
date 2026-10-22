@@ -8,7 +8,7 @@ if __name__ == "__main__":
     # Let's compute several levels.
     bases = [4, 2, 1]
     max_depth = 5
-    scale = 2/3
+    scale = 0.5
     levels = [compute_level(depth, bases, scale) for depth in range(1, max_depth + 1)]
     lcoords, durations, starts, cmyks, rgbs, dharmas, purities = zip(*levels)
 
@@ -34,7 +34,7 @@ if __name__ == "__main__":
         }
     }
 
-    rgb_key = 'cmyk_composition'
+    rgb_key = 'cmyk_scaled'
     cmyk_key = 'wcmy'
 
     base_dir = f"./plots/study_of_colors"
@@ -44,10 +44,6 @@ if __name__ == "__main__":
         'rgb_scatter_3d': False,
         'rgb_lines_3d': False,
         'cmyk_scatter_3d': False,
-        'dharma_vs_time': False,
-        'dharma_vs_index': False,
-        'purity_vs_time': False,
-        'purity_vs_index': False,
         'cmyk_vs_time': False
     }
 
@@ -58,7 +54,7 @@ if __name__ == "__main__":
             colors['rgb'][rgb_key],
             save_fig=True,
             fig_data=(
-                'a3',
+                'a2',
                 'landscape',
                 f"{base_dir}/levels/{rgb_key}/base_{bases[1]}/levels_down_to_{max_depth}.png",
                 600,
@@ -91,66 +87,6 @@ if __name__ == "__main__":
             plot_name = f"{base_dir}/cmyk_3d/{cmyk_key}/base_{bases[1]}/rgb_3d_scatter_at_level_{depth}.png"
             color = [components[:,0], components[:,1], components[:,2]]
             plot_colors_scatter_3d(color, rgb, duration, views, False, ('a3', 'landscape', plot_name, 600, True))
-
-    if plot['dharma_vs_time']:
-        for depth, (start, duration, dharma) in enumerate(zip(starts, durations, dharmas), 1):
-            title = f"Dharma vs time at depth {depth}"
-            ylabel = 'Dharma'
-            xlabel = 'Time (norm. units)'
-            fig_data = (
-                'a4',
-                'landscape',
-                f"{base_dir}/dharma/base_{bases[1]}/dharma_vs_time_at_depth_{depth}.png",
-                300,
-                False
-            )
-            time = start + duration / 2
-            plot_y_vs_x(time, dharma, (None, None), title, xlabel, ylabel, False, fig_data)
-
-    if plot['dharma_vs_index']:
-        for depth, dharma in enumerate(dharmas, 1):
-            title = f"Dharma vs index at depth {depth}"
-            ylabel = 'Dharma'
-            xlabel = 'Index'
-            fig_data = (
-                'a4',
-                'landscape',
-                f"{base_dir}/dharma/base_{bases[1]}/dharma_vs_index_at_depth_{depth}.png",
-                300,
-                False
-            )
-            index = np.arange(0, len(dharma))
-            plot_y_vs_x(index, dharma, (None, None), title, xlabel, ylabel, False, fig_data)
-
-    if plot['purity_vs_time']:
-        for depth, (start, duration, purity) in enumerate(zip(starts, durations, purities), 1):
-            title = f"Purity vs time at depth {depth}"
-            ylabel = 'Purity'
-            xlabel = 'Time (norm. units)'
-            fig_data = (
-                'a4',
-                'landscape',
-                f"{base_dir}/purity/base_{bases[1]}/purity_vs_time_at_depth_{depth}.png",
-                300,
-                False
-            )
-            time = start + duration / 2
-            plot_y_vs_x(time, purity, (None, None), title, xlabel, ylabel, False, fig_data)
-
-    if plot['purity_vs_index']:
-        for depth, purity in enumerate(purities, 1):
-            title = f"Purity vs time at depth {depth}"
-            ylabel = 'Purity'
-            xlabel = 'Index'
-            fig_data = (
-                'a4',
-                'landscape',
-                f"{base_dir}/purity/base_{bases[1]}/purity_vs_index_at_depth_{depth}.png",
-                300,
-                False
-            )
-            index = np.arange(0, len(purity))
-            plot_y_vs_x(index, purity, (None, None), title, xlabel, ylabel, False, fig_data)
 
     if plot['cmyk_vs_time']:
         for depth, (start, duration, color) in enumerate(zip(starts, durations, colors['cmyk']['cmyk']), 1):

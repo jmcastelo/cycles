@@ -3,6 +3,7 @@ import itertools as itools
 
 from cycles.functions.conversion import tcoord_to_lcoords
 from cycles.functions.color import lcoords_to_cmyk, cmyk_to_rgb, lcoords_to_lrgb
+from cycles.functions.duration import count_digits
 from cycles.functions.measure import dharma_measure, purity_measure
 
 
@@ -61,25 +62,26 @@ def compute_levels_by_duration(depths: list[int], bases: list[int], scale: float
             purity_color = np.full(3, purity)
 
             value = {
-                    'depth': depth,
-                    'tcoord': tcoord,
-                    'lcoords': lcoords,
-                    'duration': duration,
-                    'start': start,
-                    'dharma': dharma,
-                    'purity': purity,
-                    'colors': {
-                        'cmyk': rgbs[0],
-                        'cmyk_normalised': rgbs[1],
-                        'cmyk_scaled': rgbs[2],
-                        'cmyk_kscaled': rgbs[3],
-                        'cmyk_composition': rgbs[4],
-                        'wcmy': rgbs[5],
-                        'lrgb': lrgb,
-                        'dharma': dharma_color,
-                        'purity': purity_color
-                    }
+                'depth': depth,
+                'composition': count_digits(lcoords, bases[0]),
+                'tcoord': tcoord,
+                'lcoords': lcoords,
+                'duration': duration,
+                'start': start,
+                'dharma': dharma,
+                'purity': purity,
+                'colors': {
+                    'cmyk': rgbs[0],
+                    'cmyk_normalised': rgbs[1],
+                    'cmyk_scaled': rgbs[2],
+                    'cmyk_kscaled': rgbs[3],
+                    'cmyk_composition': rgbs[4],
+                    'wcmy': rgbs[5],
+                    'lrgb': lrgb,
+                    'dharma': dharma_color,
+                    'purity': purity_color
                 }
+            }
             key = np.round(duration, 10)
             if key in subcycles.keys():
                 subcycles[key].append(value)

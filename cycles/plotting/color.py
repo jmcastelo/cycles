@@ -39,7 +39,7 @@ def plot_level_bars(
     for i, (ax, d, s, c) in enumerate(zip(axs, durations, starts, colors)):
         plot_level_bar(ax, i, d, s, c)
 
-    axs[0].set_title(f"Cycle subdivisions down to depth {depth}")
+    # axs[0].set_title(f"Cycle subdivisions down to depth {depth}")
     # axs[-1].xaxis.set_visible(True)
     axs[-1].set_xlabel('Time (norm. units)')
 

@@ -1,7 +1,6 @@
 from cycles.functions.composition import analyse_level
 from cycles.functions.division import compute_levels_by_duration
-from cycles.plotting.duration import plot_multilevel_duration_equivalences
-
+from cycles.plotting.duration import plot_multilevel_duration_equivalences, plot_multilevel_trigraph
 
 if __name__ == "__main__":
     bases = [4, 2, 2]
@@ -28,5 +27,5 @@ if __name__ == "__main__":
 
         color_key = 'cmyk_kscaled'
         title = f"Multilevel duration equivalent subcycles"
-        fig_data = ('a3', 'landscape', f"{base_dir}/multilevel/{color_key}/multilevel.png", 600, False)
-        plot_multilevel_duration_equivalences(subcycles, color_key, title, False, fig_data)
+        fig_data = ('a2', 'landscape', f"{base_dir}/multilevel/{color_key}/multilevel_{''.join(str(d) for d in depths)}.png", 600, False)
+        plot_multilevel_trigraph(subcycles, color_key, title, True, fig_data)

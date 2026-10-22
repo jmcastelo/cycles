@@ -397,18 +397,11 @@ def plot_duration_bars(
 
 
 def plot_multilevel_duration_equivalences(
+    ax,
     subcycles: dict,
+    ordered_keys: np.ndarray,
     color_key: str,
-    title: str = '',
-    save_fig: bool = False,
-    fig_data: tuple[str, str, str, int, bool] | None = None
 ):
-    fig, ax = plt.subplots()
-
-    fig.suptitle(title)
-
-    indices = np.argsort(list(subcycles.keys()))
-    ordered_keys = np.array(list(subcycles.keys()))[indices]
     for i, key in enumerate(ordered_keys):
         for sc in subcycles[key]:
             ax.barh(
@@ -421,18 +414,113 @@ def plot_multilevel_duration_equivalences(
                 linewidth=0.0
             )
 
-    ax.set_xlabel('Time (norm. units)')
-    ax.set_ylabel('Duration (norm. units)')
-    ax.margins(x=0, y=0)
+    ax.xaxis.set_visible(False)
 
+    ax.set_ylabel('Duration (norm. units)')
     ax.set_yticks([x for x in np.arange(0.5, len(list(subcycles.keys())) + 0.5)])
     formatted_labels = [f"{val:.3e}" for val in ordered_keys]
     ax.set_yticklabels(formatted_labels, rotation=0, ha='right', va='center', fontsize=9)
 
+    ax.margins(x=0, y=0)
+
+
+def plot_multilevel_timeline(
+    ax,
+    subcycles: dict,
+    color_key: str
+):
+    for scg in subcycles.values():
+        for sc in scg:
+            ax.barh(
+                y=sc['depth'],
+                width=sc['duration'],
+                height=1,
+                left=sc['start'],
+                align='edge',
+                color=sc['colors'][color_key],
+                linewidth=0.05,
+                edgecolor='gray'
+            )
+
+    ax.yaxis.set_visible(False)
+    # ax.invert_yaxis()
+
+    ax.set_xlabel('Time (norm. units)')
     times = [0.0, 0.4, 0.7, 0.9, 1.0]
     ax.set_xticks(times)
     formatted_labels = [f"{t:.1f}" for t in times]
     ax.set_xticklabels(formatted_labels, rotation=0, ha='center', va='top', fontsize=9)
+
+    ax.margins(x=0, y=0)
+
+
+def plot_multilevel_duration_count(
+    ax,
+    subcycles: dict,
+    ordered_keys: np.ndarray,
+    color_key: str,
+):
+    for i, key in enumerate(ordered_keys):
+        for j, sc in enumerate(subcycles[key]):
+            bar = ax.barh(
+                y=i,
+                width=1,
+                height=1,
+                left=j,
+                align='edge',
+                color=sc['colors'][color_key],
+                linewidth=0.0
+            )
+            label = ''.join(str(c) for c in sc['composition'])
+            ax.bar_label(
+                bar,
+                labels=[label],
+                label_type='center',
+                fontsize=5,
+                rotation=-90,
+                color=(1-sc['colors'][color_key])
+            )
+
+    ax.xaxis.set_visible(False)
+
+    ax.set_ylabel('Count')
+    ax.yaxis.tick_right()
+    ax.yaxis.set_label_position('right')
+    ax.set_yticks([x for x in np.arange(0.5, len(list(subcycles.keys())) + 0.5)])
+    formatted_labels = [f"{len(subcycles[key]):.0f}" for key in ordered_keys]
+    ax.set_yticklabels(formatted_labels, rotation=0, ha='left', va='center', fontsize=9)
+
+    ax.margins(x=0, y=0)
+
+
+def plot_multilevel_trigraph(
+    subcycles: dict,
+    color_key: str,
+    title: str = '',
+    save_fig: bool = False,
+    fig_data: tuple[str, str, str, int, bool] | None = None
+):
+    fig, axs = plt.subplots(
+        nrows=2,
+        ncols=2,
+        sharex=False,
+        sharey=False,
+        height_ratios=[10, 1],
+        width_ratios=[5, 1],
+        gridspec_kw={'hspace': 0, 'wspace': 0},
+        layout='tight'
+    )
+
+    indices = np.argsort(list(subcycles.keys()))
+    ordered_keys = np.array(list(subcycles.keys()))[indices[::-1]]
+
+    plot_multilevel_duration_equivalences(axs[0, 0], subcycles, ordered_keys, color_key)
+    plot_multilevel_timeline(axs[1, 0], subcycles, color_key)
+    plot_multilevel_duration_count(axs[0, 1], subcycles, ordered_keys, color_key)
+
+    axs[1, 1].axis('off')
+
+    # fig.suptitle(title)
 
     if fig_data is not None:
         format_plot(fig, fig_data, save_fig)

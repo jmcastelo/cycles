@@ -1,3 +1,4 @@
+import numpy as np
 from symmetrymath import SymmetricGroup
 
 from cycles.functions.conversion import lcoords_to_tcoord
