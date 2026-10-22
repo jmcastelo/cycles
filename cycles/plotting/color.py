@@ -74,7 +74,7 @@ def plot_colors_scatter_3d(
                 ys=colors[1],
                 zs=colors[2],
                 c=rgbs,
-                s=sizes,
+                s=10.0,
                 alpha=0.8,
                 lw=0.3,
                 edgecolors='gray'

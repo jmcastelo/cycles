@@ -1,3 +1,5 @@
+import numpy as np
+
 from cycles.functions.division import compute_level
 from cycles.functions.color import lcoords_to_lrgb
 from cycles.plotting.color import *
@@ -5,11 +7,13 @@ from cycles.plotting.generic import *
 from cycles.functions.view import top_view, camera_view_angles
 
 if __name__ == "__main__":
-    # Let's compute several levels.
-    bases = [4, 2, 1]
+    bases = [4, 2, 2]
     max_depth = 5
-    scale = 0.5
-    levels = [compute_level(depth, bases, scale) for depth in range(1, max_depth + 1)]
+    scales = [1 / 2, 2 / 3, 0.5]
+
+    colors = np.array([[1, 1, 0], [0, 1, 1], [1, 0, 1], [0, 0, 0]])
+
+    levels = [compute_level(depth, bases, scales, colors) for depth in range(1, max_depth + 1)]
     lcoords, durations, starts, cmyks, rgbs, dharmas, purities = zip(*levels)
 
     lrgbs = [np.apply_along_axis(lcoords_to_lrgb, 1, coords) for coords in lcoords]
@@ -24,6 +28,7 @@ if __name__ == "__main__":
             'cmyk_kscaled': [rgb[:, 3] for rgb in rgbs],
             'cmyk_composition': [rgb[:, 4] for rgb in rgbs],
             'wcmy': [rgb[:, 5] for rgb in rgbs],
+            'tetrahedron': [rgb[:, 6] for rgb in rgbs],
             'lrgb': [lrgb[:, -1] for lrgb in lrgbs],
             'dharma': dharma_colors,
             'purity': purity_colors
@@ -34,14 +39,14 @@ if __name__ == "__main__":
         }
     }
 
-    rgb_key = 'cmyk_scaled'
+    rgb_key = 'tetrahedron'
     cmyk_key = 'wcmy'
 
     base_dir = f"./plots/study_of_colors"
 
     plot = {
         'level_bars': True,
-        'rgb_scatter_3d': False,
+        'rgb_scatter_3d': True,
         'rgb_lines_3d': False,
         'cmyk_scatter_3d': False,
         'cmyk_vs_time': False
@@ -52,7 +57,7 @@ if __name__ == "__main__":
             durations,
             starts,
             colors['rgb'][rgb_key],
-            save_fig=True,
+            save_fig=False,
             fig_data=(
                 'a2',
                 'landscape',
@@ -72,7 +77,7 @@ if __name__ == "__main__":
         ]
 
     if plot['rgb_scatter_3d']:
-        for depth, (components, rgb, duration) in enumerate(zip(colors['rgb'][rgb_key], colors['rgb']['lrgb'], durations), 1):
+        for depth, (components, rgb, duration) in enumerate(zip(colors['rgb'][rgb_key], colors['rgb'][rgb_key], durations), 1):
             plot_name = f"{base_dir}/rgb_3d/{rgb_key}/base_{bases[1]}/rgb_3d_scatter_at_level_{depth}.png"
             color = [components[:,0], components[:,1], components[:,2]]
             plot_colors_scatter_3d(color, rgb, duration, views, False, ('a3', 'landscape', plot_name, 600, True))

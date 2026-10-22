@@ -2,7 +2,7 @@ import numpy as np
 import itertools as itools
 
 from cycles.functions.conversion import tcoord_to_lcoords
-from cycles.functions.color import lcoords_to_cmyk, cmyk_to_rgb, lcoords_to_lrgb
+from cycles.functions.color import lcoords_to_cmyk, cmyk_to_rgb, lcoords_to_lrgb, lcoords_to_rgb_tetrahedron
 from cycles.functions.duration import count_digits
 from cycles.functions.measure import dharma_measure, purity_measure
 
@@ -23,21 +23,23 @@ def compute_start(lcoords: np.ndarray) -> float:
     return np.dot(offsets[lcoords], np.insert(np.cumprod(proportions[lcoords][:-1]), 0, 1))
 
 
-def compute_level(depth: int, bases: list[int], scale: float) -> tuple:
+def compute_level(depth: int, bases: list[int], scales: list[float], colors: np.ndarray) -> tuple:
     lcoords = np.array([tcoord_to_lcoords(i, bases[0], depth) for i in range(bases[0] ** depth)], dtype=int)
 
     durations = np.apply_along_axis(compute_duration, 1, lcoords)
     starts = np.apply_along_axis(compute_start, 1, lcoords)
 
     w1 = weights(bases[1], depth)
-    cmyks = np.array([lcoords_to_cmyk(lcoord, w1, scale) for lcoord in lcoords], dtype=float)
+    cmyks = np.array([lcoords_to_cmyk(lcoord, w1, scales) for lcoord in lcoords], dtype=float)
     rgbs = np.apply_along_axis(cmyk_to_rgb, 2, cmyks)
+    rgbs_tetrahedron = np.array([[lcoords_to_rgb_tetrahedron(lcoord, colors, scales[2])] for lcoord in lcoords])
+    all_rgbs = np.concatenate((rgbs, rgbs_tetrahedron), axis=1)
     dharmas = np.array([dharma_measure(lcoord, w1) for lcoord in lcoords])
 
     w2 = weights(bases[2], depth)
     purities = np.array([purity_measure(lcoord, w2) for lcoord in lcoords])
 
-    return lcoords, durations, starts, cmyks, rgbs, dharmas, purities
+    return lcoords, durations, starts, cmyks, all_rgbs, dharmas, purities
 
 
 def compute_levels_by_duration(depths: list[int], bases: list[int], scale: float) -> dict:
