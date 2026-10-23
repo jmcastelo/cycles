@@ -39,14 +39,14 @@ if __name__ == "__main__":
         }
     }
 
-    rgb_key = 'tetrahedron'
+    rgb_key = 'cmyk_kscaled'
     cmyk_key = 'wcmy'
 
     base_dir = f"./plots/study_of_colors"
 
     plot = {
         'level_bars': True,
-        'rgb_scatter_3d': True,
+        'rgb_scatter_3d': False,
         'rgb_lines_3d': False,
         'cmyk_scatter_3d': False,
         'cmyk_vs_time': False

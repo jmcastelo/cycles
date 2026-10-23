@@ -24,8 +24,8 @@ def cmyk_to_rgb(cmyk: np.ndarray) -> np.ndarray:
 
 
 def lcoords_to_lrgb(lcoords: np.ndarray) -> np.ndarray:
-    wcmy = np.array([[0, 0, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]], dtype=float)
-    return np.array([cmyk_to_rgb(wcmy[lcoords[d]]) for d in range(len(lcoords))])
+    cmyk = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=float)
+    return np.array([cmyk_to_rgb(cmyk[lcoords[d]]) for d in range(len(lcoords))])
 
 
 def lcoords_to_rgb_tetrahedron(lcoords: np.ndarray, colors: np.ndarray, scale: float) -> np.ndarray:

@@ -2,17 +2,23 @@ import numpy as np
 from symmetrymath import SymmetricGroup
 
 from cycles.functions.conversion import lcoords_to_tcoord
+from cycles.functions.color import lcoords_to_lrgb
 from cycles.functions.division import compute_level, compute_duration
 from cycles.functions.permutation import permutation_matrix
 from cycles.plotting.permutation import plot_timeline_permutations, plot_permutation_matrices
 
 
 if __name__ == "__main__":
-    depth = 3
+    depth = 4
     bases = [4, 2, 2]
-    scale = 2/3
+    scales = [1 / 2, 2 / 3, 0.5]
+    colors = np.array([[1, 1, 0], [0, 1, 1], [1, 0, 1], [0, 0, 0]])
 
-    lcoords, durations, starts, cmyks, rgbs, dharmas, purities = compute_level(depth, bases, scale)
+    lcoords, durations, starts, cmyks, rgbs, dharmas, purities = compute_level(depth, bases, scales, colors)
+
+    lrgbs = np.apply_along_axis(lcoords_to_lrgb, 1, lcoords)
+    dharma_colors = np.array([np.full(3, dharma) for dharma in dharmas])
+    purity_colors = np.array([np.full(3, purity) for purity in purities])
 
     fdurations = np.ones(4 ** depth)
     fstarts = np.cumsum(fdurations)
@@ -23,10 +29,14 @@ if __name__ == "__main__":
         'cmyk_scaled': rgbs[:, 2],
         'cmyk_kscaled': rgbs[:, 3],
         'cmyk_composition': rgbs[:, 4],
-        'wcmy': rgbs[:, 5]
+        'wcmy': rgbs[:, 5],
+        'tetrahedron': rgbs[:, 6],
+        'lrgb': lrgbs[:, -1],
+        'dharma': dharma_colors,
+        'purity': purity_colors
     }
 
-    color_key = 'cmyk_kscaled'
+    color_key = 'lrgb'
 
     base_dir = f"./plots/study_of_permutations"
 
@@ -38,7 +48,7 @@ if __name__ == "__main__":
     if study['plot_timeline_permutations']:
         SG = SymmetricGroup(depth)
 
-        element = (0, 2, 1)
+        element = (3, 0, 1, 2)
 
         tcoord_perm_pow = np.array([
             [lcoords_to_tcoord(np.array(SG.operation(tuple(lcoord), p))) for lcoord in lcoords]

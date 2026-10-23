@@ -17,7 +17,7 @@ def plot_timeline_permutations(
     height = 1
     hspace = 2
 
-    fig, axs = plt.subplots(nrows=2, ncols=1, height_ratios=[7, 1])
+    fig, axs = plt.subplots(nrows=3, ncols=1, height_ratios=[7, 2, 1])
 
     axs[0].set_title(title)
     axs[0].set_axis_off()
@@ -30,7 +30,9 @@ def plot_timeline_permutations(
             left=starts[idx],
             height=height,
             align='edge',
-            color=colors
+            color=colors,
+            edgecolor='gray',
+            linewidth=0.1
         )
 
     for i in range(len(indices) - 1):
@@ -52,12 +54,19 @@ def plot_timeline_permutations(
                 )
             )
 
-    axs[1].pcolormesh(
+    t = starts + durations / 2
+    for i in range(len(indices) - 1):
+        axs[1].plot(t, t[indices[i + 1]] - t[indices[i]])
+
+    axs[1].set_xlim([t[0], t[-1]])
+    axs[1].margins(x=0, y=0)
+
+    axs[2].pcolormesh(
         np.arange(0, permutation_matrix.shape[0], 1),
         np.arange(0, permutation_matrix.shape[1], 1),
         permutation_matrix
     )
-    axs[1].axis('off')
+    axs[2].axis('off')
     # axs[1].set_aspect('equal')
 
     if fig_data is not None:
