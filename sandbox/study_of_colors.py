@@ -8,7 +8,7 @@ from cycles.functions.view import top_view, camera_view_angles
 
 if __name__ == "__main__":
     bases = [4, 2, 2]
-    max_depth = 5
+    max_depth = 3
     scales = [1 / 2, 2 / 3, 0.5]
 
     colors = np.array([[1, 1, 0], [0, 1, 1], [1, 0, 1], [0, 0, 0]])
@@ -39,7 +39,7 @@ if __name__ == "__main__":
         }
     }
 
-    rgb_key = 'cmyk_kscaled'
+    rgb_key = 'lrgb'
     cmyk_key = 'wcmy'
 
     base_dir = f"./plots/study_of_colors"
@@ -57,13 +57,13 @@ if __name__ == "__main__":
             durations,
             starts,
             colors['rgb'][rgb_key],
-            save_fig=False,
+            save_fig=True,
             fig_data=(
-                'a2',
+                'a5',
                 'landscape',
                 f"{base_dir}/levels/{rgb_key}/base_{bases[1]}/levels_down_to_{max_depth}.png",
                 600,
-                True
+                False
             )
         )
 

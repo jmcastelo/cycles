@@ -7,72 +7,78 @@ from cycles.plotting.helpers import format_plot
 def plot_timeline_permutations(
     durations: np.ndarray,
     starts: np.ndarray,
-    colors: np.ndarray,
-    indices: np.ndarray,
-    permutation_matrix: np.ndarray,
-    title: str,
+    colors: list[np.ndarray],
+    perm_indices: list[np.ndarray],
+    ax_texts: list[str],
+    fig,
+    axes,
     save_fig: bool=False,
     fig_data: tuple[str, str, str, int, bool]|None=None
 ):
     height = 1
     hspace = 2
+    sub_height = height / len(colors)
 
-    fig, axs = plt.subplots(nrows=3, ncols=1, height_ratios=[7, 2, 1])
+    for k, (ax, indices, texts) in enumerate(zip(axes, perm_indices, ax_texts)):
+        # ax.spines['bottom'].set_color('w')
+        # ax.spines['top'].set_color('w')
+        # ax.spines['right'].set_color('w')
+        # ax.spines['left'].set_color('w')
+        # ax.xaxis.set_visible(False)
+        # ax.yaxis.set_visible(False)
+        ax.axis('off')
+        ax.set_xmargin(0)
+        ax.set_ymargin(0)
 
-    axs[0].set_title(title)
-    axs[0].set_axis_off()
-    axs[0].margins(x=0, y=0)
-
-    for i, idx in enumerate(indices):
-        axs[0].barh(
-            y=i * (height + hspace),
-            width=durations[idx],
-            left=starts[idx],
-            height=height,
-            align='edge',
-            color=colors,
-            edgecolor='gray',
-            linewidth=0.1
-        )
-
-    for i in range(len(indices) - 1):
-        x0 = starts[indices[i]] + durations[indices[i]] / 2
-        x1 = starts[indices[i + 1]] + durations[indices[i + 1]] / 2
-
-        for j in range(len(x0)):
-            axs[0].annotate(
-                text='',
-                xy=(x1[j], (i + 1) * (height + hspace)),
-                xytext=(x0[j], i * (height + hspace) + height),
-                arrowprops=dict(
-                    arrowstyle='-',
-                    color=colors[j],
-                    linewidth=0.7,
-                    antialiased=True,
-                    shrinkA=0,
-                    shrinkB=0
+        for i, idx in enumerate(indices):
+            for j, clrs in enumerate(colors):
+                ax.barh(
+                    y=i * (height + hspace) + j * sub_height,
+                    width=durations[idx],
+                    left=starts[idx],
+                    height=sub_height,
+                    align='edge',
+                    color=clrs,
+                    edgecolor='k',
+                    linewidth=0.1
                 )
+
+        for i, text in enumerate(texts):
+            ax.text(
+                starts[0],
+                i * (height + hspace) + height + hspace / 2,
+                text,
+                fontsize=8,
+                rotation=90,
+                ha='center',
+                va='center',
+                color='k'
             )
+            # t.set_in_layout(in_layout=False)
 
-    t = starts + durations / 2
-    for i in range(len(indices) - 1):
-        axs[1].plot(t, t[indices[i + 1]] - t[indices[i]])
+        for i in range(len(indices) - 1):
+            x0 = starts[indices[i]] + durations[indices[i]] / 2
+            x1 = starts[indices[i + 1]] + durations[indices[i + 1]] / 2
 
-    axs[1].set_xlim([t[0], t[-1]])
-    axs[1].margins(x=0, y=0)
-
-    axs[2].pcolormesh(
-        np.arange(0, permutation_matrix.shape[0], 1),
-        np.arange(0, permutation_matrix.shape[1], 1),
-        permutation_matrix
-    )
-    axs[2].axis('off')
-    # axs[1].set_aspect('equal')
+            for j in range(len(x0)):
+                ax.annotate(
+                    text='',
+                    xy=(x1[j], (i + 1) * (height + hspace)),
+                    xytext=(x0[j], i * (height + hspace) + height),
+                    arrowprops=dict(
+                        arrowstyle='-',
+                        color='k',
+                        linewidth=0.25,
+                        antialiased=True,
+                        shrinkA=0,
+                        shrinkB=0
+                    )
+                )
 
     if fig_data is not None:
         format_plot(fig, fig_data, save_fig)
 
-    plt.tight_layout()
+    # plt.tight_layout()
     plt.show()
 
 

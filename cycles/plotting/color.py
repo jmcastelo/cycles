@@ -19,7 +19,8 @@ def plot_level_bar(
         left=starts,
         height=1,
         align='center',
-        color=colors
+        color=colors,
+        lw=0.0
     )
     ax.yaxis.set_visible(False)
     ax.xaxis.set_visible(False)
@@ -34,7 +35,7 @@ def plot_level_bars(
     fig_data: tuple[str, str, str, int, bool]|None=None
 ):
     depth = len(durations)
-    fig, axs = plt.subplots(nrows=depth, ncols=1, sharex=True, gridspec_kw={'hspace': 0, 'wspace': 0}, layout='tight')
+    fig, axs = plt.subplots(nrows=depth, ncols=1, sharex=True, gridspec_kw={'hspace': 0.1, 'wspace': 0}, layout='compressed')
 
     for i, (ax, d, s, c) in enumerate(zip(axs, durations, starts, colors)):
         plot_level_bar(ax, i, d, s, c)
@@ -46,8 +47,8 @@ def plot_level_bars(
     if fig_data is not None:
         format_plot(fig, fig_data, save_fig)
 
-    plt.tight_layout()
-    plt.subplots_adjust(hspace=0, wspace=0)
+    # plt.tight_layout()
+    plt.subplots_adjust(hspace=0.1, wspace=0)
     plt.show()
 
 

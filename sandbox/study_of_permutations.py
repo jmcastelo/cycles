@@ -1,7 +1,10 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from fontTools.merge import layout
+from matplotlib.gridspec import GridSpec
 from symmetrymath import SymmetricGroup
 
-from cycles.functions.conversion import lcoords_to_tcoord
+from cycles.functions.conversion import lcoords_to_tcoord, tcoord_to_lcoords
 from cycles.functions.color import lcoords_to_lrgb
 from cycles.functions.division import compute_level, compute_duration
 from cycles.functions.permutation import permutation_matrix
@@ -9,7 +12,7 @@ from cycles.plotting.permutation import plot_timeline_permutations, plot_permuta
 
 
 if __name__ == "__main__":
-    depth = 4
+    depth = 3
     bases = [4, 2, 2]
     scales = [1 / 2, 2 / 3, 0.5]
     colors = np.array([[1, 1, 0], [0, 1, 1], [1, 0, 1], [0, 0, 0]])
@@ -48,26 +51,52 @@ if __name__ == "__main__":
     if study['plot_timeline_permutations']:
         SG = SymmetricGroup(depth)
 
-        element = (3, 0, 1, 2)
+        element_groups = [[(1, 0, 2), (0, 2, 1), (2, 1, 0)], [(1, 2, 0)]]
+        # elements = [(4, 1, 2, 3, 0)]
 
-        tcoord_perm_pow = np.array([
-            [lcoords_to_tcoord(np.array(SG.operation(tuple(lcoord), p))) for lcoord in lcoords]
-            for p in SG.powers(element)
-        ])
+        # tcoord_perm_pow = [np.array([
+        #     [lcoords_to_tcoord(np.array(SG.operation(tuple(lcoord), p))) for lcoord in lcoords]
+        #     for p in SG.powers(element)
+        # ]) for element in elements]
 
-        perm_matrix = permutation_matrix(element, lcoords)
+        indices = []
+        ax_texts = []
+        for elements in element_groups:
+            texts = []
+            lcs = np.array(lcoords)
+            tcoord_perm_pow = [np.array([lcoords_to_tcoord(lc) for lc in lcs])]
+            for el in elements:
+                for order in range(SG.order_of(el)):
+                    tcoords = np.array([lcoords_to_tcoord(np.array(SG.operation(tuple(lc), el))) for lc in lcs])
+                    tcoord_perm_pow.append(tcoords)
+                    lcs = [tcoord_to_lcoords(tc, bases[0], depth) for tc in tcoords]
+                    texts.append(f"{SG.identity} → {el}")
+            indices.append(np.array(tcoord_perm_pow))
+            ax_texts.append(texts)
 
-        title = f"Permutation {SG.identity} → {element} of level coordinates at depth {depth}"
-        relpath = f"{base_dir}/powers/{color_key}/depth_{depth}_permutation_{''.join(str(element))}.png"
-        fig_data = ('a2', 'landscape', relpath, 600, True)
+        color_keys = ['cmyk_normalised', 'lrgb', 'dharma']
+        selected_colors = [colors[key] for key in color_keys]
+
+        relpath = f"{base_dir}/powers/{'+'.join(color_keys)}/depth_{depth}_permutations_{len(elements)}.png"
+        fig_data = ('a2', 'landscape', relpath, 600, False)
+
+        fig = plt.figure()
+        gs = GridSpec(1, 2, figure=fig, left=0.01, right=0.99, bottom=0.02, top=0.98, wspace=0.02)
+        axes = [
+            fig.add_subplot(gs[0, 0]),
+            fig.add_subplot(gs[0, 1]),
+            # fig.add_subplot(gs[2, 0]),
+            # fig.add_subplot(gs[:, 1]),
+        ]
 
         plot_timeline_permutations(
             fdurations,
             fstarts,
-            colors[color_key],
-            tcoord_perm_pow,
-            perm_matrix,
-            title,
+            selected_colors,
+            indices,
+            ax_texts,
+            fig,
+            axes,
             False,
             fig_data
         )
