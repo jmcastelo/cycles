@@ -85,6 +85,8 @@ from typing import Callable, Dict, Optional, Sequence, Tuple
 
 import numpy as np
 
+from cycles.functions.timescale import TimeMap
+
 __all__ = ["lahiri_ayanamsa", "long_term_ayanamsa", "year_from_ayanamsa",
            "ecliptic_coordinates_of_date", "plot_equinoctial_precession",
            "plot_zodiac_with_planets", "plot_zodiac_planets_grid",
@@ -458,6 +460,61 @@ def year_from_ayanamsa(
             if np.max(np.abs(step)) < 1e-10:
                 break
     return float(result) if np.ndim(result) == 0 else result
+
+def precession_time_map(
+    start_year: float,
+    turns: float,
+    model: str = "long_term",
+    j2000_ayanamsa_deg: float = LAHIRI_AYANAMSA_J2000_DEG,
+    rate_arcsec_per_year: float = PRECESSION_RATE_ARCSEC_PER_YEAR,
+) -> TimeMap:
+    """
+    Time map that divides precession angle instead of time.
+
+    Normalized time ``u`` (0 to 1) is sent to the year at which the ayanamsa
+    has advanced ``u * turns`` turns since ``start_year``. Equal fractions of
+    the cycle are therefore equal arcs of precession, and the boundaries of
+    every subcycle, at any depth, are precession boundaries. With a model in
+    which the precession rate varies (``long_term``), equal arcs are not equal
+    spans of years.
+
+    Parameters
+    ----------
+    start_year : float
+        Year of normalized time 0 (Julian epoch, astronomical numbering).
+    turns : float
+        Precession arc of the whole cycle, in turns (positive).
+    model, j2000_ayanamsa_deg, rate_arcsec_per_year
+        As in ``year_from_ayanamsa``.
+
+    Returns
+    -------
+    TimeMap
+        See ``cycles.functions.timescale``.
+    """
+    if turns <= 0:
+        raise ValueError("turns must be positive")
+    if model == "long_term":
+        def ayanamsa(year):
+            return long_term_ayanamsa(year, j2000_ayanamsa_deg)
+    elif model == "linear":
+        def ayanamsa(year):
+            return lahiri_ayanamsa(year, j2000_ayanamsa_deg, rate_arcsec_per_year)
+    else:
+        raise ValueError(f"Unknown model {model!r}; use 'long_term' or 'linear'.")
+    a0 = ayanamsa(start_year)
+
+    def to_physical(u):
+        return year_from_ayanamsa(np.asarray(u, dtype=float) * turns, unit="turns",
+                                  reference_year=start_year, model=model,
+                                  j2000_ayanamsa_deg=j2000_ayanamsa_deg,
+                                  rate_arcsec_per_year=rate_arcsec_per_year)
+
+    def to_normalized(year):
+        return (np.asarray(ayanamsa(year), dtype=float) - a0) / (360.0 * turns)
+
+    return TimeMap.from_functions(to_physical, to_normalized)
+
 
 def ecliptic_coordinates_of_date(
     vectors,
