@@ -7,7 +7,7 @@ name = "cycles"
 version = "0.1.0"
 description = "Mathematical analysis of cycles"
 readme = "README.md"
-license = "GPL-3.0-or-later"
+license = "GPL-3.0-only"
 license-files = ["LICENSE"]
 authors = [{ name = "jmcastelo", email = "jm.castelo@uv.es" }]
 # Star-unpacking inside subscripts (permutation.py) requires Python 3.11+.

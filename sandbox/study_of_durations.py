@@ -1,132 +1,147 @@
-from pathlib import Path
+"""Study of subcycle durations: which subcycles share a duration, where and how many."""
+
 import numpy as np
 
-from cycles.functions.division import compute_level, find_identical, compute_duration
-from cycles.functions.color import lcoords_to_lrgb
 from cycles.functions.analysis import autocorrelation
 from cycles.functions.conversion import lcoords_to_tcoord
-from cycles.plotting.duration import *
-from cycles.plotting.generic import *
+from cycles.functions.division import RGB_KEYS, DEFAULT_COLOR_KEY, find_identical, indentical_duration_lcoords, compute_duration
+from cycles.functions.duration import count_digits, duration_quotient, compute_consecutive_distances
+from cycles.plotting.duration import (
+    plot_bars, plot_stacked_bars, plot_stacked_counts, plot_stacked_spaced_bars,
+    plot_durations_trigraph, plot_equality_test, plot_duration_bars,
+)
+from cycles.plotting.generic import return_plot, grid_of_plots
+from common import PLOTS_DIR, compute_levels, level_colors, fig_data
+from runner import study, run
+
+BASE_DIR = PLOTS_DIR / "study_of_durations"
 
 
-SANDBOX_DIR = Path(__file__).resolve().parent
-PLOTS_DIR = SANDBOX_DIR / "plots"
+def setup():
+    max_depth = 4
+    levels = compute_levels(max_depth)
+    color_key = 'cmyk_scaled'  # any of common.COLOR_KEYS
+    return dict(
+        max_depth=max_depth,
+        levels=levels,
+        color_key=color_key,
+        # Level RGB variant for the plots that take a whole Level
+        variant=color_key if color_key in RGB_KEYS else DEFAULT_COLOR_KEY,
+        colors=[level_colors(level)[color_key] for level in levels],
+        identical=[find_identical(level.durations) for level in levels],
+    )
+
+
+@study
+def trigraph(ctx, opts):
+    """Location and count of the subcycles of each duration, per depth."""
+    for depth, (idd, level, colors) in enumerate(zip(ctx.identical, ctx.levels, ctx.colors), 1):
+        title = f"Location and count of subcycle durations. Total of {4 ** depth} subcycles at depth {depth}"
+        path = BASE_DIR / f"trigraphs/{ctx.color_key}/trigraph_at_depth_{depth}.png"
+        plot_durations_trigraph(idd, level.lcoords, level.durations, level.starts, colors, title,
+                                opts.save, fig_data(path, 'a3', 600))
+
+
+@study(default=False)
+def sorted_durations(ctx, opts):
+    """Subcycle durations sorted from the shortest, as bars, per depth."""
+    for depth, (level, colors) in enumerate(zip(ctx.levels, ctx.colors), 1):
+        idx = np.argsort(np.round(level.durations, 10), stable=True)
+        path = PLOTS_DIR / f"unique_durations/{ctx.color_key}/sorted_durations_at_depth_{depth}.png"
+        plot_bars(level.durations[idx], colors[idx], f"Sorted subcycle durations for depth {depth}",
+                  "Index", "Duration (norm. units)", opts.save, fig_data(path))
+
+
+@study(default=False)
+def counts(ctx, opts):
+    """Number of subcycles with each duration, labelled with their addresses, per depth."""
+    for depth, (idd, level, colors) in enumerate(zip(ctx.identical, ctx.levels, ctx.colors), 1):
+        title = f"Count of subcycle durations. Total of {4 ** depth} subcycles at depth {depth}"
+        path = BASE_DIR / f"count/{ctx.color_key}/count_at_depth_{depth}.png"
+        plot_stacked_counts(idd, level.lcoords, colors, title, "Duration (norm. units)", "Count",
+                            opts.save, fig_data(path))
+
+
+@study(default=False)
+def spaced_bars(ctx, opts):
+    """Where in time the subcycles of each duration lie, per depth."""
+    for depth, (idd, level) in enumerate(zip(ctx.identical, ctx.levels), 1):
+        title = f"Location of unique subcycle durations for depth {depth}.\n# Unique durations: {len(idd)}"
+        path = PLOTS_DIR / f"unique_durations/{ctx.variant}/unique_durations_location_at_depth_{depth}.png"
+        plot_stacked_spaced_bars(idd, level, title, "Time (norm. units)", "Duration (norm. units)",
+                                 opts.save, fig_data(path), rgb_key=ctx.variant)
+
+
+@study(default=False)
+def equality_test(ctx, opts):
+    """Duration ratio of every pair of subcycles, as a color map, per depth."""
+    for level in ctx.levels:
+        digit_counts = np.array([count_digits(lcoords) for lcoords in level.lcoords])
+        cdiffs = digit_counts[:, None, :] - digit_counts[None, :, :]
+        plot_equality_test(level.starts, level.durations, np.apply_along_axis(duration_quotient, 2, cdiffs))
+
+
+@study(default=False)
+def consecutive_distances(ctx, opts):
+    """Distances between consecutive subcycles of equal duration, stacked per duration, per depth."""
+    for idd, level in zip(ctx.identical, ctx.levels):
+        durations, data = zip(*[(duration, compute_consecutive_distances(level.starts, idx)) for duration, idx in idd])
+        _, distances, _, _ = zip(*data)
+        plot_stacked_bars(list(durations), list(distances))
+
+
+@study(default=False)
+def return_plots(ctx, opts):
+    """Return maps of the sequence of durations (log-log), per depth."""
+    max_delay = 20
+    for depth, (level, colors) in enumerate(zip(ctx.levels, ctx.colors), 1):
+        path = BASE_DIR / f"return_plots/{ctx.color_key}/return_plots_max_delay_{max_delay}_at_depth_{depth}.png"
+        return_plot(level.durations, max_delay, colors, f"Return plots (log-log) at depth {depth}",
+                    'Duration', False, opts.save, fig_data(path, 'a3'))
+
+
+@study(default=False)
+def autocorrelations(ctx, opts):
+    """Autocorrelation of the durations, ordered by the reversed-digit index, per depth."""
+    series = []
+    for level in ctx.levels:
+        indices = [lcoords_to_tcoord(lcoords, reverse=True) for lcoords in level.lcoords]
+        series.append(autocorrelation(level.durations[indices]))
+    lags, acorrs = zip(*series)
+    labels = [f"Depth {depth}" for depth in range(1, ctx.max_depth + 1)]
+    path = BASE_DIR / f"auto_correlations/auto_correlations_up_to_depth_{ctx.max_depth}.png"
+    grid_of_plots(lags, acorrs, 'Auto-correlation of subcycle durations', labels, 'Lag', (0, 1),
+                  opts.save, fig_data(path, tight_layout=True))
+
+
+@study(default=False)
+def duration_bars(ctx, opts):
+    """All subcycles of every depth as squares of side equal to their duration."""
+    aspect = (1, 1)
+    path = BASE_DIR / f"durations/durations_1_to_{ctx.max_depth}_aspect_{aspect[0]}_{aspect[1]}.png"
+    plot_duration_bars(ctx.levels, 1, ctx.max_depth, aspect, opts.save, fig_data(path, dpi=600),
+                       rgb_key=ctx.variant)
+
+
+@study(default=False)
+def unique_across_depths(ctx, opts):
+    """Check that subcycles of different depths never share a duration."""
+    durations = [u for level in ctx.levels for u in np.unique(np.round(level.durations, 10))]
+    _, repeats = np.unique(durations, return_counts=True)
+    print("Durations shared between depths:", int(np.sum(repeats > 1)))
+
+
+@study(default=False)
+def equal_duration_groups(ctx, opts):
+    """Print the groups of equal duration at depth 3, and the reorderings of one address."""
+    level = ctx.levels[2]
+    for duration, idx in ctx.identical[2]:
+        print(f"{duration:.6f}: " + ' '.join(''.join(map(str, level.lcoords[i])) for i in idx))
+    lcoords = [0, 3, 1]
+    print(f"\nReorderings of {lcoords} (all of duration {compute_duration(lcoords):.6f}):")
+    for reordering in sorted(indentical_duration_lcoords(lcoords)):
+        print(reordering, 'tcoord', lcoords_to_tcoord(np.array(reordering)))
 
 
 if __name__ == "__main__":
-    bases = [4, 2, 2]
-    max_depth = 4
-    scales = [1 / 2, 2 / 3, 0.5]
-    tetrahedron_colors = np.array([[1, 1, 0], [0, 1, 1], [1, 0, 1], [0, 0, 0]])
-    levels = [compute_level(depth, bases, scales, tetrahedron_colors) for depth in range(1, max_depth + 1)]
-    lcoords, durations, starts, cmyks, rgbs, dharmas, purities = zip(*levels)
-
-    lrgbs = [np.apply_along_axis(lcoords_to_lrgb, 1, coords) for coords in lcoords]
-    dharma_colors = [np.array([np.full(3, d) for d in dharma]) for dharma in dharmas]
-    purity_colors = [np.array([np.full(3, p) for p in purity]) for purity in purities]
-
-    colors = {
-        'cmyk': [rgb[:, 0] for rgb in rgbs],
-        'cmyk_normalised': [rgb[:, 1] for rgb in rgbs],
-        'cmyk_scaled': [rgb[:, 2] for rgb in rgbs],
-        'cmyk_kscaled': [rgb[:, 3] for rgb in rgbs],
-        'cmyk_composition': [rgb[:, 4] for rgb in rgbs],
-        'wcmy': [rgb[:, 5] for rgb in rgbs],
-        'lrgb': [lrgb[:, -1] for lrgb in lrgbs],
-        'dharma': dharma_colors,
-        'purity': purity_colors
-    }
-
-    color_key = 'cmyk_scaled'
-
-    idurations = [find_identical(durs) for durs in durations]
-
-    base_dir = f"{PLOTS_DIR}/study_of_durations"
-
-    study = {
-        'plot_durations_trigraph': False
-    }
-
-    if study['plot_durations_trigraph']:
-        for depth, (idd, coords, durs, strs, clrs) in enumerate(zip(idurations, lcoords, durations, starts, colors[color_key]), 1):
-            title = f"Location and count of subcycle durations. Total of {4 ** depth} subcycles at depth {depth}"
-            fig_data = ('a3', 'landscape', f"{base_dir}/trigraphs/{color_key}/trigraph_at_depth_{depth}.png", 600, False)
-            plot_durations_trigraph(idd, coords, durs, strs, clrs, title, False, fig_data)
-
-    '''
-    # Let's sort the subcycle durations and plot them as bars
-    for depth, (durs, colors) in enumerate(zip(durations, colors[color_key]), 1):
-        idx = np.argsort(np.round(durs, 10), stable=True)
-        title = f"Sorted subcycle durations for depth {depth}"
-        fig_data = ('a4', 'landscape', f"{PLOTS_DIR}/unique_durations/{color_key}/sorted_durations_at_depth_{depth}.png", 300)
-        plot_bars(durs[idx], colors[idx], title, "Index", "Duration (norm. units)", False, fig_data)
-    '''
-    '''
-    # The plots show many subcycles with equal durations! Let's count them
-    for depth, (idd, coords, colors) in enumerate(zip(idurations, lcoords, colors[color_key]), 1):
-        title = f"Count of subcycle durations. Total of {4 ** depth} subcycles at depth {depth}"
-        fig_data = ('a4', 'landscape', f"{base_dir}/count/{color_key}/count_at_depth_{depth}.png", 300)
-        plot_stacked_counts(idd, coords, colors, title, "Duration (norm. units)", "Count", True, fig_data)
-    '''
-    '''
-    title = f"Location of unique subcycle durations for depth {depth}.\n# Unique durations: {len(idd)}"
-    fig_data = ('a4', 'landscape', f"{PLOTS_DIR}/unique_durations/{color_key}/unique_durations_location_at_depth_{depth}.png", 300)
-    plot_stacked_spaced_bars(idd, level, title, "Time (norm. units)", "Duration (norm. units)", True, fig_data)
-    '''
-    '''
-    counts = [count_digits(lcoord) for lcoord in lcoords]
-    cdiffs = [[c1 - c2 for c2 in counts] for c1 in counts]
-    # test = np.apply_along_axis(equality_test, 2, count_diffs)
-    # plot_equality_test(starts, durations, test)
-    dquot = np.apply_along_axis(duration_quotient, 2, cdiffs)
-    plot_equality_test(starts, durations, dquot)
-    '''
-    '''
-    lcdistances = [[(dur, compute_consecutive_distances(strs, idx)) for dur, idx in idd] for idd, strs in zip(idurations, starts)]
-    for cdistances in lcdistances:
-        durs, data = zip(*cdistances)
-        idx, dists, ndists, ratios = zip(*data)
-        plot_stacked_bars(list(durs), list(dists))
-    '''
-    '''
-    for depth, (duration, color) in enumerate(zip(durations, colors[color_key]), 1):
-        max_delay = 20
-        title = f"Return plots (log-log) at depth {depth}"
-        label = 'Duration'
-        fig_data = (
-            'a3',
-            'landscape',
-            f"{base_dir}/return_plots/{color_key}/return_plots_max_delay_{max_delay}_at_depth_{depth}.png",
-            300,
-            False
-        )
-        return_plot(duration, max_delay, color, title, label, False, True, fig_data)
-    '''
-
-    '''
-    indices = [[lcoords_to_int(coord, True) for coord in coords] for coords in lcoords]
-    print(durations[1])
-    print(durations[1][indices[1]])
-    print(indices[1])
-    acorr_data = [autocorrelation(durs[indices[i]]) for i, durs in enumerate(durations)]
-    lags, acorrs = zip(*acorr_data)
-    title = 'Auto-correlation of subcycle durations'
-    labels = [f"Depth {d}" for d in range(1, max_depth + 1)]
-    fig_data = (
-        'a4',
-        'landscape',
-        f"{base_dir}/auto_correlations/auto_correlations_up_to_depth_{max_depth}.png",
-        300,
-        True
-    )
-    grid_of_plots(lags, acorrs, title, labels, 'Lag', (0, 1), False, fig_data)
-    # plot_auto_correlations(durations, title, labels, True, fig_data)
-    '''
-
-    # There are no subcycles of different depth with equal durations:
-    # 1. We find unique subcycle durations for each level.
-    # 2. Then find those unique among all the previously found, and count them: all ones, no repetitions.
-    # udurations = [u for level in levels for u in np.unique(np.round(level[1], decimals=10), sorted=True)]
-    # u, uc = np.unique(udurations, return_counts=True, sorted=True)
-    # print(np.all(uc == np.ones(len(uc)), axis=0))
-
+    run(setup)
