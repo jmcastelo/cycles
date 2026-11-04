@@ -1,3 +1,4 @@
+from pathlib import Path
 import numpy as np
 
 from cycles.functions.division import compute_level
@@ -5,6 +6,10 @@ from cycles.functions.color import lcoords_to_lrgb
 from cycles.plotting.color import *
 from cycles.plotting.generic import *
 from cycles.functions.view import top_view, camera_view_angles
+
+SANDBOX_DIR = Path(__file__).resolve().parent
+PLOTS_DIR = SANDBOX_DIR / "plots"
+
 
 if __name__ == "__main__":
     bases = [4, 2, 2]
@@ -42,7 +47,7 @@ if __name__ == "__main__":
     rgb_key = 'lrgb'
     cmyk_key = 'wcmy'
 
-    base_dir = f"./plots/study_of_colors"
+    base_dir = f"{PLOTS_DIR}/study_of_colors"
 
     plot = {
         'level_bars': True,
@@ -114,19 +119,19 @@ if __name__ == "__main__":
     # Plot color graphs
     # save_fig = False
     # for depth, level in enumerate(levels, 1):
-    #     plot_cmyk_vs_time(level, save_fig, ('a4', 'landscape', f"./plots/cmyk/base_{bases[1]}/cmyk_vs_time_level_{depth}.png", 300))
-    #     plot_rgb_vs_time(level, save_fig, ('a4', 'landscape', f"./plots/rgb/base_{bases[1]}/rgb_vs_time_level_{depth}.png", 300))
-    #     plot_hsv_vs_time(level, save_fig, ('a4', 'landscape', f"./plots/hsv/base_{bases[1]}/hsv_vs_time_level_{depth}.png", 300))
-    #     plot_hls_vs_time(level, save_fig, ('a4', 'landscape', f"./plots/hls/base_{bases[1]}/hls_vs_time_level_{depth}.png", 300))
-    #     plot_cmyk_vs_index(level, save_fig, ('a4', 'landscape', f"./plots/cmyk/base_{bases[1]}/cmyk_vs_index_level_{depth}.png", 300))
-    #     plot_rgb_vs_index(level, save_fig, ('a4', 'landscape', f"./plots/rgb/base_{bases[1]}/rgb_vs_index_level_{depth}.png", 300))
-    #     plot_hsv_vs_index(level, save_fig, ('a4', 'landscape', f"./plots/hsv/base_{bases[1]}/hsv_vs_index_level_{depth}.png", 300))
-    #     plot_hls_vs_index(level, save_fig, ('a4', 'landscape', f"./plots/hls/base_{bases[1]}/hls_vs_index_level_{depth}.png", 300))
+    #     plot_cmyk_vs_time(level, save_fig, ('a4', 'landscape', f"{PLOTS_DIR}/cmyk/base_{bases[1]}/cmyk_vs_time_level_{depth}.png", 300))
+    #     plot_rgb_vs_time(level, save_fig, ('a4', 'landscape', f"{PLOTS_DIR}/rgb/base_{bases[1]}/rgb_vs_time_level_{depth}.png", 300))
+    #     plot_hsv_vs_time(level, save_fig, ('a4', 'landscape', f"{PLOTS_DIR}/hsv/base_{bases[1]}/hsv_vs_time_level_{depth}.png", 300))
+    #     plot_hls_vs_time(level, save_fig, ('a4', 'landscape', f"{PLOTS_DIR}/hls/base_{bases[1]}/hls_vs_time_level_{depth}.png", 300))
+    #     plot_cmyk_vs_index(level, save_fig, ('a4', 'landscape', f"{PLOTS_DIR}/cmyk/base_{bases[1]}/cmyk_vs_index_level_{depth}.png", 300))
+    #     plot_rgb_vs_index(level, save_fig, ('a4', 'landscape', f"{PLOTS_DIR}/rgb/base_{bases[1]}/rgb_vs_index_level_{depth}.png", 300))
+    #     plot_hsv_vs_index(level, save_fig, ('a4', 'landscape', f"{PLOTS_DIR}/hsv/base_{bases[1]}/hsv_vs_index_level_{depth}.png", 300))
+    #     plot_hls_vs_index(level, save_fig, ('a4', 'landscape', f"{PLOTS_DIR}/hls/base_{bases[1]}/hls_vs_index_level_{depth}.png", 300))
 
     # Plot duration bars
     # aspect = (1, 1)
     # l1, l2 = 1, 5
-    # plot_name = f"./plots/durations/durations_{l1}_to_{l2}_aspect_{aspect[0]}_{aspect[1]}.png"
+    # plot_name = f"{PLOTS_DIR}/durations/durations_{l1}_to_{l2}_aspect_{aspect[0]}_{aspect[1]}.png"
     # plot_duration_bars(levels, l1, l2, aspect, False, ('a4', 'landscape', plot_name, 600))
 
     # TODO: Rewrite the following plots

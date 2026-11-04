@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cycles"
+version = "0.1.0"
+description = "Mathematical analysis of cycles"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [{ name = "jmcastelo", email = "jm.castelo@uv.es" }]
+# Star-unpacking inside subscripts (permutation.py) requires Python 3.11+.
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.0",
+    "matplotlib>=3.8",
+    "papersize>=1.7",
+    "symmetry-math>=0.1",
+]
+
+[project.optional-dependencies]
+# N-body ephemeris (cycles.functions.nbody_ephemeris)
+astro = [
+    "rebound>=5.2",
+    "reboundx>=5.1",
+]
+# Sound synthesis and scalograms (cycles.functions.sound); sounddevice is
+# used by the sandbox scripts to play the generated signals.
+sound = [
+    "PyWavelets>=1.9",
+    "sounddevice>=0.5",
+]
+all = ["cycles[astro,sound]"]
+
+[tool.setuptools.packages.find]
+include = ["cycles*"]

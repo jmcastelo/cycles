@@ -1,13 +1,21 @@
+from pathlib import Path
+import numpy as np
+
 from cycles.functions.division import compute_level
 from cycles.functions.color import lcoords_to_lrgb
 from cycles.plotting.color import plot_quality_grid
 from cycles.plotting.generic import *
 
+SANDBOX_DIR = Path(__file__).resolve().parent
+PLOTS_DIR = SANDBOX_DIR / "plots"
+
+
 if __name__ == "__main__":
     bases = [4, 2, 1]
     max_depth = 5
-    scale = 2/3
-    levels = [compute_level(depth, bases, scale) for depth in range(1, max_depth + 1)]
+    scales = [1 / 2, 2 / 3, 0.5]
+    tetrahedron_colors = np.array([[1, 1, 0], [0, 1, 1], [1, 0, 1], [0, 0, 0]])
+    levels = [compute_level(depth, bases, scales, tetrahedron_colors) for depth in range(1, max_depth + 1)]
     lcoords, durations, starts, cmyks, rgbs, dharmas, purities = zip(*levels)
 
     lrgbs = [np.apply_along_axis(lcoords_to_lrgb, 1, coords) for coords in lcoords]
@@ -35,7 +43,7 @@ if __name__ == "__main__":
     rgb_key = 'cmyk_kscaled'
     cmyk_key = 'wcmy'
 
-    base_dir = f"./plots/study_of_measures"
+    base_dir = f"{PLOTS_DIR}/study_of_measures"
 
     plot = {
         'dharma_vs_time': False,
@@ -121,4 +129,4 @@ if __name__ == "__main__":
             index = np.arange(0, len(purity))
             plot_y_vs_x(dharma, purity, (None, None), title, xlabel, ylabel, False, fig_data)
         '''
-        plot_quality_grid()
+        plot_quality_grid(levels, rgb_key)

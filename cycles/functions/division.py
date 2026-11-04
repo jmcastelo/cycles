@@ -1,5 +1,16 @@
+"""
+Fractal division of a cycle into four ages and their subcycles.
+
+A cycle is divided into four ages with proportions 0.4, 0.3, 0.2 and 0.1 of
+its length (Golden, Silver, Bronze and Iron; or Satya, Treta, Dvapara and
+Kali). Each age is divided again in the same way, and so on. A subcycle at
+depth ``d`` is identified by its address (``lcoords``): ``d`` digits, each the
+age chosen at one level. Durations and starts are fractions of the whole cycle.
+"""
+
 import numpy as np
 import itertools as itools
+from typing import NamedTuple
 
 from cycles.functions.conversion import tcoord_to_lcoords
 from cycles.functions.color import lcoords_to_cmyk, cmyk_to_rgb, lcoords_to_lrgb, lcoords_to_rgb_tetrahedron
@@ -7,23 +18,87 @@ from cycles.functions.duration import count_digits
 from cycles.functions.measure import dharma_measure, purity_measure
 
 
+# Share of its parent cycle taken by each age (Golden, Silver, Bronze, Iron), and
+# where each age starts within its parent (0, 0.4, 0.7, 0.9).
 proportions = np.array([0.4, 0.3, 0.2, 0.1], dtype=float)
 offsets = np.insert(np.cumsum(proportions[:-1], dtype=float), 0, 0)
 
 
+# Names of the color variants stored in a Level, in storage order.
+# CMYK variants come from lcoords_to_cmyk; the RGB variants are those same
+# variants converted to RGB, plus the Sierpinski tetrahedron coloring.
+CMYK_KEYS = ('cmyk', 'cmyk_normalised', 'cmyk_scaled', 'cmyk_kscaled', 'cmyk_composition', 'wcmy')
+RGB_KEYS = CMYK_KEYS + ('tetrahedron',)
+
+# 'cmyk_normalised' is the coloring of the original code (one CMYK/RGB color per subcycle)
+DEFAULT_COLOR_KEY = 'cmyk_normalised'
+
+
+class Level(NamedTuple):
+    """
+    All the subcycles at one depth, as returned by compute_level.
+
+    Being a NamedTuple, it can still be unpacked as a 7-tuple.
+    """
+    lcoords: np.ndarray     # (N, depth)
+    durations: np.ndarray   # (N,)
+    starts: np.ndarray      # (N,)
+    cmyks: np.ndarray       # (N, len(CMYK_KEYS), 4)
+    rgbs: np.ndarray        # (N, len(RGB_KEYS), 3)
+    dharmas: np.ndarray     # (N,)
+    purities: np.ndarray    # (N,)
+
+    def cmyk(self, key: str = DEFAULT_COLOR_KEY) -> np.ndarray:
+        """CMYK colors (N, 4) of the given variant."""
+        return self.cmyks[:, CMYK_KEYS.index(key)]
+
+    def rgb(self, key: str = DEFAULT_COLOR_KEY) -> np.ndarray:
+        """RGB colors (N, 3) of the given variant."""
+        return self.rgbs[:, RGB_KEYS.index(key)]
+
+    def subset(self, index) -> 'Level':
+        """Level restricted to the subcycles selected by index (array of indices or mask)."""
+        return Level(*(field[index] for field in self))
+
+
 def weights(base: int, depth: int) -> np.ndarray:
+    """
+    Weight of each digit position: ``base^-1, base^-2, ..., base^-depth``.
+
+    Used by colors and measures, so that outer levels count more.
+    """
     return np.array([base ** (-k) for k in range(1, depth + 1)])
 
 
 def compute_duration(lcoords: np.ndarray) -> float:
+    """
+    Duration of a subcycle as a fraction of the whole cycle: the product of the
+    proportions of the ages in its address.
+    """
+    lcoords = np.asarray(lcoords, dtype=int)
     return np.prod(proportions[lcoords], dtype=float)
 
 
 def compute_start(lcoords: np.ndarray) -> float:
+    """Start of a subcycle as a fraction of the whole cycle."""
+    lcoords = np.asarray(lcoords, dtype=int)
     return np.dot(offsets[lcoords], np.insert(np.cumprod(proportions[lcoords][:-1]), 0, 1))
 
 
-def compute_level(depth: int, bases: list[int], scales: list[float], colors: np.ndarray) -> tuple:
+def compute_level(depth: int, bases: list[int], scales: list[float], colors: np.ndarray) -> Level:
+    """
+    All ``bases[0]^depth`` subcycles of depth ``depth``, in time order.
+
+    Parameters
+    ----------
+    bases : [division base (4), color weight base, purity weight base]
+    scales : [scales[0], scales[1]] for ``color.lcoords_to_cmyk``, and
+        ``scales[2]`` for ``color.lcoords_to_rgb_tetrahedron``
+    colors : the four vertex colors of the tetrahedron coloring
+
+    Returns a ``Level``: addresses, durations, starts, all CMYK and RGB color
+    variants, dharma and purity of each subcycle.
+    """
     lcoords = np.array([tcoord_to_lcoords(i, bases[0], depth) for i in range(bases[0] ** depth)], dtype=int)
 
     durations = np.apply_along_axis(compute_duration, 1, lcoords)
@@ -39,10 +114,19 @@ def compute_level(depth: int, bases: list[int], scales: list[float], colors: np.
     w2 = weights(bases[2], depth)
     purities = np.array([purity_measure(lcoord, w2) for lcoord in lcoords])
 
-    return lcoords, durations, starts, cmyks, all_rgbs, dharmas, purities
+    return Level(lcoords, durations, starts, cmyks, all_rgbs, dharmas, purities)
 
 
-def compute_levels_by_duration(depths: list[int], bases: list[int], scale: float) -> dict:
+def compute_levels_by_duration(depths: list[int], bases: list[int], scales: list[float]) -> dict:
+    """
+    Subcycles of several depths, grouped by duration.
+
+    Returns a dict whose keys are durations (rounded to 10 decimals) and whose
+    values are lists with one dict per subcycle, holding its depth, composition,
+    tcoord, lcoords, duration, start, dharma, purity and a ``colors`` dict with
+    the RGB color of each variant (see ``bases`` and ``scales`` in
+    ``compute_level``).
+    """
     subcycles = {}
 
     for depth in depths:
@@ -52,7 +136,7 @@ def compute_levels_by_duration(depths: list[int], bases: list[int], scale: float
             start = compute_start(lcoords)
 
             w1 = weights(bases[1], depth)
-            cmyks = lcoords_to_cmyk(lcoords, w1, scale)
+            cmyks = lcoords_to_cmyk(lcoords, w1, scales)
             rgbs = [cmyk_to_rgb(cmyk) for cmyk in cmyks]
             lrgb = lcoords_to_lrgb(lcoords)
 
@@ -111,16 +195,25 @@ def compute_deeper_subcycles(parent_coords: list[int], extra_depth: int, bases: 
 '''
 
 
-def select_subcycle(prefix_coords: list[int], level: tuple) -> tuple:
+def select_subcycle(prefix_coords: list[int], level: Level) -> Level:
+    """
+    The subcycles of ``level`` inside the subcycle whose address is
+    ``prefix_coords`` (all of ``level`` if the prefix is empty).
+    """
     depth = len(prefix_coords)
     if depth == 0:
         return level
-    lcoords, durations, starts, colors = level
-    sel_coords = [i for i, lcoord in enumerate(lcoords) if (lcoord[:depth] == prefix_coords).all()]
-    return lcoords[sel_coords], durations[sel_coords], starts[sel_coords], colors[sel_coords]
+    sel_coords = [i for i, lcoord in enumerate(level.lcoords) if (lcoord[:depth] == prefix_coords).all()]
+    return level.subset(sel_coords)
 
 
 def find_identical(a: np.ndarray, decimals: int=10) -> list:
+    """
+    Groups of equal values (or rows) of ``a``, after rounding to ``decimals``.
+
+    Returns a list of ``(value, indices)``, sorted by value, where ``indices``
+    are the positions in ``a`` holding that value.
+    """
     arounded = np.round(a, decimals)
     u, uidx, uinv = np.unique(arounded, axis=0, return_index=True, return_inverse=True)
     uu = uidx[uinv]
@@ -128,6 +221,7 @@ def find_identical(a: np.ndarray, decimals: int=10) -> list:
 
 
 def find_identical_colors(colors: list[list[float]], decimals: int) -> list:
+    """Same as ``find_identical``, for an array of colors."""
     colors_rounded = np.round(colors, decimals)
     u, uidx, uinv = np.unique(colors_rounded, axis=0, return_index=True, return_inverse=True)
     uu = uidx[uinv]
@@ -135,10 +229,18 @@ def find_identical_colors(colors: list[list[float]], decimals: int) -> list:
 
 
 def subdivision_map(i: int, u: float) -> float:
+    """
+    Map a position ``u`` (fraction of a cycle) to the same relative position
+    inside age ``i`` of that cycle.
+    """
     return proportions[i] * u + offsets[i]
 
 
 def find_lcoords(x: float, depth: int) -> np.ndarray:
+    """
+    Address of the subcycle of depth ``depth`` that contains the time ``x``
+    (a fraction of the whole cycle).
+    """
     lcoords = []
     for d in range(depth):
         for coord, (x1, x2) in enumerate(zip(offsets, offsets + proportions)):
@@ -150,6 +252,11 @@ def find_lcoords(x: float, depth: int) -> np.ndarray:
 
 
 def find_total_lcoords(x: float, dt: float, t: float) -> np.ndarray:
+    """
+    Address of the largest subcycle that contains time ``x`` and lasts less than
+    ``dt``, in a cycle of total length ``t`` (``x`` and ``dt`` in the same units
+    as ``t``).
+    """
     lcoords = []
     while dt <= t:
         for coord, (x1, x2) in enumerate(zip(offsets, offsets + proportions)):
@@ -162,6 +269,18 @@ def find_total_lcoords(x: float, dt: float, t: float) -> np.ndarray:
 
 
 def fill_partition(t1: float, t2: float, t: float, dt: float, dt_min: float) -> tuple:
+    """
+    Cover the interval ``[t1, t2)`` of a cycle of length ``t`` with subcycles.
+
+    The interval is split into windows of length ``dt``. Inside each window,
+    subcycles are taken one after another with ``find_total_lcoords`` (each the
+    largest one that fits in what remains of the window) until less than
+    ``dt_min`` remains; that remainder is recorded as a gap.
+
+    Returns ``(lcoords, locs, durs, gaps, n)``: the addresses (``None`` for each
+    gap), the start time of each subcycle, the durations (subcycles and gaps),
+    ``(end, remainder)`` for each window, and the number of windows.
+    """
     x, dx = t1, dt
     lcoords = []
     locs = []
@@ -189,15 +308,22 @@ def fill_partition(t1: float, t2: float, t: float, dt: float, dt_min: float) -> 
 
 
 def indentical_duration_lcoords(lcoords: list[int]):
+    """
+    All distinct reorderings of the digits of ``lcoords``; they all have the same
+    duration.
+    """
     return set(itools.permutations(lcoords))
 
 
-def partition_level(level: tuple, subdepth: int, base: int) -> list[tuple]:
-    lcoords, durations, starts, rgb, cmyk = level
-
-    depth = len(lcoords[0])
+def partition_level(level: Level, subdepth: int, base: int) -> list[Level]:
+    """
+    Split ``level`` into ``base^subdepth`` consecutive groups: the subcycles inside
+    each subcycle of depth ``subdepth``. Returns ``[level]`` if ``level`` is not
+    deeper than ``subdepth``.
+    """
+    depth = len(level.lcoords[0])
     if depth > subdepth:
         indices = np.arange(base**depth).reshape(base**subdepth, base**(depth - subdepth))
     else:
         return [level]
-    return [(lcoords[index], durations[index], starts[index], rgb[index], cmyk[index]) for index in indices]
+    return [level.subset(index) for index in indices]

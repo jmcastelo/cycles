@@ -1,6 +1,6 @@
+from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
-from fontTools.merge import layout
 from matplotlib.gridspec import GridSpec
 from symmetrymath import SymmetricGroup
 
@@ -9,6 +9,10 @@ from cycles.functions.color import lcoords_to_lrgb
 from cycles.functions.division import compute_level, compute_duration
 from cycles.functions.permutation import permutation_matrix
 from cycles.plotting.permutation import plot_timeline_permutations, plot_permutation_matrices
+
+
+SANDBOX_DIR = Path(__file__).resolve().parent
+PLOTS_DIR = SANDBOX_DIR / "plots"
 
 
 if __name__ == "__main__":
@@ -41,7 +45,7 @@ if __name__ == "__main__":
 
     color_key = 'lrgb'
 
-    base_dir = f"./plots/study_of_permutations"
+    base_dir = f"{PLOTS_DIR}/study_of_permutations"
 
     study = {
         'plot_timeline_permutations': True,

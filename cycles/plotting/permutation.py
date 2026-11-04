@@ -1,3 +1,5 @@
+"""Plots of permutations of the subcycles of a level."""
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -15,6 +17,17 @@ def plot_timeline_permutations(
     save_fig: bool=False,
     fig_data: tuple[str, str, str, int, bool]|None=None
 ):
+    """
+    Timelines of a level under successive permutations.
+
+    Each axis in ``axes`` gets the arrays of ``perm_indices`` (one per row): in a
+    row, subcycle ``k`` is drawn at the time slot of subcycle ``indices[k]``.
+    Each subcycle is split into sub-rows, one per color array in ``colors``.
+    Lines join the positions of each subcycle in consecutive rows, and
+    ``ax_texts`` label the rows.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     height = 1
     hspace = 2
     sub_height = height / len(colors)
@@ -88,6 +101,11 @@ def plot_permutation_matrices(
     save_fig: bool = False,
     fig_data: tuple[str, str, str, int, bool] | None = None
 ):
+    """
+    Grid of permutation matrices drawn as images, titled with their permutations.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     nrows = int(np.sqrt(len(matrices)))
     ncols = int(len(matrices) / nrows)
 

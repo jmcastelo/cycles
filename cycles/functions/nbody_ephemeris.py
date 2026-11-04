@@ -74,12 +74,12 @@ Usage
 -----
     # NOTE: the span counts years from J2000.0: 63300 years back reach the year -61300
     # (to cover the start of the Satya Yuga at about -61138 you need at least 63138).
-    python nbody_ephemeris.py build back_63k 63300 --direction back      # ~2 h, ~1.2 GB
-    python nbody_ephemeris.py build forward_4k 4000 --direction forward  # ~6 min
+    python -m cycles.functions.nbody_ephemeris build back_63k 63300 --direction back      # ~2 h, ~1.2 GB
+    python -m cycles.functions.nbody_ephemeris build forward_4k 4000 --direction forward  # ~6 min
 
-    python nbody_ephemeris.py build all_dirs 63300 --direction both --forward-years 4000 --workers 2
+    python -m cycles.functions.nbody_ephemeris build all_dirs 63300 --direction both --forward-years 4000 --workers 2
 
-    >>> import nbody_ephemeris as ne
+    >>> import cycles.functions.nbody_ephemeris as ne
     >>> eph = ne.load_ephemeris("back_63k")
     >>> ne.body_state(eph, "jupiter", jd_tdb)            # (position AU, velocity AU/day)
     >>> ne.geocentric_direction(eph, "jupiter", jd_tdb)  # unit vector, ICRF, from the EMB

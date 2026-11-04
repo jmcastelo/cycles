@@ -1,3 +1,6 @@
+from pathlib import Path
+import numpy as np
+
 from cycles.functions.division import compute_level, find_identical, compute_duration
 from cycles.functions.color import lcoords_to_lrgb
 from cycles.functions.analysis import autocorrelation
@@ -6,11 +9,16 @@ from cycles.plotting.duration import *
 from cycles.plotting.generic import *
 
 
+SANDBOX_DIR = Path(__file__).resolve().parent
+PLOTS_DIR = SANDBOX_DIR / "plots"
+
+
 if __name__ == "__main__":
     bases = [4, 2, 2]
     max_depth = 4
-    scale = 2 / 3
-    levels = [compute_level(depth, bases, scale) for depth in range(1, max_depth + 1)]
+    scales = [1 / 2, 2 / 3, 0.5]
+    tetrahedron_colors = np.array([[1, 1, 0], [0, 1, 1], [1, 0, 1], [0, 0, 0]])
+    levels = [compute_level(depth, bases, scales, tetrahedron_colors) for depth in range(1, max_depth + 1)]
     lcoords, durations, starts, cmyks, rgbs, dharmas, purities = zip(*levels)
 
     lrgbs = [np.apply_along_axis(lcoords_to_lrgb, 1, coords) for coords in lcoords]
@@ -33,7 +41,7 @@ if __name__ == "__main__":
 
     idurations = [find_identical(durs) for durs in durations]
 
-    base_dir = f"./plots/study_of_durations"
+    base_dir = f"{PLOTS_DIR}/study_of_durations"
 
     study = {
         'plot_durations_trigraph': False
@@ -50,7 +58,7 @@ if __name__ == "__main__":
     for depth, (durs, colors) in enumerate(zip(durations, colors[color_key]), 1):
         idx = np.argsort(np.round(durs, 10), stable=True)
         title = f"Sorted subcycle durations for depth {depth}"
-        fig_data = ('a4', 'landscape', f"./plots/unique_durations/{color_key}/sorted_durations_at_depth_{depth}.png", 300)
+        fig_data = ('a4', 'landscape', f"{PLOTS_DIR}/unique_durations/{color_key}/sorted_durations_at_depth_{depth}.png", 300)
         plot_bars(durs[idx], colors[idx], title, "Index", "Duration (norm. units)", False, fig_data)
     '''
     '''
@@ -62,7 +70,7 @@ if __name__ == "__main__":
     '''
     '''
     title = f"Location of unique subcycle durations for depth {depth}.\n# Unique durations: {len(idd)}"
-    fig_data = ('a4', 'landscape', f"./plots/unique_durations/{color_key}/unique_durations_location_at_depth_{depth}.png", 300)
+    fig_data = ('a4', 'landscape', f"{PLOTS_DIR}/unique_durations/{color_key}/unique_durations_location_at_depth_{depth}.png", 300)
     plot_stacked_spaced_bars(idd, level, title, "Time (norm. units)", "Duration (norm. units)", True, fig_data)
     '''
     '''

@@ -1,3 +1,4 @@
+from pathlib import Path
 import matplotlib.pyplot as plt
 
 import cycles.functions.nbody_ephemeris as nbe
@@ -12,6 +13,11 @@ from cycles.plotting.equinoctial_precession import (
     plot_zodiac_planets_grid,
 
 )
+
+SANDBOX_DIR = Path(__file__).resolve().parent
+PLOTS_DIR = SANDBOX_DIR / "plots"
+DATA_DIR = SANDBOX_DIR / "data"
+
 
 if __name__ == "__main__":
     # tk = -3101
@@ -45,11 +51,11 @@ if __name__ == "__main__":
 
     # fig, ax, ayanamsa = plot_equinoctial_precession(2026, dpi=600)
 
-    eph_f = nbe.load_ephemeris('data/tabla70k70k/forward')
-    eph_b = nbe.load_ephemeris('data/tabla70k70k/back')
+    eph_f = nbe.load_ephemeris(DATA_DIR / 'tabla70k70k' / 'forward')
+    eph_b = nbe.load_ephemeris(DATA_DIR / 'tabla70k70k' / 'back')
 
-    eph_fp = nbe.load_ephemeris('data/tabla70k70kp/forward')
-    eph_bp = nbe.load_ephemeris('data/tabla70k70kp/back')
+    eph_fp = nbe.load_ephemeris(DATA_DIR / 'tabla70k70kp' / 'forward')
+    eph_bp = nbe.load_ephemeris(DATA_DIR / 'tabla70k70kp' / 'back')
 
     now_jd = date_time_to_julian_day(2026, 11, 3, 19, 49, 0)
     now = julian_day_to_year(now_jd)
@@ -71,7 +77,7 @@ if __name__ == "__main__":
         [eph_b, eph_f],
         time_scale='UT',
         epoch_display=("year", "date", "julian_day"),
-        save_path='plots/study_of_precession/satya.png'
+        save_path=PLOTS_DIR / 'study_of_precession' / 'satya.png'
     )
 
     plot_zodiac_with_planets(
@@ -79,7 +85,7 @@ if __name__ == "__main__":
         [eph_bp, eph_fp],
         time_scale='UT',
         epoch_display=("year", "date", "julian_day"),
-        save_path='plots/study_of_precession/satya_p.png'
+        save_path=PLOTS_DIR / 'study_of_precession' / 'satya_p.png'
     )
     """
     """
@@ -88,7 +94,7 @@ if __name__ == "__main__":
         [eph_b, eph_f],
         time_scale='UT',
         epoch_display=("year", "date", "julian_day"),
-        save_path='plots/study_of_precession/sub_kali.png'
+        save_path=PLOTS_DIR / 'study_of_precession' / 'sub_kali.png'
     )
 
     plot_zodiac_planets_grid(
@@ -96,6 +102,6 @@ if __name__ == "__main__":
         [eph_bp, eph_fp],
         time_scale='UT',
         epoch_display=("year", "date", "julian_day"),
-        save_path='plots/study_of_precession/sub_kali_p.png'
+        save_path=PLOTS_DIR / 'study_of_precession' / 'sub_kali_p.png'
     )
     """

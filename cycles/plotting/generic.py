@@ -1,3 +1,5 @@
+"""General-purpose plots of numeric sequences."""
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -14,6 +16,11 @@ def plot_y_vs_x(
     save_fig: bool=False,
     fig_data: tuple[str, str, str, int, bool]|None=None
 ):
+    """
+    Line and scatter plot of ``y`` against ``x``.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     fig, ax = plt.subplots()
 
     fig.suptitle(title)
@@ -44,6 +51,11 @@ def plot_multi_y_vs_x(
     save_fig: bool=False,
     fig_data: tuple[str, str, str, int, bool]|None=None
 ):
+    """
+    Several series against the same ``x``, each with its label and color.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     fig, ax = plt.subplots()
 
     fig.suptitle(title)
@@ -74,6 +86,11 @@ def grid_of_plots(
     save_fig: bool = False,
     fig_data: tuple[str, str, str, int, bool] | None = None
 ):
+    """
+    Grid of line plots, one per pair ``(x[k], y[k])``, titled with ``labels[k]``.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     nrows = int(np.sqrt(len(x)))
     ncols = int(len(x) / nrows)
 
@@ -117,6 +134,12 @@ def return_plot(
     save_fig: bool=False,
     fig_data: tuple[str, str, str, int, bool]|None=None
 ):
+    """
+    Return maps (log-log): ``points[n + delay]`` against ``points[n]`` for
+    delays 1 to ``max_delay``, one panel per delay, colored by ``colors``.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     nrows = int(np.sqrt(max_delay))
     ncols = int(max_delay / nrows)
 
@@ -166,6 +189,11 @@ def plot_auto_correlations(
     save_fig: bool = False,
     fig_data: tuple[str, str, str, int, bool] | None = None
 ):
+    """
+    Grid of autocorrelation plots (non-negative lags), one per series in ``x``.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     nrows = int(np.sqrt(len(x)))
     ncols = int(len(x) / nrows)
 

@@ -55,7 +55,7 @@ Astronomical year numbering (1 BC = year 0, 3102 BC = -3101), fractional years
 allowed (Julian years from J2000.0, i.e. Julian epochs). For calendar dates
 use the companion module ``astro_dates``:
 
-    from astro_dates import date_to_year, parse_date
+    from cycles.functions.astro_dates import date_to_year, parse_date
     plot_equinoctial_precession(date_to_year(*parse_date("3102 BC-02-18")))
 
 Dependencies
@@ -80,6 +80,7 @@ from __future__ import annotations
 
 import functools
 import math
+from pathlib import Path
 from typing import Callable, Dict, Optional, Sequence, Tuple
 
 import numpy as np
@@ -935,6 +936,7 @@ def plot_equinoctial_precession(
                       bbox_to_anchor=(1.02, 1.0), frameon=False, fontsize=8)
 
     if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
     if show:
         plt.show()
@@ -1474,6 +1476,7 @@ def plot_zodiac_with_planets(
                      style="italic")
 
     if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
     if show:
         plt.show()
@@ -1637,6 +1640,7 @@ def plot_zodiac_planets_grid(
                  family=_TABLE_FONT, linespacing=1.45)
 
     if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
     if show:
         plt.show()
@@ -1868,6 +1872,7 @@ def plot_ayanamsa_comparison(
     fig.tight_layout(rect=(0, 0, 1, 0.965))
 
     if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
     if show:
         plt.show()

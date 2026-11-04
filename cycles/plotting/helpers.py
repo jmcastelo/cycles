@@ -1,9 +1,20 @@
+"""Shared figure formatting."""
+
 import matplotlib.pyplot as plt
 import papersize as ps
 from pathlib import Path
 
 
 def format_plot(fig: plt.Figure, fig_data: tuple[str, str, str, int, bool], save_fig: bool=False):
+    """
+    Size a figure to a paper format and optionally save it.
+
+    ``fig_data`` is ``(paper, orientation, path, dpi, tight_layout)``: a paper
+    size name understood by ``papersize`` (e.g. ``'a4'``), ``'landscape'`` or
+    ``'portrait'``, the output file, its resolution, and whether to apply
+    ``tight_layout``. The file is written only when ``save_fig`` is true; missing
+    folders are created.
+    """
     paper_type, orientation_type, fig_path, dpi, tight_layout = fig_data
 
     orientation = ps.LANDSCAPE
