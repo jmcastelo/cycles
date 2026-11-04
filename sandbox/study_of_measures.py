@@ -3,7 +3,7 @@
 import numpy as np
 
 from cycles.functions.division import partition_level
-from cycles.plotting.color import plot_quality_grid, plot_purity_vs_dharma, plot_quality_scatter_3d
+from cycles.plotting.measure import plot_quality_grid, plot_purity_vs_dharma, plot_quality_scatter_3d
 from cycles.plotting.generic import plot_y_vs_x
 from common import PLOTS_DIR, compute_levels, fig_data, save_figure
 from runner import study, run
