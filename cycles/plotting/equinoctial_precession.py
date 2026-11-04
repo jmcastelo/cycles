@@ -169,6 +169,8 @@ _TEXT_NOTE_MODEL = "#5F5E5A"
 _SIGN_NAMES = ["Aries", "Tauro", "Géminis", "Cáncer", "Leo", "Virgo",
                "Libra", "Escorpio", "Sagitario", "Capricornio", "Acuario",
                "Piscis"]
+# centre of the diagram: (symbol, disc colour); the Earth is the astronomical symbol
+_CENTER_SYMBOLS = {"earth": ("⊕", "#5BA3E0"), "sun": ("☉", "#EF9F27")}
 _SIGN_GLYPHS = ("♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓")
 _SIGN_ABBREVIATIONS = ["Ari", "Tau", "Gem", "Cán", "Leo", "Vir",
                        "Lib", "Esc", "Sag", "Cap", "Acu", "Pis"]
@@ -178,7 +180,9 @@ _LABEL_JUNE = "Solsticio\nde junio"
 _LABEL_AUTUMNAL = "Punto otoñal"
 _LABEL_DECEMBER = "Solsticio\nde diciembre"
 _LABEL_SPICA = "Spica (Chitrā)"
-_TITLE_TEMPLATE = "Precesión de los equinoccios · año {year}"
+_TITLE_HEAD = "Precesión de los equinoccios"
+_TITLE_TEMPLATE = _TITLE_HEAD + " · año {year}"
+_EPOCH_PARTS = ("year", "date", "julian_day")      # canonical order of the epoch display
 _SUMMARY_AYANAMSA_LAHIRI = "Ayanāṃśa de Lahiri: A = {deg}° = {dms}{turns}"
 _SUMMARY_AYANAMSA_CUSTOM = "Ayanāṃśa (modelo propio): A = {deg}° = {dms}{turns}"
 _SUMMARY_TURNS = " ({turns} vueltas)"
@@ -201,14 +205,14 @@ _NAK_RING_DARK = "#D6DFE9"
 _NAK_RING_EDGE = "#7F8A99"
 _NAK_RING_WIDTH = 0.16        # radial width of the nakshatra ring, outside the signs
 _EMBLEMS_HEADER = "Emblemas tradicionales de los nakṣatras ocupados (hay variantes entre textos):"
-_PLANETS_TITLE = "Zodiaco sidéreo y planetas · año {year}"
+_PLANETS_HEAD = "Zodiaco sidéreo y planetas"
+_PLANETS_TITLE = _PLANETS_HEAD + " · año {year}"
 _PLANETS_TABLE_HEADER = ("Cuerpo      Long. sidérea   Long. trópica   Signo (sidéreo)        "
                          "Nakṣatra (pada)")
 _PLANETS_NOTE_METHOD = ("Posiciones geométricas geocéntricas (desde el baricentro Tierra-Luna), "
                         "sin tiempo de luz ni aberración.")
 _PLANETS_NOTE_EPOCH_TDB = "Época en TDB."
 _PLANETS_NOTE_EPOCH_UT = "Época dada en UT y convertida a TDB (ΔT = {seconds} s)."
-_PLANETS_TITLE_UT = " (UT)"
 _PLANETS_NOTE_NO_MOON = ("La Luna no se muestra: su posición no es fiable a estas "
                          "distancias.")
 _PLANETS_NOTE_EXTERNAL = "Los puntos añadidos con extra_points proceden de otra fuente."
@@ -544,12 +548,23 @@ def _format_deg_min(degrees: float) -> str:
     return f"{sign}{whole}°{minutes:02d}′"
 
 
-def _format_year(year: float) -> str:
-    """Format an astronomical year as a Spanish 'd. C.' / 'a. C.' string."""
-    decimals = 0 if float(year).is_integer() else 2
-    if year > 0:
-        return f"{_format_number(year, decimals)} {_ERA_AD}"
-    return f"{_format_number(1 - year, decimals)} {_ERA_BC}"
+def _format_year(year: float, short: bool = False) -> str:
+    """
+    Spanish text of an astronomical year. Integer years use the usual era names
+    ("3103 a. C." is the astronomical year -3102). A decimal year before the year 1
+    is written as the signed astronomical number ("-3102,86 (astronómico)"),
+    because "N a. C." would be ambiguous for a point inside a year. ``short``
+    drops the parenthesis.
+    """
+    year = float(year)
+    if year.is_integer():
+        if year > 0:
+            return f"{_format_number(year, 0)} {_ERA_AD}"
+        return f"{_format_number(1 - year, 0)} {_ERA_BC}"
+    if year >= 1:
+        return f"{_format_number(year, 2)} {_ERA_AD}"
+    text = _format_number(year, 2)
+    return text if short else f"{text} (astronómico)"
 
 
 def _format_compact(value: float) -> str:
@@ -618,7 +633,11 @@ def plot_equinoctial_precession(
     show_arc: bool = True,
     annotations: bool = True,
     nakshatras: bool = False,
-    symbols: bool = True,
+    sign_labels: str = "both",
+    epoch_display: Sequence[str] = ("year",),
+    calendar: str = "auto",
+    epoch_position: str = "title",
+    center_symbol: bool = False,
 ):
     """
     Draw the equinoctial and solstitial axes against the sidereal zodiac.
@@ -666,10 +685,25 @@ def plot_equinoctial_precession(
         Draw the ring of the 27 nakshatras (13 deg 20 min each, counted from the
         sidereal zero) outside the ring of the signs, with number and
         abbreviation (default False).
-    symbols : bool
-        Draw the zodiac glyphs of the signs (default True). The nakshatras have
-        no standard glyphs; see ``_NAKSHATRA_EMBLEMS`` for their traditional
-        emblems.
+    sign_labels : {"text", "symbol", "both"}
+        How the twelve signs are labelled: with their name, with their glyph
+        (♈ ♉ …) or with both (default). In small panels (``annotations=False``)
+        "both" shows only the glyph. The nakshatras have no standard glyphs; see
+        ``_NAKSHATRA_EMBLEMS`` for their traditional emblems.
+    center_symbol : bool
+        Draw the symbol of the centre (⊕ for the Earth, ☉ for the Sun) on a disc,
+        like the planets, instead of a plain dot (default False). With the epoch
+        in the centre box the symbol is the first element of the box.
+    epoch_display : sequence of {"year", "date", "julian_day"}
+        What to show of the epoch under the title (default only the year, in
+        the title itself; an empty sequence shows nothing). "date" needs the
+        companion module ``astro_dates``. The year is taken as a decimal Julian
+        year without a stated time scale.
+    calendar : {"auto", "julian", "gregorian"}
+        Calendar of the displayed date (automatic: Julian up to 4 Oct 1582).
+    epoch_position : {"title", "center"}
+        Where the epoch items go: under the title (default) or in a box in the
+        centre of the diagram (the title then has no epoch line).
 
     Returns
     -------
@@ -686,7 +720,12 @@ def plot_equinoctial_precession(
         raise ValueError("model must be 'long_term' or 'linear'")
     if center not in ("sun", "earth", "none"):
         raise ValueError("center must be 'sun', 'earth' or 'none'")
-
+    epoch_parts = _epoch_parts(epoch_display)
+    _check_calendar_name(calendar)
+    _check_epoch_position(epoch_position)
+    _check_sign_labels(sign_labels)
+    center_in_box = (epoch_position == "center" and bool(epoch_parts) and center_symbol
+                     and center in ("sun", "earth"))
     custom_model = ayanamsa_function is not None
     note_text, note_color = None, None
     if custom_model:
@@ -730,20 +769,22 @@ def plot_equinoctial_precession(
     import matplotlib.patheffects as path_effects
     names = _SIGN_ABBREVIATIONS if short_names else _SIGN_NAMES
     middle = (inner_radius + outer_radius) / 2
-    for i, center in enumerate(centers):
+    for i, sector_angle in enumerate(centers):
         halo = [path_effects.withStroke(linewidth=2.2, foreground=colors[i])]
-        label_style = dict(ha="center", va="center", color=_TEXT_DARK, zorder=6,
-                           path_effects=halo)
-        if symbols and not annotations:                 # small panels: glyph only
-            ax.text(center, middle, _SIGN_GLYPHS[i], fontsize=11,
-                    fontfamily=_PLANET_FONT, **label_style)
-        elif symbols:
-            ax.text(center, middle + 0.045, _SIGN_GLYPHS[i], fontsize=14,
-                    fontfamily=_PLANET_FONT, **label_style)
-            ax.text(center, middle - 0.055, names[i], fontsize=7.5, **label_style)
+        text_style = dict(ha="center", va="center", color=_TEXT_DARK, zorder=6,
+                          path_effects=halo)
+        if sign_labels == "text":
+            ax.text(sector_angle, middle, names[i], fontsize=9 if short_names else 7.5,
+                    **text_style)
         else:
-            ax.text(center, middle, names[i], fontsize=9 if short_names else 7.5,
-                    **label_style)
+            both = sign_labels == "both" and annotations     # small panels: glyph only
+            glyph_size = 13.0 if both else (17.0 if annotations else 10.5)   # points
+            ax.scatter([sector_angle], [middle + (0.045 if both else 0.0)], s=glyph_size ** 2,
+                       marker=_centered_glyph(_SIGN_GLYPHS[i], _PLANET_FONT),
+                       c=_TEXT_DARK, edgecolors=_TEXT_DARK, linewidths=0.2, zorder=6,
+                       path_effects=halo)
+            if both:
+                ax.text(sector_angle, middle - 0.055, names[i], fontsize=7.5, **text_style)
         if annotations:
             ax.text(rad(30 * i), outer_radius + extra + 0.07, f"{30 * i}°",
                     ha="center", va="center", fontsize=7.5, color=_TEXT_MUTED)
@@ -755,10 +796,10 @@ def plot_equinoctial_precession(
         nak_colors = [_NAK_RING_LIGHT if k % 2 == 0 else _NAK_RING_DARK for k in range(27)]
         ax.bar(nak_centers, extra, width=rad(width), bottom=outer_radius,
                color=nak_colors, edgecolor=_NAK_RING_EDGE, linewidth=0.5, zorder=1)
-        for k, center in enumerate(nak_centers):
+        for k, sector_angle in enumerate(nak_centers):
             label = f"{k + 1} {_NAKSHATRA_ABBREVIATIONS[k]}" if annotations else f"{k + 1}"
-            ax.text(center, outer_radius + extra / 2, label, ha="center", va="center",
-                    rotation=_radial_rotation(center), rotation_mode="anchor",
+            ax.text(sector_angle, outer_radius + extra / 2, label, ha="center", va="center",
+                    rotation=_radial_rotation(sector_angle), rotation_mode="anchor",
                     fontsize=6.4 if annotations else 5.0, color=_TEXT_DARK, zorder=6,
                     path_effects=[path_effects.withStroke(
                         linewidth=2.0, foreground=nak_colors[k])])
@@ -826,7 +867,11 @@ def plot_equinoctial_precession(
                 bbox=dict(facecolor="white", edgecolor="none", pad=1.5))
 
     # --- Centre marker (reference point) -------------------------------------
-    if center == "sun":
+    if center_in_box:
+        pass                                    # the epoch box carries the symbol
+    elif center in ("sun", "earth") and center_symbol:
+        _draw_center_disc(ax, center, compact=not annotations)
+    elif center == "sun":
         ax.plot([0], [0], marker="o", color=_AMBER, markeredgecolor=_AMBER_EDGE,
                 markersize=13, zorder=7)
     elif center == "earth":
@@ -836,7 +881,18 @@ def plot_equinoctial_precession(
     # --- Texts ---------------------------------------------------------------
     vernal_longitude = (-ayanamsa) % 360.0
     sign_index, sign_offset = _sign_index_and_offset(vernal_longitude)
-    title = _TITLE_TEMPLATE.format(year=_format_year(year))
+    epoch_texts = _epoch_texts(year, year, None, epoch_parts, calendar)
+    if epoch_position == "center":
+        title = _TITLE_HEAD
+        _draw_epoch_center(ax, _epoch_center_lines(year, year, None, epoch_parts, calendar),
+                           compact=not annotations,
+                           symbol=_CENTER_SYMBOLS[center] if center_in_box else None)
+    elif epoch_parts == ("year",):
+        title = _TITLE_HEAD + " · " + epoch_texts[0]
+    elif epoch_parts:
+        title = _TITLE_HEAD + "\n" + _join_epoch(epoch_texts)
+    else:
+        title = _TITLE_HEAD
     turns_summary = (_SUMMARY_TURNS.format(turns=turns_text)
                      if total_turns >= 1 else "")
     summary_template = (_SUMMARY_AYANAMSA_CUSTOM if custom_model
@@ -924,7 +980,188 @@ _NAKSHATRA_EMBLEMS = (
     "tambor", "círculo vacío o mil flores", "patas delanteras del lecho fúnebre",
     "patas traseras del lecho fúnebre", "pez o tambor")
 _PLANET_FONT = "DejaVu Sans"        # ships with matplotlib, has the planetary symbols
+_DISC_AREA = 300.0                  # planet discs, area in points^2 (diameter about 19.5 pt)
+_DISC_AREA_COMPACT = 165.0          # the same in small panels
+_GLYPH_FILL = 0.58                  # largest dimension of the symbol, as a fraction of the disc
 _TABLE_FONT = "DejaVu Sans Mono"
+
+
+def _epoch_parts(epoch_display) -> tuple:
+    """Validate ``epoch_display`` (a name or a sequence of names) and return it in canonical order."""
+    if epoch_display is None:
+        return ()
+    if isinstance(epoch_display, str):
+        epoch_display = (epoch_display,)
+    unknown = [p for p in epoch_display if p not in _EPOCH_PARTS]
+    if unknown:
+        raise ValueError(f"unknown epoch_display items {unknown}; use {list(_EPOCH_PARTS)}")
+    return tuple(p for p in _EPOCH_PARTS if p in epoch_display)
+
+
+def _check_calendar_name(calendar: str) -> None:
+    if calendar not in ("auto", "julian", "gregorian"):
+        raise ValueError("calendar must be 'auto', 'julian' or 'gregorian'")
+
+
+def _civil_date_parts(jd: float, calendar: str) -> tuple:
+    """(date text, calendar tag, 'HH:MM') of a Julian Day, to the minute, in Spanish."""
+    try:
+        from cycles.functions.astro_dates import format_date, julian_day_to_date, split_day
+    except ImportError as error:
+        raise ImportError("epoch_display='date' needs the companion module "
+                          "astro_dates") from error
+    # whole minutes (no 60 s or day carry); the quarter second keeps the minute
+    # from falling to the previous one through floating-point noise
+    rounded = round(jd * 1440.0) / 1440.0 + 0.25 / 86400.0
+    year, month, fraction_day = julian_day_to_date(rounded, calendar)
+    day, hour, minute, _ = split_day(fraction_day)
+    text = format_date(year, month, day, calendar)
+    core, _, tag = text.partition(" (calendario ")
+    tag = "jul." if tag.startswith("juliano") else "greg."
+    return core, tag, f"{hour:02d}:{minute:02d}"
+
+
+def _civil_date_text(jd: float, scale_label: Optional[str], calendar: str,
+                     compact: bool) -> str:
+    """Spanish date and time (to the minute) of a Julian Day, with its time scale."""
+    core, tag, clock = _civil_date_parts(jd, calendar)
+    calendar_text = f" {tag}" if compact else (
+        " (calendario juliano)" if tag == "jul." else " (calendario gregoriano)")
+    return f"{core}{calendar_text}, {clock}" + (f" {scale_label}" if scale_label else "")
+
+
+def _epoch_center_lines(year_given: float, year_tdb: float, scale_label: Optional[str],
+                        parts: tuple, calendar: str) -> list:
+    """Short lines (for the box in the centre of the diagram) of the requested epoch items."""
+    lines = []
+    jd_given = 2451545.0 + (year_given - 2000.0) * 365.25
+    scale = f" {scale_label}" if scale_label else ""
+    for part in parts:
+        if part == "year":
+            lines.append(f"año {_format_year(year_given, short=True)}")
+        elif part == "date":
+            core, tag, clock = _civil_date_parts(jd_given, calendar)
+            lines += [core, f"{tag} {clock}{scale}"]
+        else:
+            lines.append(f"JD {_format_number(jd_given, 3)}{scale}")
+            if scale_label == "UT":
+                jd_tdb = 2451545.0 + (year_tdb - 2000.0) * 365.25
+                lines.append(f"→ {_format_number(jd_tdb, 3)} TDB")
+    return lines
+
+
+def _disc_diameter(compact: bool) -> float:
+    """Diameter in points of the planet discs."""
+    return math.sqrt(4.0 * (_DISC_AREA_COMPACT if compact else _DISC_AREA) / math.pi)
+
+
+def _draw_center_disc(ax, kind: str, compact: bool) -> None:
+    """The Earth (or the Sun) at the centre: a disc with its symbol, like the planets."""
+    glyph, face = _CENTER_SYMBOLS[kind]
+    area = _DISC_AREA_COMPACT if compact else _DISC_AREA
+    size = _GLYPH_FILL * math.sqrt(4.0 * area / math.pi)
+    ax.scatter([0], [0], s=area, c=face, edgecolors="#2C2C2A", linewidths=0.8, zorder=7)
+    ax.scatter([0], [0], s=size ** 2, marker=_centered_glyph(glyph, _PLANET_FONT),
+               c="#2C2C2A", edgecolors="#2C2C2A", linewidths=0.25, zorder=8)
+
+
+def _draw_epoch_center(ax, lines: list, compact: bool, symbol=None) -> None:
+    """
+    Epoch box in the centre of a polar diagram, above the axes. With a
+    ``symbol`` (glyph, colour) the box starts with that symbol on a disc, so the
+    Earth (or the Sun) stays visible at the centre of the diagram.
+    """
+    if not lines:
+        return
+    fontsize = 6.0 if compact else 8.0
+    if symbol is None:
+        ax.text(0, 0, "\n".join(lines), ha="center", va="center",
+                multialignment="center", fontsize=fontsize,
+                linespacing=1.3, color=_TEXT_DARK, zorder=12,
+                bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
+                          edgecolor=_RING_EDGE, linewidth=0.6, alpha=0.93))
+        return
+    from matplotlib.offsetbox import AnnotationBbox, DrawingArea, TextArea, VPacker
+    from matplotlib.patches import Circle, PathPatch
+    from matplotlib.path import Path
+    glyph, face = symbol
+    diameter = _disc_diameter(compact)
+    drawing = DrawingArea(diameter, diameter, 0, 0)
+    drawing.add_artist(Circle((diameter / 2, diameter / 2), diameter / 2 - 0.4,
+                              facecolor=face, edgecolor="#2C2C2A", linewidth=0.8))
+    outline = _centered_glyph(glyph, _PLANET_FONT)
+    scale = _GLYPH_FILL * diameter / (2.0 * np.max(np.abs(outline.vertices)))
+    drawing.add_artist(PathPatch(Path(outline.vertices * scale + diameter / 2, outline.codes),
+                                 facecolor="#2C2C2A", edgecolor="#2C2C2A", linewidth=0.25))
+    text = TextArea("\n".join(lines), textprops=dict(
+        fontsize=fontsize, color=_TEXT_DARK, multialignment="center", linespacing=1.3))
+    packed = VPacker(children=[drawing, text], align="center", pad=0, sep=3)
+    box = AnnotationBbox(packed, (0, 0), xycoords="data", box_alignment=(0.5, 0.5),
+                         frameon=True, pad=0.3,
+                         bboxprops=dict(boxstyle="round,pad=0.25", facecolor="white",
+                                        edgecolor=_RING_EDGE, linewidth=0.6, alpha=0.93))
+    box.set_zorder(12)
+    ax.add_artist(box)
+
+
+def _check_sign_labels(sign_labels: str) -> None:
+    if sign_labels not in ("text", "symbol", "both"):
+        raise ValueError("sign_labels must be 'text', 'symbol' or 'both'")
+
+
+def _check_epoch_position(epoch_position: str) -> None:
+    if epoch_position not in ("title", "center"):
+        raise ValueError("epoch_position must be 'title' or 'center'")
+
+
+def _epoch_texts(year_given: float, year_tdb: float, scale_label: Optional[str],
+                 parts: tuple, calendar: str, compact: bool = False) -> list:
+    """
+    Texts of the requested epoch items, in canonical order. ``year_given`` is in
+    the time scale ``scale_label`` ("UT", "TDB" or None when unspecified) and
+    ``year_tdb`` is the same instant in TDB (only used to show both Julian Days).
+    """
+    texts = []
+    jd_given = 2451545.0 + (year_given - 2000.0) * 365.25
+    suffix = f" {scale_label}" if scale_label else ""
+    for part in parts:
+        if part == "year":
+            text = _format_year(year_given) if compact else f"año {_format_year(year_given)}"
+            if scale_label == "UT" and not compact:
+                text = text[:-1] + ", UT)" if text.endswith(")") else text + " (UT)"
+        elif part == "date":
+            text = _civil_date_text(jd_given, scale_label, calendar, compact)
+        else:
+            text = f"JD {_format_number(jd_given, 3)}{suffix}"
+            if scale_label == "UT" and not compact:
+                jd_tdb = 2451545.0 + (year_tdb - 2000.0) * 365.25
+                text += f" → {_format_number(jd_tdb, 3)} TDB"
+        texts.append(text)
+    return texts
+
+
+def _join_epoch(texts: list) -> str:
+    """Epoch items on one line, or one per line when they would be too long."""
+    line = " · ".join(texts)
+    return line if len(line) <= 80 else "\n".join(texts)
+
+
+@functools.lru_cache(maxsize=None)
+def _centered_glyph(symbol: str, family: str):
+    """
+    Outline of a glyph as a matplotlib Path whose bounding box is centred on the
+    origin. Used as a scatter marker it is centred exactly on its point, which
+    text alignment cannot do: matplotlib centres a line of text by the metrics
+    of the line, not by the ink of the glyph, and the planetary symbols then
+    sit about a point above the middle of their discs.
+    """
+    from matplotlib.font_manager import FontProperties
+    from matplotlib.path import Path
+    from matplotlib.textpath import TextPath
+    outline = TextPath((0, 0), symbol, size=1.0, prop=FontProperties(family=family))
+    box = outline.get_extents()
+    centre = np.array([(box.x0 + box.x1) / 2.0, (box.y0 + box.y1) / 2.0])
+    return Path(outline.vertices - centre, outline.codes)
 
 
 def _radial_rotation(theta: float) -> float:
@@ -1003,7 +1240,11 @@ def plot_zodiac_with_planets(
     compact: bool = False,
     time_scale: str = "TDB",
     nakshatras: bool = True,
-    symbols: bool = True,
+    sign_labels: str = "both",
+    epoch_display: Sequence[str] = ("year",),
+    calendar: str = "auto",
+    epoch_position: str = "title",
+    center_symbol: bool = True,
 ):
     """
     Draw the sidereal zodiac, the equinoctial and solstitial axes and the
@@ -1040,9 +1281,31 @@ def plot_zodiac_with_planets(
         Draw the ring of the 27 nakshatras outside the signs (number and
         abbreviation) and, under the table, the traditional emblem of each
         nakshatra occupied by a body (default True).
-    symbols : bool
-        Draw the zodiac glyphs of the signs (default True). The nakshatras have
-        no standard glyphs, so their emblems are given as text.
+    sign_labels : {"text", "symbol", "both"}
+        How the twelve signs are labelled: with their name, with their glyph
+        (♈ ♉ …) or with both (default; small panels show only the glyph). The
+        nakshatras have no standard glyphs, so their emblems are given as text.
+    center_symbol : bool
+        Show the Earth at the centre as its astronomical symbol ⊕ on a disc, like
+        the planets (default True; False gives a plain blue dot). With
+        ``epoch_position="center"`` the symbol is the first element of the epoch
+        box.
+    epoch_display : sequence of {"year", "date", "julian_day"}
+        What to show of the epoch under the title: the year, the civil date
+        and time (to the minute) and/or the Julian Day, each with its time
+        scale (UT or TDB, as in ``time_scale``). With ``time_scale="UT"`` the
+        Julian Day line also gives the TDB one that was used. Default: only the
+        year, as before; an empty sequence shows nothing. "date" needs the
+        companion module ``astro_dates``.
+    calendar : {"auto", "julian", "gregorian"}
+        Calendar of the displayed date (automatic: Julian up to 4 Oct 1582;
+        use "julian" or "gregorian" to force one for ancient dates).
+    epoch_position : {"title", "center"}
+        Where the epoch items go. "title" (default): under the title. "center":
+        in a short box in the centre of the circle (year, date and time on two
+        lines, Julian Day), which frees the title; the planets are then kept
+        clear of the box and, in a figure created here, the diagram is made
+        about a quarter larger (the figure is taller and its margins narrower).
     table : bool
         Add a table with the longitudes, signs and nakshatras (only when the
         figure is created here).
@@ -1066,6 +1329,11 @@ def plot_zodiac_with_planets(
     year = float(year)
     if not math.isfinite(year):
         raise ValueError("year must be a finite number")
+    epoch_parts = _epoch_parts(epoch_display)
+    _check_calendar_name(calendar)
+    _check_epoch_position(epoch_position)
+    _check_sign_labels(sign_labels)
+    centered = epoch_position == "center" and bool(epoch_parts)
     year_given = year
     year = _tdb_year(year, time_scale)                 # from here on, TDB
     delta_t_seconds_used = (year - year_given) * 365.25 * 86400.0
@@ -1095,28 +1363,52 @@ def plot_zodiac_with_planets(
     # --- base diagram (geocentric view: the Earth is at the centre) ----------
     own_figure = ax is None
     if own_figure:
-        fig = plt.figure(figsize=(9.0, 12.2))
+        if epoch_position == "center":       # larger circle: shorter title, taller figure
+            text_block = 4.05 if (table and not compact) else 0.3     # inches under it
+            title_block = 1.15
+            fig_height = 8.0 + title_block + text_block
+            fig = plt.figure(figsize=(9.0, fig_height))
+        else:
+            fig = plt.figure(figsize=(9.0, 12.2))
         ax = fig.add_subplot(111, projection="polar")
     else:
         fig = ax.figure
     plot_equinoctial_precession(
         year, model=model, j2000_ayanamsa_deg=j2000_ayanamsa_deg,
         rate_arcsec_per_year=rate_arcsec_per_year, ax=ax, legend=False,
-        show=False, center="earth", show_arc=False, annotations=not compact,
-        nakshatras=nakshatras, symbols=symbols)
-    lines = ax.get_title().split("\n")
-    lines[0] = (_PLANETS_TITLE.format(year=_format_year(year_given))
-                + (_PLANETS_TITLE_UT if time_scale == "UT" else ""))
+        show=False, center="none" if (centered and center_symbol) else "earth",
+        show_arc=False, annotations=not compact, nakshatras=nakshatras,
+        sign_labels=sign_labels, epoch_display=(), center_symbol=center_symbol)
+    summary_lines = ax.get_title().split("\n")[1:]    # ayanamsa and vernal point
+    epoch_texts = _epoch_texts(year_given, year, time_scale, epoch_parts, calendar,
+                               compact=compact)
+    if epoch_position == "center":
+        head_lines = [_PLANETS_HEAD]
+        if centered:
+            _draw_epoch_center(ax, _epoch_center_lines(year_given, year, time_scale,
+                                                       epoch_parts, calendar), compact,
+                               symbol=_CENTER_SYMBOLS["earth"] if center_symbol else None)
+    elif epoch_parts == ("year",):
+        head_lines = [_PLANETS_HEAD + " · " + epoch_texts[0]]
+    elif epoch_parts:
+        head_lines = [_PLANETS_HEAD, _join_epoch(epoch_texts)]
+    else:
+        head_lines = [_PLANETS_HEAD]
     if compact:
         ax.set_ylim(0, 1.08 + (_NAK_RING_WIDTH if nakshatras else 0.0))   # no outer labels
-        ax.set_title("\n".join(lines[:2]), fontsize=8, pad=6)
+        ax.set_title("\n".join(head_lines + summary_lines[:1]), fontsize=8, pad=6)
     else:
-        ax.set_title("\n".join(lines), fontsize=9, pad=14)
+        ax.set_title("\n".join(head_lines + summary_lines), fontsize=9, pad=14)
 
     # --- planets: markers at staggered radii, with a tick to the ring --------
     names = list(positions)
     longitudes = [positions[n]["sidereal"] for n in names]
-    radii = (0.66, 0.56, 0.46, 0.36, 0.26)
+    if centered and center_symbol:                  # taller box: planets a little further out
+        radii = (0.72, 0.65, 0.58, 0.51, 0.45)
+    elif centered:                                  # clear of the centre box
+        radii = (0.70, 0.62, 0.54, 0.47, 0.40)
+    else:
+        radii = (0.66, 0.56, 0.46, 0.36, 0.26)
     levels = _stagger_levels(longitudes, radii, 13.0 if compact else 10.0)
     for i, name in enumerate(names):
         theta = math.radians(longitudes[i])
@@ -1124,15 +1416,22 @@ def plot_zodiac_with_planets(
         radius = levels[i]
         ax.plot([theta, theta], [radius, 0.80], color=color, linewidth=1.3,
                 alpha=0.9, zorder=8)
-        ax.scatter([theta], [radius], s=230 if compact else 420, c=color,
-                   edgecolors="#2C2C2A", linewidths=0.8, zorder=9)
-        ax.text(theta, radius, symbol, ha="center", va="center",
-                fontsize=9 if compact else 12, fontfamily=_PLANET_FONT,
-                color="#2C2C2A", zorder=10)
+        disc_area = _DISC_AREA_COMPACT if compact else _DISC_AREA
+        glyph_size = _GLYPH_FILL * math.sqrt(4.0 * disc_area / math.pi)   # points
+        ax.scatter([theta], [radius], s=disc_area, c=color, edgecolors="#2C2C2A",
+                   linewidths=0.8, zorder=9)
+        ax.scatter([theta], [radius], s=glyph_size ** 2,
+                   marker=_centered_glyph(symbol, _PLANET_FONT), c="#2C2C2A",
+                   edgecolors="#2C2C2A", linewidths=0.25, zorder=10)
 
     # --- table ---------------------------------------------------------------
     if own_figure:
-        fig.subplots_adjust(top=0.86, bottom=0.33 if table else 0.08)
+        height = fig.get_figheight()
+        if epoch_position == "center":
+            fig.subplots_adjust(left=0.02, right=0.98, top=1 - title_block / height,
+                                bottom=text_block / height)
+        else:
+            fig.subplots_adjust(top=0.86, bottom=0.33 if table else 0.08)
         if table and not compact:
             rows = [_PLANETS_TABLE_HEADER]
             for name in names:
@@ -1149,7 +1448,7 @@ def plot_zodiac_with_planets(
                             f"      {tropical:>10}      "
                             f"{_SIGN_NAMES[sign_index]:<12}{_format_deg_min(offset):>7}   "
                             f"{_NAKSHATRAS[nak]} ({pada})")
-            fig.text(0.5, 0.305, "\n".join(rows), ha="center", va="top",
+            fig.text(0.5, 3.72 / height, "\n".join(rows), ha="center", va="top",
                      multialignment="left", fontsize=8.6, family=_TABLE_FONT,
                      linespacing=1.45)
             if nakshatras:
@@ -1162,7 +1461,7 @@ def plot_zodiac_with_planets(
                         occupied.append(k)
                 items = "; ".join(f"{_NAKSHATRAS[k]}: {_NAKSHATRA_EMBLEMS[k]}"
                                   for k in occupied)
-                fig.text(0.5, 0.148, _EMBLEMS_HEADER + "\n" + textwrap.fill(items, 105),
+                fig.text(0.5, 1.81 / height, _EMBLEMS_HEADER + "\n" + textwrap.fill(items, 105),
                          ha="center", va="top", multialignment="left", fontsize=8.2,
                          color=_TEXT_DARK)
             epoch_note = (_PLANETS_NOTE_EPOCH_UT.format(
@@ -1170,7 +1469,7 @@ def plot_zodiac_with_planets(
                 if time_scale == "UT" else _PLANETS_NOTE_EPOCH_TDB)
             note = (_PLANETS_NOTE_METHOD + "\n" + epoch_note + "\n"
                     + (_PLANETS_NOTE_EXTERNAL if extra_points else _PLANETS_NOTE_NO_MOON))
-            fig.text(0.5, 0.075, note, ha="center", va="top",
+            fig.text(0.5, 0.915 / height, note, ha="center", va="top",
                      multialignment="center", fontsize=8.2, color=_TEXT_NOTE_MODEL,
                      style="italic")
 
@@ -1196,7 +1495,12 @@ def plot_zodiac_planets_grid(
     dpi: int = 150,
     time_scale: str = "TDB",
     nakshatras: bool = True,
-    symbols: bool = True,
+    sign_labels: str = "both",
+    epoch_display: Optional[Sequence[str]] = None,
+    calendar: str = "auto",
+    epoch_position: str = "title",
+    panel_size: float = 3.7,
+    center_symbol: bool = True,
 ):
     """
     Draw several years side by side: one small zodiac diagram with the planets
@@ -1216,9 +1520,20 @@ def plot_zodiac_planets_grid(
         the one that covers it.
     labels : sequence of str, optional
         Panel titles (default: the year, in Spanish with "a. C." / "d. C.").
-    bodies, model, j2000_ayanamsa_deg, rate_arcsec_per_year, nakshatras, symbols
-        As in ``plot_zodiac_with_planets`` (in the small panels the signs show
-        only their glyph and the nakshatras only their number).
+    epoch_display : sequence of {"year", "date", "julian_day"}, optional
+        Extra lines under each panel title: the year, the civil date and time
+        (to the minute, with its time scale and a short calendar tag) and/or
+        the Julian Day. Without it, panels show only ``labels`` (or the year).
+    calendar : {"auto", "julian", "gregorian"}
+        Calendar of the displayed dates.
+    epoch_position : {"title", "center"}
+        Put the ``epoch_display`` items under each panel title (default) or in
+        a small box in the centre of each circle, which shortens the titles.
+    panel_size : float
+        Width in inches of each panel (default 3.7); the circles grow with it.
+    bodies, model, j2000_ayanamsa_deg, rate_arcsec_per_year, nakshatras, sign_labels, center_symbol
+        As in ``plot_zodiac_with_planets`` (in the small panels "both" shows only
+        the glyph of each sign, and the nakshatras only their number).
     columns : int, optional
         Panels per row (default: all in one row).
     table : bool
@@ -1240,9 +1555,20 @@ def plot_zodiac_planets_grid(
     count = len(years)
     if count == 0:
         raise ValueError("years must not be empty")
+    epoch_parts = _epoch_parts(epoch_display)
+    _check_calendar_name(calendar)
+    _check_epoch_position(epoch_position)
+    _check_sign_labels(sign_labels)
+    in_center = epoch_position == "center"
+    if float(panel_size) <= 0:
+        raise ValueError("panel_size must be positive")
     if labels is None:
-        labels = [_format_year(y) for y in years]
-    labels = list(labels)
+        title_labels = ([_format_year(y) for y in years] if epoch_display is None
+                        else [None] * count)
+        labels = [_format_year(y, short=True) for y in years]      # table header
+    else:
+        labels = list(labels)
+        title_labels = labels
     if len(labels) != count:
         raise ValueError("labels must have one entry per year")
     columns = count if columns is None else int(columns)
@@ -1253,10 +1579,13 @@ def plot_zodiac_planets_grid(
     if time_scale not in ("TDB", "UT"):
         raise ValueError("time_scale must be 'TDB' or 'UT'")
 
-    panel = 3.7
+    panel = float(panel_size)
     table_lines = len(body_list) + 2
     table_height = 0.20 * table_lines + 0.5 if table else 0.0
-    height = 0.92 * panel * rows + 0.8 + table_height
+    title_line_count = (0 if all(t is None for t in title_labels) else 1) \
+        + (0 if in_center else len(epoch_parts)) + 1     # label, epoch items, ayanamsa
+    header = 0.30 + 0.17 * title_line_count         # room for the panel titles, inches
+    height = 0.92 * panel * rows + header + 0.15 + table_height
     fig = plt.figure(figsize=(panel * columns, height))
     axes, all_positions, ayanamsas = [], [], []
     for k, (year, label) in enumerate(zip(years, labels)):
@@ -1266,20 +1595,27 @@ def plot_zodiac_planets_grid(
             j2000_ayanamsa_deg=j2000_ayanamsa_deg,
             rate_arcsec_per_year=rate_arcsec_per_year,
             ax=ax, show=False, compact=True, time_scale=time_scale,
-            nakshatras=nakshatras, symbols=symbols)
+            nakshatras=nakshatras, sign_labels=sign_labels, calendar=calendar,
+            center_symbol=center_symbol,
+            epoch_display=epoch_parts if in_center else (),
+            epoch_position=epoch_position)
         year_tdb = _tdb_year(year, time_scale)
+        title_lines = ([title_labels[k]] if title_labels[k] is not None else []) \
+            + ([] if in_center else _epoch_texts(year, year_tdb, time_scale, epoch_parts,
+                                                 calendar, compact=True))
         if model == "long_term":
             ayanamsa = long_term_ayanamsa(year_tdb, j2000_ayanamsa_deg)
         else:
             ayanamsa = float(lahiri_ayanamsa(year_tdb, j2000_ayanamsa_deg,
                                              rate_arcsec_per_year))
-        ax.set_title(f"{label}\nA = {_format_number(ayanamsa, 2)}°", fontsize=9, pad=8)
+        ax.set_title("\n".join(title_lines + [f"A = {_format_number(ayanamsa, 2)}°"]),
+                     fontsize=9 if len(title_lines) < 3 else 8, pad=8)
         axes.append(ax)
         all_positions.append(positions)
         ayanamsas.append(ayanamsa)
 
     bottom = (table_height + 0.15) / height if table else 0.04
-    fig.subplots_adjust(left=0.02, right=0.98, top=1 - 0.55 / height,
+    fig.subplots_adjust(left=0.02, right=0.98, top=1 - header / height,
                         bottom=bottom, wspace=0.08, hspace=0.30)
     if table:
         short = [label if len(label) <= 15 else label[:14] + "…" for label in labels]
