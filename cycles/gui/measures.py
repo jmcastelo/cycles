@@ -1,30 +1,45 @@
 """
 Measures panel: dharma and purity of the subcycles of one level, linked with
-the navigator. The selected subcycle is ringed; with "Equal durations" on,
-so are those with its duration. Clicking a point selects that subcycle.
+the navigator, in 2D (against each other, time or index) or in 3D (dharma,
+purity and time or index; drag to rotate). The selected subcycle is ringed;
+with "Equal durations" on, so are those with its duration. Clicking a point
+selects that subcycle.
 """
 
 import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from matplotlib.ticker import MaxNLocator
+from matplotlib.ticker import FuncFormatter, MaxNLocator
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox, QToolTip, QVBoxLayout, QWidget
 
 from cycles.gui.state import MAX_DEPTH, CycleState, address_of, children_range, equal_duration_indices, tcoord
 from cycles.plotting.generic import plot_y_vs_x
-from cycles.plotting.measure import plot_purity_and_dharma
+from cycles.plotting.measure import plot_purity_and_dharma, plot_quality_scatter_3d
 
-# Plot kinds: label -> (y measure, x axis); x is 'dharma', 'index' or 'time'
+# Plot kinds: label -> (y measure, x axis); x is 'dharma', 'index' or 'time'.
+# The 3D kinds have y = '3d' and x the third axis (dharma and purity are the other two).
 KINDS = {
     'Purity vs dharma': ('purity', 'dharma'),
     'Dharma vs time': ('dharma', 'time'),
     'Purity vs time': ('purity', 'time'),
     'Dharma vs index': ('dharma', 'index'),
     'Purity vs index': ('purity', 'index'),
+    'Dharma, purity and time (3D)': ('3d', 'time'),
+    'Dharma, purity and index (3D)': ('3d', 'index'),
+}
+# Camera presets of the 3D plots (dharma along x, purity along y, time or index along z),
+# and the axis each one sees edge-on (its ticks are hidden)
+EDGE_ON = {'top': 'z', 'dharma': 'y', 'purity': 'x'}
+VIEWS_3D = {
+    'oblique': ('Oblique', (22, -55, 0)),
+    'top': ('Down the time axis: purity vs dharma', (90, -90, 0)),
+    'dharma': ('From the side: dharma vs time', (0, -90, 0)),
+    'purity': ('From the side: purity vs time', (0, 0, 0)),
 }
 PICK_RADIUS = 10    # pixels
+DRAG_THRESHOLD = 4  # pixels moved between press and release that make it a rotation, not a click
 
 
 class MeasuresPanel(QWidget):
@@ -34,7 +49,9 @@ class MeasuresPanel(QWidget):
         super().__init__(parent)
         self.state = state
         self._base = None            # what the drawn plot shows, to redraw only when it changes
-        self._x = self._y = None
+        self._x = self._y = self._z = None
+        self._press = None
+        self.ax = None
         self._indices = np.array([], dtype=int)
         self._dirty = True
 
@@ -61,12 +78,22 @@ class MeasuresPanel(QWidget):
         self.sized.toggled.connect(self._schedule)
         row.addWidget(self.sized)
         row.addStretch(1)
+        self.view_label = QLabel('View')
+        self.view = QComboBox()
+        self.view.addItem('Free (drag to rotate)', None)
+        for key, (label, _) in VIEWS_3D.items():
+            self.view.addItem(label, key)
+        self.view.setCurrentIndex(self.view.findData('oblique'))
+        self.view.currentIndexChanged.connect(self._apply_view)
+        row.addWidget(self.view_label)
+        row.addWidget(self.view)
         layout.addLayout(row)
 
         self.figure = Figure(figsize=(5, 4), layout='constrained')
         self.canvas = FigureCanvasQTAgg(self.figure)
         self.canvas.setMinimumSize(260, 220)
-        self.canvas.mpl_connect('button_press_event', self._clicked)
+        self.canvas.mpl_connect('button_press_event', self._pressed)
+        self.canvas.mpl_connect('button_release_event', self._released)
         self.canvas.mpl_connect('motion_notify_event', self._hovered)
         layout.addWidget(self.canvas, 1)
         self.info = QLabel()
@@ -118,7 +145,9 @@ class MeasuresPanel(QWidget):
         scope = self.scope(depth)
         # redraw the plot only if what it shows changed: the point colors, and dharma or purity
         y_name, x_name = KINDS[self.kind.currentText()]
-        measures = {y_name, x_name} & {'dharma', 'purity'}
+        measures = {'dharma', 'purity'} if y_name == '3d' else {y_name, x_name} & {'dharma', 'purity'}
+        self.view_label.setVisible(y_name == '3d')
+        self.view.setVisible(y_name == '3d')
         parameters = (state.parameters_of(state.color_key), *(state.parameters_of(m) for m in sorted(measures)))
         base = (self.kind.currentText(), depth, scope, state.color_key, state.model, state.names, parameters,
                 self.sized.isChecked())
@@ -150,10 +179,37 @@ class MeasuresPanel(QWidget):
         where = ' › '.join(state.names[d] for d in scope) or 'whole cycle'
         title = f"{self.kind.currentText()}, depth {depth} ({where})"
 
+        camera = (self.ax.elev, self.ax.azim, self.ax.roll) if self.ax is not None and self._z is not None else None
         self.figure.clear()
-        ax = self.figure.add_subplot(111)
-        sizes = self.point_sizes(part.durations, scatter=x_name == 'dharma')
-        if x_name == 'dharma':
+        self._z = None
+        sizes = self.point_sizes(part.durations, scatter=x_name == 'dharma' or y_name == '3d')
+        if y_name == '3d':
+            ax = self.figure.add_subplot(111, projection='3d')
+            if x_name == 'index':
+                z = indices.astype(float)
+            else:
+                z = part.starts + part.durations / 2
+                if state.time_map is not None:
+                    z = state.time_map.to_physical(z)
+            plot_quality_scatter_3d(part, ax=ax, show=False, axis=x_name,
+                                    values=z if x_name == 'index' or state.time_map is not None else None,
+                                    colors=colors, sizes=sizes, path=True, alpha=0.9)
+            ax.set_title(title, fontsize=9)
+            ax.zaxis.set_major_locator(MaxNLocator(5))
+            # plain numbers: the Unicode minus may be missing from the font at some angles
+            ax.zaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:.0f}" if abs(v) >= 10 else f"{v:g}"))
+            ax.tick_params(axis='z', pad=8)
+            ax.zaxis.labelpad = 14
+            edge_on = EDGE_ON.get(self.view.currentData())
+            if edge_on:
+                getattr(ax, f"set_{edge_on}ticklabels")([])
+                getattr(ax, f"set_{edge_on}label")('')
+            view = VIEWS_3D.get(self.view.currentData())
+            ax.view_init(*(view[1] if view else camera if camera else VIEWS_3D['oblique'][1]))
+            x, y = part.dharmas, part.purities
+            self._z = np.asarray(z, dtype=float)
+        elif x_name == 'dharma':
+            ax = self.figure.add_subplot(111)
             plot_purity_and_dharma(ax, part, colors=colors, sizes=sizes)
             ax.set_title(title, fontsize=9)
             x, y = part.dharmas, part.purities
@@ -166,6 +222,7 @@ class MeasuresPanel(QWidget):
                 xlabel = 'Normalized time'
                 if state.time_map is not None:
                     x, xlabel = state.time_map.to_physical(x), 'Year'
+            ax = self.figure.add_subplot(111)
             plot_y_vs_x(x, y, (None, None), title, xlabel, y_name.capitalize(), ax=ax, show=False,
                         colors=colors, size=sizes)
             ax.title.set_fontsize(9)
@@ -173,7 +230,14 @@ class MeasuresPanel(QWidget):
         self.ax = ax
         self._x, self._y, self._indices = np.asarray(x, dtype=float), np.asarray(y, dtype=float), indices
         self._highlights = []
-        self.info.setText(f"{len(indices)} subcycles. Click a point to select it.")
+        self.info.setText(f"{len(indices)} subcycles. Click a point to select it"
+                          + ('; drag to rotate.' if self._z is not None else '.'))
+
+    def _apply_view(self, *_) -> None:
+        """A new camera preset: redraw (the axis seen edge-on changes)."""
+        if self._z is not None:
+            self._base = None
+            self._schedule()
 
     def _draw_highlights(self, depth: int) -> None:
         state = self.state
@@ -188,20 +252,31 @@ class MeasuresPanel(QWidget):
             equal = [positions[int(i)] for i in equal_duration_indices(state.cache.level(depth), tcoord(selection))
                      if int(i) in positions]
             if equal:
-                self._highlights.append(self.ax.scatter(self._x[equal], self._y[equal], s=90, facecolors='none',
-                                                        edgecolors='black', linewidths=0.8, zorder=3))
+                self._highlights.append(self._ring(equal, s=90, color='black', width=0.8))
         k = positions.get(tcoord(selection))
         if k is not None:
-            self._highlights.append(self.ax.scatter([self._x[k]], [self._y[k]], s=260, facecolors='none',
-                                                    edgecolors='#1f77b4', linewidths=2.5, zorder=4))
+            self._highlights.append(self._ring([k], s=260, color='#1f77b4', width=2.5))
+
+    def _ring(self, points: list[int], s: float, color: str, width: float):
+        """Hollow markers around the plotted points at positions ``points`` (2D or 3D)."""
+        if self._z is not None:
+            return self.ax.scatter(self._x[points], self._y[points], self._z[points], s=s, facecolors='none',
+                                   edgecolors=color, linewidths=width, depthshade=False)
+        return self.ax.scatter(self._x[points], self._y[points], s=s, facecolors='none', edgecolors=color,
+                               linewidths=width, zorder=4)
 
     # -- interaction
 
     def _nearest(self, event) -> int | None:
         """Position in the plotted arrays of the point nearest the mouse (within ``PICK_RADIUS``)."""
-        if self._x is None or event.inaxes is not getattr(self, 'ax', None) or not len(self._x):
+        if self._x is None or self.ax is None or event.inaxes is not self.ax or not len(self._x):
             return None
-        points = self.ax.transData.transform(np.column_stack([self._x, self._y]))
+        if self._z is not None:
+            from mpl_toolkits.mplot3d import proj3d
+            x, y, _ = proj3d.proj_transform(self._x, self._y, self._z, self.ax.get_proj())
+            points = self.ax.transData.transform(np.column_stack([x, y]))
+        else:
+            points = self.ax.transData.transform(np.column_stack([self._x, self._y]))
         distances = np.hypot(points[:, 0] - event.x, points[:, 1] - event.y)
         k = int(np.argmin(distances))
         return k if distances[k] <= PICK_RADIUS * self.canvas.devicePixelRatioF() else None
@@ -209,12 +284,27 @@ class MeasuresPanel(QWidget):
     def _address(self, k: int) -> tuple:
         return address_of(int(self._indices[k]), self.plot_depth())
 
-    def _clicked(self, event) -> None:
+    def _pressed(self, event) -> None:
+        self._press = (event.x, event.y) if event.button == 1 else None
+
+    def _released(self, event) -> None:
+        if self._press is None or event.button != 1:
+            return
+        moved = np.hypot(event.x - self._press[0], event.y - self._press[1])
+        self._press = None
+        if moved > DRAG_THRESHOLD:
+            if self._z is not None and self.view.currentData() is not None:
+                self.view.blockSignals(True)       # the user rotated the 3D view: it is now free
+                self.view.setCurrentIndex(0)
+                self.view.blockSignals(False)
+            return
         k = self._nearest(event)
-        if k is not None and event.button == 1:
+        if k is not None:
             self.state.reveal(self._address(k))
 
     def _hovered(self, event) -> None:
+        if self._press is not None:
+            return
         k = self._nearest(event)
         if k is None:
             QToolTip.hideText()

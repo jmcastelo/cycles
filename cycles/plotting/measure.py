@@ -124,30 +124,47 @@ def plot_quality_grid(levels: list[Level], rgb_key: str=DEFAULT_COLOR_KEY):
     plt.show()
 
 
-def plot_quality_scatter_3d(level: Level, rgb_key: str=DEFAULT_COLOR_KEY) -> plt.Figure:
+def plot_quality_scatter_3d(level: Level, rgb_key: str=DEFAULT_COLOR_KEY, ax=None, show: bool=True,
+                            axis: str='time', values=None, colors=None, sizes=10, path: bool=False,
+                            alpha: float=0.5):
     """
     3D scatter of dharma, purity and time (subcycle midpoint), colored by
-    subcycle. Returns the figure.
+    subcycle.
+
+    ax : existing 3D Axes to draw on (then nothing is shown); ``show`` as usual
+        otherwise.
+    axis : third coordinate, ``'time'`` (subcycle midpoints) or ``'index'``;
+        ``values`` replaces its values (e.g. years, or indices within a whole
+        level) keeping the label (``'Year'`` for time given this way).
+    colors, sizes : point colors ((N, 3), overriding ``rgb_key``) and areas.
+    path : also join the points in time order with a faint line.
+
+    Returns the figure.
     """
     durations, starts, dharma, purity = level.durations, level.starts, level.dharmas, level.purities
-    rgb = level.rgb(rgb_key)
-    t = starts + durations / 2
+    rgb = level.rgb(rgb_key) if colors is None else colors
+    if axis == 'index':
+        z, zlabel = np.arange(len(dharma), dtype=float), 'Index'
+    else:
+        z, zlabel = starts + durations / 2, 'Location' if values is None else 'Year'
+    if values is not None:
+        z = np.asarray(values, dtype=float)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-    ax.scatter(
-        xs=dharma,
-        ys=purity,
-        zs=t,
-        c=rgb,
-        # s=durations,
-        s=10,
-        alpha=0.5
-    )
+    own_figure = ax is None
+    if own_figure:
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
+    else:
+        fig = ax.figure
+    if path:
+        ax.plot(dharma, purity, z, color='0.75', lw=0.5, zorder=1)
+    ax.scatter(xs=dharma, ys=purity, zs=z, c=rgb, s=sizes, alpha=alpha, depthshade=False)
     ax.set_xlabel('Dharma')
     ax.set_ylabel('Purity')
-    ax.set_zlabel('Location')
-    plt.margins(x=0, y=0)
-    plt.tight_layout()
-    plt.show()
+    ax.set_zlabel(zlabel)
+    if own_figure:
+        plt.margins(x=0, y=0)
+        plt.tight_layout()
+        if show:
+            plt.show()
     return fig

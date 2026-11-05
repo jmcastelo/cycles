@@ -295,7 +295,9 @@ in `$CYCLES_EPHEMERIS`, then in the folder last chosen with *Ephemeris…*,
 then in `sandbox/data/tabla70k70k`.
 
 The *Measures* tab plots dharma and purity (against each other, against
-time, or against index) for the level of the selected subcycle, or for a
+time, or against index, or in 3D: dharma, purity and time or index, with
+a faint line in time order, camera presets looking along each axis, and
+dragging to rotate) for the level of the selected subcycle, or for a
 chosen depth, inside the zoomed subcycle or over the whole cycle, with
 points sized by duration or all alike. The
 selected subcycle is ringed in blue and, with *Equal durations* on, those
