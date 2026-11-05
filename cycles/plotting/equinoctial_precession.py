@@ -85,9 +85,11 @@ from typing import Callable, Dict, Optional, Sequence, Tuple
 
 import numpy as np
 
+from cycles.functions.astro_dates import date_time_to_julian_day, julian_day_to_year
 from cycles.functions.timescale import TimeMap
 
 __all__ = ["lahiri_ayanamsa", "long_term_ayanamsa", "year_from_ayanamsa",
+           "precession_time_map", "yuga_boundaries", "yuga_time_maps", "KALI_YUGA_START", "YUGA_TURNS",
            "ecliptic_coordinates_of_date", "plot_equinoctial_precession",
            "plot_zodiac_with_planets", "plot_zodiac_planets_grid",
            "plot_ayanamsa_comparison"]
@@ -514,6 +516,47 @@ def precession_time_map(
         return (np.asarray(ayanamsa(year), dtype=float) - a0) / (360.0 * turns)
 
     return TimeMap.from_functions(to_physical, to_normalized)
+
+
+# Start of the Kali Yuga (decimal year, UT): 6:30 local solar time in Ujjain
+KALI_YUGA_START = julian_day_to_year(date_time_to_julian_day(-3103, 2, 7, 6, 30, utc_offset_hours=75.77 / 15))
+# Precession arc of each yuga, in turns of the ayanamsa (4:3:2:1 in angle)
+YUGA_TURNS = (1.0, 3 / 4, 1 / 2, 1 / 4)
+
+
+def yuga_boundaries(kali_start: float = KALI_YUGA_START, model: str = "long_term") -> list[float]:
+    """
+    Years of the yuga boundaries found from the precession of the equinoxes:
+    starts of Satya, Treta, Dvapara and Kali, and the end of Kali.
+
+    From the start of the Kali Yuga, each earlier boundary is found by going
+    back the arc of the yuga before it (1/2 turn of the ayanamsa for Dvapara,
+    3/4 for Treta, 1 for Satya), and the end is 1/4 turn after the start of
+    Kali. ``model`` is as in ``year_from_ayanamsa``.
+    """
+    tk = kali_start
+    td = year_from_ayanamsa(-YUGA_TURNS[2], unit='turns', reference_year=tk, model=model)
+    tt = year_from_ayanamsa(-YUGA_TURNS[1], unit='turns', reference_year=td, model=model)
+    ts = year_from_ayanamsa(-YUGA_TURNS[0], unit='turns', reference_year=tt, model=model)
+    tm = year_from_ayanamsa(YUGA_TURNS[3], unit='turns', reference_year=tk, model=model)
+    return [float(t) for t in (ts, tt, td, tk, tm)]
+
+
+def yuga_time_maps(kali_start: float = KALI_YUGA_START, model: str = "long_term") -> Dict[str, TimeMap]:
+    """
+    The three time maps of the yuga cycle (see ``yuga_boundaries``):
+
+    * ``'precession'``: divides precession angle (``precession_time_map``), so
+      every subcycle boundary, at any depth, is a precession boundary;
+    * ``'fitted'``: divides time, each yuga fitted to its boundaries;
+    * ``'linear'``: divides time uniformly between the first and last boundary.
+    """
+    boundaries = yuga_boundaries(kali_start, model)
+    return {
+        'precession': precession_time_map(boundaries[0], sum(YUGA_TURNS), model=model),
+        'fitted': TimeMap.from_age_boundaries(boundaries),
+        'linear': TimeMap.linear(boundaries[0], boundaries[-1]),
+    }
 
 
 def ecliptic_coordinates_of_date(

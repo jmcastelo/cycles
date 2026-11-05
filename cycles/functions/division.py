@@ -33,6 +33,17 @@ RGB_KEYS = CMYK_KEYS + ('tetrahedron',)
 # 'cmyk_normalised' is the coloring of the original code (one CMYK/RGB color per subcycle)
 DEFAULT_COLOR_KEY = 'cmyk_normalised'
 
+# Default parameters of compute_level:
+# [division base, color weight base, purity weight base]
+DEFAULT_BASES = [4, 2, 2]
+# [cmyk scale, black scale, tetrahedron step]
+DEFAULT_SCALES = [1 / 2, 2 / 3, 0.5]
+# Vertex colors of the tetrahedron coloring: Golden, Silver, Bronze, Iron
+TETRAHEDRON_COLORS = np.array([[1, 1, 0], [0, 1, 1], [1, 0, 1], [0, 0, 0]])
+
+# Names accepted by level_colors: the RGB variants of a Level, plus three more
+COLOR_KEYS = RGB_KEYS + ('lrgb', 'dharma', 'purity')
+
 
 class Level(NamedTuple):
     """
@@ -61,6 +72,19 @@ class Level(NamedTuple):
         return Level(*(field[index] for field in self))
 
 
+def level_colors(level: Level) -> dict[str, np.ndarray]:
+    """
+    RGB color of every subcycle of ``level`` for each name in ``COLOR_KEYS``:
+    the Level's RGB variants, ``lrgb`` (pure ink of the innermost age), and
+    ``dharma`` / ``purity`` as gray levels.
+    """
+    colors = {key: level.rgb(key) for key in RGB_KEYS}
+    colors['lrgb'] = np.array([lcoords_to_lrgb(lcoords)[-1] for lcoords in level.lcoords])
+    colors['dharma'] = np.repeat(level.dharmas[:, None], 3, axis=1)
+    colors['purity'] = np.repeat(level.purities[:, None], 3, axis=1)
+    return colors
+
+
 def weights(base: int, depth: int) -> np.ndarray:
     """
     Weight of each digit position: ``base^-1, base^-2, ..., base^-depth``.
@@ -85,7 +109,8 @@ def compute_start(lcoords: np.ndarray) -> float:
     return np.dot(offsets[lcoords], np.insert(np.cumprod(proportions[lcoords][:-1]), 0, 1))
 
 
-def compute_level(depth: int, bases: list[int], scales: list[float], colors: np.ndarray) -> Level:
+def compute_level(depth: int, bases: list[int] = DEFAULT_BASES, scales: list[float] = DEFAULT_SCALES,
+                  colors: np.ndarray = TETRAHEDRON_COLORS) -> Level:
     """
     All ``bases[0]^depth`` subcycles of depth ``depth``, in time order.
 
@@ -95,6 +120,9 @@ def compute_level(depth: int, bases: list[int], scales: list[float], colors: np.
     scales : [scales[0], scales[1]] for ``color.lcoords_to_cmyk``, and
         ``scales[2]`` for ``color.lcoords_to_rgb_tetrahedron``
     colors : the four vertex colors of the tetrahedron coloring
+
+    The defaults are ``DEFAULT_BASES``, ``DEFAULT_SCALES`` and
+    ``TETRAHEDRON_COLORS``.
 
     Returns a ``Level``: addresses, durations, starts, all CMYK and RGB color
     variants, dharma and purity of each subcycle.

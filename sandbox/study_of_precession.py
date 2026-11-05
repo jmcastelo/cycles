@@ -5,11 +5,12 @@ the N-body ephemeris at their boundaries.
 
 import cycles.functions.nbody_ephemeris as nbe
 from cycles.functions.astro_dates import date_time_to_julian_day, julian_day_to_year
-from cycles.functions.timescale import TimeMap, addresses_with_prefix, address_label
+from cycles.functions.timescale import addresses_with_prefix, address_label
 from cycles.plotting.equinoctial_precession import (
+    KALI_YUGA_START,
     plot_equinoctial_precession,
-    precession_time_map,
-    year_from_ayanamsa,
+    yuga_boundaries,
+    yuga_time_maps,
     plot_zodiac_with_planets,
     plot_zodiac_planets_grid,
 )
@@ -28,23 +29,21 @@ PREFIX = [3]
 
 
 def setup():
-    # Start of the Kali Yuga: 6:30 local solar time in Ujjain
-    tk = julian_day_to_year(date_time_to_julian_day(-3103, 2, 7, 6, 30, utc_offset_hours=75.77 / 15))
-    td = year_from_ayanamsa(-1 / 2, unit='turns', reference_year=tk)
-    tt = year_from_ayanamsa(-3 / 4, unit='turns', reference_year=td)
-    ts = year_from_ayanamsa(-1, unit='turns', reference_year=tt)
-    tm = year_from_ayanamsa(1 / 4, unit='turns', reference_year=tk)
+    # Yuga boundaries from the start of the Kali Yuga, going back and forward by
+    # the arc of each yuga (1, 3/4, 1/2 and 1/4 turns of the ayanamsa)
+    ts, tt, td, tk, tm = yuga_boundaries(KALI_YUGA_START)
+    maps = yuga_time_maps(KALI_YUGA_START)
     # Normalized time -> year, dividing precession angle: the yugas are 1, 3/4, 1/2
     # and 1/4 turns (4:3:2:1 in angle), and so is every subdivision
-    time_map = precession_time_map(ts, 1 + 3 / 4 + 1 / 2 + 1 / 4)
+    time_map = maps['precession']
     return dict(
         starts={'Satya': ts, 'Treta': tt, 'Dvapara': td, 'Kali': tk, 'end': tm},
         time_map=time_map,
         # Alternatives for comparison, dividing time instead of angle:
         # each yuga fitted to its boundaries, linear inside it
-        fitted_map=TimeMap.from_age_boundaries([ts, tt, td, tk, tm]),
+        fitted_map=maps['fitted'],
         # one linear map over the whole span (the yugas then are exactly 4:3:2:1 in years)
-        linear_map=TimeMap.linear(ts, tm),
+        linear_map=maps['linear'],
         # Kali Yuga divided like a whole cycle (0.4, 0.3, 0.2, 0.1 of its arc), and its end
         sub_kali=[time_map.interval(lcoords)[0] for lcoords in addresses_with_prefix([3], 2)] + [tm],
         now=julian_day_to_year(date_time_to_julian_day(2026, 11, 3, 19, 49, 0)),

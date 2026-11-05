@@ -1,0 +1,354 @@
+"""
+The cycle navigator: the zoomed subcycle and its subdivisions, one row per
+depth, each subcycle drawn in its color.
+
+Mouse: click selects, double-click zooms in, right-click zooms out.
+Keys: Left/Right previous/next subcycle, Up parent, Down first part,
+Enter zoom into the selection, Backspace/Escape zoom out.
+"""
+
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
+from PySide6.QtGui import QColor, QFont, QPainter, QPen
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QSizePolicy, QToolButton, QToolTip, QWidget
+
+from cycles.gui.state import (
+    MAX_DEPTH, CycleState, address_of, children_range, current_year, date_text, equal_duration_indices, tcoord,
+    span_text, time_text,
+)
+
+LABEL_WIDTH = 44     # left margin, for the depth of each row
+AXIS_HEIGHT = 24     # bottom margin, for the time axis
+
+
+def rgb_to_qcolor(rgb) -> QColor:
+    return QColor.fromRgbF(*(min(1.0, max(0.0, float(c))) for c in rgb))
+
+
+def text_color(color: QColor) -> QColor:
+    """Black or white, whichever reads better on ``color``."""
+    luminance = 0.2126 * color.redF() + 0.7152 * color.greenF() + 0.0722 * color.blueF()
+    return QColor('black') if luminance > 0.5 else QColor('white')
+
+
+class Navigator(QWidget):
+    """Rows of subcycles below the focus of a ``CycleState``."""
+
+    hovered = Signal(object)   # address under the mouse, or None
+    busy = Signal(str)         # message while computing levels ('' when done)
+
+    def __init__(self, state: CycleState, parent=None):
+        super().__init__(parent)
+        self.state = state
+        self._cells: list[tuple[QRectF, tuple]] = []
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setMouseTracking(True)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        state.focusChanged.connect(self._changed)
+        state.selectionChanged.connect(self.update)
+        state.viewChanged.connect(self._changed)
+        state.dateChanged.connect(self.update)
+
+    def sizeHint(self) -> QSize:
+        return QSize(900, 420)
+
+    def _changed(self, *_) -> None:
+        """Compute the levels the new view needs (with a wait cursor if slow), then repaint."""
+        depths = [d for d in [len(self.state.focus), *self.state.visible_depths()]
+                  if d and not self.state.cache.has(d)]
+        if depths:
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            try:
+                for depth in depths:
+                    self.busy.emit(f"Computing the {4 ** depth} subcycles of depth {depth}…")
+                    self.state.cache.level(depth)
+            finally:
+                self.busy.emit('')
+                QApplication.restoreOverrideCursor()
+        self.update()
+
+    # -- geometry
+
+    def _rows(self) -> list[int]:
+        """Depth of each row, from the focus down."""
+        return [len(self.state.focus), *self.state.visible_depths()]
+
+    def _layout(self) -> list[tuple[QRectF, tuple, int, int]]:
+        """Cells to draw: (rectangle, address, depth, index)."""
+        state = self.state
+        rows = self._rows()
+        area = QRectF(LABEL_WIDTH, 4, self.width() - LABEL_WIDTH - 8, self.height() - AXIS_HEIGHT - 8)
+        row_height = area.height() / len(rows)
+        focus = state.focus
+        if focus:
+            level = state.cache.level(len(focus))
+            f_start = level.starts[tcoord(focus)]
+            f_duration = level.durations[tcoord(focus)]
+        else:
+            f_start, f_duration = 0.0, 1.0
+
+        cells = []
+        for r, depth in enumerate(rows):
+            top = area.top() + r * row_height
+            indices = children_range(focus, depth)
+            if state.spacing == 'time' and depth:
+                level = state.cache.level(depth)
+                lefts = (level.starts[indices.start:indices.stop] - f_start) / f_duration
+                widths = level.durations[indices.start:indices.stop] / f_duration
+            else:
+                n = len(indices)
+                lefts = [k / n for k in range(n)]
+                widths = [1 / n] * n
+            for index, left, width in zip(indices, lefts, widths):
+                rect = QRectF(area.left() + left * area.width(), top, width * area.width(), row_height)
+                cells.append((rect, address_of(index, depth), depth, index))
+        return cells
+
+    def cell_at(self, pos: QPointF) -> tuple | None:
+        for rect, address in self._cells:
+            if rect.contains(pos):
+                return address
+        return None
+
+    # -- painting
+
+    def paintEvent(self, event) -> None:
+        state = self.state
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        palette = self.palette()
+        painter.fillRect(self.rect(), palette.base())
+        cells = self._layout()
+        self._cells = [(rect, address) for rect, address, _, _ in cells]
+
+        selection = state.selection
+        equal = set()
+        if state.highlight_equal and selection:
+            level = state.cache.level(len(selection))
+            equal = {address_of(int(i), len(selection))
+                     for i in equal_duration_indices(level, tcoord(selection))}
+
+        font = QFont(self.font())
+        metrics = painter.fontMetrics()
+        dim = QColor(palette.base().color())
+        dim.setAlphaF(0.75)
+        border = QPen(palette.mid().color(), 1)
+
+        for rect, address, depth, index in cells:
+            if depth:
+                color = rgb_to_qcolor(state.cache.colors(depth, state.color_key)[index])
+            else:
+                color = palette.button().color()
+            painter.fillRect(rect, color)
+            if rect.width() >= 4:
+                painter.setPen(border)
+                painter.drawRect(rect)
+            if equal and depth == len(selection) and address not in equal:
+                painter.fillRect(rect, dim)
+                continue
+            # Name of the innermost age, or its initial, if it fits
+            if depth:
+                name = state.names[address[-1]]
+            else:
+                name = 'Whole cycle'
+            for text in (name, name[0]):
+                if metrics.horizontalAdvance(text) + 6 <= rect.width() and metrics.height() <= rect.height():
+                    painter.setPen(text_color(color))
+                    painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, text)
+                    break
+
+        # Selection and its ancestors
+        if selection:
+            highlight = palette.highlight().color()
+            for rect, address, depth, _ in cells:
+                if depth and address == selection[:depth]:
+                    width = 3 if address == selection else 1.5
+                    painter.setPen(QPen(highlight, width))
+                    painter.drawRect(rect.adjusted(width / 2, width / 2, -width / 2, -width / 2))
+
+        # Depth of each row, and the extent of the zoomed subcycle
+        painter.setPen(palette.text().color())
+        painter.setFont(font)
+        seen = set()
+        for rect, _, depth, _ in cells:
+            if depth not in seen:
+                seen.add(depth)
+                painter.drawText(QRectF(0, rect.top(), LABEL_WIDTH - 6, rect.height()),
+                                 Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, f"d{depth}")
+        self._draw_axis(painter, cells)
+        self._draw_date(painter, cells)
+        painter.end()
+
+    def _time_label(self, u: float, span: float) -> str:
+        """Label of the normalized time ``u``, in the units of the current time map."""
+        time_map = self.state.time_map
+        if time_map is None:
+            return f"{u:.10g}"
+        return time_text(time_map.to_physical(min(1.0, u)), span)
+
+    def _draw_axis(self, painter: QPainter, cells) -> None:
+        """Ticks at the boundaries of the first row below the zoom, labelled in the current time units."""
+        state = self.state
+        rows = self._rows()
+        if len(rows) < 2:
+            return
+        depth = rows[1]
+        children = [(rect, address) for rect, address, d, _ in cells if d == depth]
+        level = state.cache.level(depth)
+        start, end = self._focus_extent()
+        time_map = state.time_map
+        span = (time_map.to_physical(end) - time_map.to_physical(start)) if time_map else 0.0
+        bottom = max(rect.bottom() for rect, *_ in cells)
+        metrics = painter.fontMetrics()
+        ticks = [(rect.left(), float(level.starts[tcoord(address)])) for rect, address in children]
+        ticks.append((children[-1][0].right(), end))
+        painter.setPen(self.palette().text().color())
+        last_right = -1e9
+        for k, (x, u) in enumerate(ticks):
+            painter.drawLine(QPointF(x, bottom), QPointF(x, bottom + 4))
+            text = self._time_label(u, span)
+            width = metrics.horizontalAdvance(text)
+            left = x if k == 0 else (x - width if k == len(ticks) - 1 else x - width / 2)
+            left = min(max(left, LABEL_WIDTH), self.width() - 8 - width)
+            if left > last_right + 8:
+                painter.drawText(QPointF(left, bottom + 6 + metrics.ascent()), text)
+                last_right = left + width
+
+    def _draw_date(self, painter: QPainter, cells) -> None:
+        """Line at the marked date, through every row (also with equal widths)."""
+        state = self.state
+        u = state.date_position()
+        if u is None:
+            return
+        start, end = self._focus_extent()
+        if not start <= u <= end:
+            return
+        color = QColor('#d62728')
+        painter.setPen(QPen(color, 2))
+        top = None
+        for rect, address, depth, index in cells:
+            # the cell of each row that contains the date
+            if depth == 0:
+                c_start, c_duration = 0.0, 1.0
+            else:
+                level = state.cache.level(depth)
+                c_start, c_duration = float(level.starts[index]), float(level.durations[index])
+            if c_start <= u < c_start + c_duration or (u == 1.0 and c_start + c_duration >= 1.0 - 1e-12):
+                x = rect.left() + (u - c_start) / c_duration * rect.width()
+                painter.drawLine(QPointF(x, rect.top()), QPointF(x, rect.bottom()))
+                top = x if top is None else top
+        if top is not None:
+            label = 'now' if abs(state.date - current_year()) < 1 / 365.25 else date_text(state.date)
+            painter.setPen(color)
+            metrics = painter.fontMetrics()
+            width = metrics.horizontalAdvance(label)
+            left = top + 4 if top + 4 + width < self.width() - 8 else top - 4 - width
+            painter.fillRect(QRectF(left - 2, 6, width + 4, metrics.height()), self.palette().base())
+            painter.drawText(QPointF(left, 6 + metrics.ascent()), label)
+
+    def _focus_extent(self) -> tuple[float, float]:
+        focus = self.state.focus
+        if not focus:
+            return 0.0, 1.0
+        level = self.state.cache.level(len(focus))
+        i = tcoord(focus)
+        return float(level.starts[i]), float(min(1.0, level.starts[i] + level.durations[i]))
+
+    # -- interaction
+
+    def mousePressEvent(self, event) -> None:
+        self.setFocus()
+        if event.button() == Qt.MouseButton.RightButton:
+            self.state.zoom_out()
+        elif event.button() == Qt.MouseButton.LeftButton:
+            address = self.cell_at(event.position())
+            if address is not None:
+                self.state.select(address)
+
+    def mouseDoubleClickEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            address = self.cell_at(event.position())
+            if address:
+                self.state.zoom_in(address)
+
+    def mouseMoveEvent(self, event) -> None:
+        self.hovered.emit(self.cell_at(event.position()))
+
+    def leaveEvent(self, event) -> None:
+        self.hovered.emit(None)
+
+    def event(self, event) -> bool:
+        if event.type() == event.Type.ToolTip:
+            address = self.cell_at(QPointF(event.pos()))
+            if address:
+                text = ' › '.join(self.state.names[d] for d in address)
+                time_map = self.state.time_map
+                if time_map is not None:
+                    t0, t1 = time_map.interval(address)
+                    text += f"\n{time_text(t0, t1 - t0)} to {time_text(t1, t1 - t0)} ({span_text(t1 - t0)})"
+                QToolTip.showText(event.globalPos(), text, self)
+            else:
+                QToolTip.hideText()
+            return True
+        return super().event(event)
+
+    def keyPressEvent(self, event) -> None:
+        state = self.state
+        key = event.key()
+        selection = state.selection
+        if key in (Qt.Key.Key_Backspace, Qt.Key.Key_Escape):
+            state.zoom_out()
+        elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and selection:
+            state.zoom_in(selection)
+        elif selection is None and key in (Qt.Key.Key_Left, Qt.Key.Key_Right, Qt.Key.Key_Down):
+            self._select(state.focus + (0,))
+        elif key in (Qt.Key.Key_Left, Qt.Key.Key_Right):
+            step = -1 if key == Qt.Key.Key_Left else 1
+            index = tcoord(selection) + step
+            if 0 <= index < 4 ** len(selection):
+                self._select(address_of(index, len(selection)))
+        elif key == Qt.Key.Key_Up and selection:
+            self._select(selection[:-1])
+        elif key == Qt.Key.Key_Down and selection and len(selection) < MAX_DEPTH:
+            self._select(selection + (0,))
+        else:
+            super().keyPressEvent(event)
+
+    def _select(self, address: tuple) -> None:
+        self.state.reveal(address)
+
+
+class Breadcrumb(QWidget):
+    """Path of the zoomed subcycle; each step zooms out to it."""
+
+    def __init__(self, state: CycleState, parent=None):
+        super().__init__(parent)
+        self.state = state
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(4, 2, 4, 2)
+        self._layout.setSpacing(2)
+        state.focusChanged.connect(self.rebuild)
+        state.viewChanged.connect(self.rebuild)
+        self.rebuild()
+
+    def rebuild(self, *_) -> None:
+        while self._layout.count():
+            item = self._layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.hide()
+                widget.deleteLater()
+        focus = self.state.focus
+        steps = [((), 'Whole cycle')] + [(focus[:k + 1], self.state.names[d]) for k, d in enumerate(focus)]
+        for k, (address, name) in enumerate(steps):
+            if k:
+                self._layout.addWidget(QLabel('›'))
+            button = QToolButton()
+            button.setText(name)
+            button.setAutoRaise(True)
+            if k == len(steps) - 1:   # where we are
+                font = button.font()
+                font.setBold(True)
+                button.setFont(font)
+            button.clicked.connect(lambda _=False, a=address: self.state.set_focus(a))
+            self._layout.addWidget(button)
+        self._layout.addStretch(1)

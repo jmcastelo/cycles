@@ -31,7 +31,14 @@ sound = [
     "PyWavelets>=1.9",
     "sounddevice>=0.5",
 ]
-all = ["cycles[astro,sound]"]
+# Graphical interface (cycles.gui)
+gui = [
+    "PySide6>=6.6",
+]
+all = ["cycles[astro,sound,gui]"]
+
+[project.gui-scripts]
+cycles-gui = "cycles.gui.app:main"
 
 [tool.setuptools.packages.find]
 include = ["cycles*"]

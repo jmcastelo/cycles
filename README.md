@@ -71,6 +71,10 @@ precession boundary; dividing time instead shifts the inner boundaries by up
 to about a century. The study uses the precession map, and its
 `current_subcycle` study compares the three.
 
+`yuga_boundaries()` and `yuga_time_maps()` (in
+`cycles.plotting.equinoctial_precession`) give these boundaries and the three
+maps, starting from `KALI_YUGA_START`.
+
 ## Installation
 
 Requires Python 3.11 or later.
@@ -90,7 +94,8 @@ optional extras add the heavier dependencies:
 |---------|--------------------------|------------------------------------|
 | `astro` | REBOUND, REBOUNDx        | building the N-body ephemeris      |
 | `sound` | PyWavelets, sounddevice  | scalograms and sound playback      |
-| `all`   | both of the above        |                                    |
+| `gui`   | PySide6                  | the graphical explorer             |
+| `all`   | all of the above         |                                    |
 
 For example, `pip install -e .` installs the core only and
 `pip install -e ".[astro]"` adds the ephemeris.
@@ -115,6 +120,7 @@ cycles/
     view.py             3D camera angles for matplotlib
   plotting/       figures (one module per topic: color, measure, duration, sector,
                   partition, permutation, generic, equinoctial_precession)
+  gui/            graphical explorer (PySide6)
 sandbox/          study scripts, one per topic
 ```
 
@@ -158,6 +164,40 @@ and a batch run that saves every figure. They use the interpreter in `.venv`.
 New studies are plain functions marked with `@study` (see
 `sandbox/runner.py`); shared paths and default parameters are in
 `sandbox/common.py`.
+
+## The graphical explorer
+
+```bash
+pip install -e ".[gui]"
+cycles-gui                 # or: python -m cycles.gui
+```
+
+The window shows the subcycle you have zoomed into and its subdivisions, one
+row per depth, each in its color. Click a subcycle to select it,
+double-click to zoom in, right-click to zoom out; the breadcrumb above
+returns to any outer level. In the navigator, the arrow keys move to the
+previous or next subcycle, the parent and the first part, Enter zooms in and
+Backspace zooms out.
+
+The panel on the right shows the selected subcycle: address, index, start,
+duration, composition, how many subcycles share its duration or its
+composition, dharma, purity, and its color in every variant. The toolbar
+chooses the coloring, how many levels to draw, whether widths follow
+duration (time) or are equal (index), the names of the ages (yugas or
+Golden/Silver/Bronze/Iron), and can dim every subcycle whose duration
+differs from the selected one. *File → Save view as image* saves the
+navigator.
+
+The *Time* box chooses how the cycle is placed in history: the yuga cycle
+with any of the three time maps above (dividing precession angle by
+default), or normalized time. With a map in years, the axis below the rows
+shows years or dates, the inspector shows when the selected subcycle starts
+and ends, and a red line marks a date (the present, at start). In the *Date*
+tab, enter a date (`2026-11-05`, `3102 BC-02-18`) or a decimal year
+(`-3101.5`) to mark it and select the subcycle that contains it; the table
+lists the subcycle containing it at every depth, and clicking a row selects
+it. Levels down to depth 8 are available; the deepest take a few
+seconds the first time.
 
 ## The ephemeris data
 
