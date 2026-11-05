@@ -91,6 +91,10 @@ class MainWindow(QMainWindow):
         ``'below'`` (side by side under the navigator).
         """
         docks = [dock for dock in self.docks.values() if dock.isVisible()] or list(self.docks.values())
+        # The closed panels are placed too, after the open ones and kept closed, so that they stay in the
+        # layout: opening one later puts it where the arrangement continues (a removed dock widget that is
+        # shown again is not in any dock area, and appears nowhere)
+        closed = [dock for dock in self.docks.values() if dock not in docks]
         area = (Qt.DockWidgetArea.BottomDockWidgetArea if layout == 'below'
                 else Qt.DockWidgetArea.RightDockWidgetArea)
         for dock in self.docks.values():
@@ -100,21 +104,22 @@ class MainWindow(QMainWindow):
         self.addDockWidget(area, first)
         first.show()
         horizontal, vertical = Qt.Orientation.Horizontal, Qt.Orientation.Vertical
-        for k, dock in enumerate(docks[1:], 1):
+        order = docks + closed
+        for k, dock in enumerate(order[1:], 1):
             dock.setFloating(False)
             if layout == 'tabs':
                 self.tabifyDockWidget(first, dock)
             elif layout in ('side', 'below'):
-                self.splitDockWidget(docks[k - 1], dock, horizontal)
+                self.splitDockWidget(order[k - 1], dock, horizontal)
             elif layout == 'stacked':
-                self.splitDockWidget(docks[k - 1], dock, vertical)
+                self.splitDockWidget(order[k - 1], dock, vertical)
             elif layout == 'grid':
                 # 0 | 1 on top, 2 under 0, 3 under 1
                 if k == 1:
                     self.splitDockWidget(first, dock, horizontal)
                 else:
-                    self.splitDockWidget(docks[k - 2], dock, vertical)
-            dock.show()
+                    self.splitDockWidget(order[k - 2], dock, vertical)
+            dock.setVisible(dock in docks)
         first.raise_()
         width, height = self.width(), self.height()
         if layout == 'below':
