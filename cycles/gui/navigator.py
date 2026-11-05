@@ -5,7 +5,7 @@ depth, each subcycle drawn in its color and labelled with its name and/or a
 column of dots (4, 3, 2, 1 for Satya, Treta, Dvapara, Kali).
 
 Mouse: click selects, double-click zooms in, right-click zooms out; a click on
-the overview zooms to that yuga.
+the overview zooms to that yuga; Shift+click sets the moment of the sky chart.
 Keys: Left/Right previous/next subcycle, Up parent, Down first part,
 Enter zoom into the selection, Backspace/Escape zoom out.
 """
@@ -15,7 +15,7 @@ from PySide6.QtGui import QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QSizePolicy, QToolButton, QToolTip, QWidget
 
 from cycles.gui.state import (
-    MAX_DEPTH, CycleState, address_of, children_range, current_year, date_text, equal_duration_indices, tcoord,
+    MAX_DEPTH, MOMENT_COLOR, CycleState, address_of, children_range, current_year, date_text, equal_duration_indices, tcoord,
     span_text, time_text,
 )
 
@@ -170,6 +170,14 @@ class Navigator(QWidget):
                     width = 3 if address == selection else 1.5
                     painter.setPen(QPen(highlight, width))
                     painter.drawRect(rect.adjusted(width / 2, width / 2, -width / 2, -width / 2))
+
+        # The subcycles that contain the sky moment (Follow)
+        if state.follow and state.sky_time is not None:
+            moment = {depth: state.moment_index(depth) for depth in self._rows()}
+            painter.setPen(QPen(QColor(MOMENT_COLOR), 2))
+            for rect, _, depth, index in cells:
+                if moment.get(depth) == index:
+                    painter.drawRect(rect.adjusted(1, 1, -1, -1))
 
         # Depth of each row, and the extent of the zoomed subcycle
         painter.setPen(palette.text().color())
@@ -381,6 +389,11 @@ class Navigator(QWidget):
         self.setFocus()
         if event.button() == Qt.MouseButton.RightButton:
             self.state.zoom_out()
+        elif event.button() == Qt.MouseButton.LeftButton and \
+                event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+            year = self.moment_at(event.position())
+            if year is not None:
+                self.state.set_sky_time(year)
         elif event.button() == Qt.MouseButton.LeftButton:
             yuga = self._overview_yuga(event.position())
             if yuga is not None:
@@ -389,6 +402,22 @@ class Navigator(QWidget):
             address = self.cell_at(event.position())
             if address is not None:
                 self.state.select(address)
+
+    def moment_at(self, pos: QPointF) -> float | None:
+        """Year at the horizontal position of ``pos`` in the rows (also with equal widths)."""
+        time_map = self.state.time_map
+        if time_map is None:
+            return None
+        rows = [(rect, address) for rect, address in self._cells if rect.left() <= pos.x() <= rect.right()]
+        if not rows:
+            return None
+        # the cell under the mouse, or else the one in the deepest row at that position
+        rect, address = next(((r, a) for r, a in rows if r.contains(pos)), rows[-1])
+        level = self.state.cache.level(len(address))
+        i = tcoord(address)
+        fraction = (pos.x() - rect.left()) / rect.width() if rect.width() > 0 else 0.0
+        u = float(level.starts[i] + fraction * level.durations[i])
+        return time_map.to_physical(min(1.0, max(0.0, u)))
 
     def mouseDoubleClickEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:

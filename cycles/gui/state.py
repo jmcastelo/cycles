@@ -33,6 +33,8 @@ from cycles.functions.timescale import AGE_NAMES, YUGA_NAMES, TimeMap
 MAX_DEPTH = 8
 # Name sets for the four ages
 NAME_SETS = {'Yugas': YUGA_NAMES, 'Ages': AGE_NAMES}
+# Color of the highlight of the subcycles that contain the sky moment
+MOMENT_COLOR = '#ff7f0e'
 # How subcycles are labelled in the navigator
 LABEL_MODES = {'names': 'Names', 'dots': 'Dots (4, 3, 2, 1)', 'both': 'Names and dots', 'none': 'None'}
 MONTHS = ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
@@ -202,6 +204,7 @@ class CycleState(QObject):
         self._time_map = self.model.time_map() if self.model is not None else None
         self.date: float | None = current_year()
         self.sky_time: float | None = None
+        self.follow: bool = True        # the plots highlight their subcycle containing the sky moment
         self.focus: tuple = ()
         self.selection: tuple | None = None
         self.color_key: str = DEFAULT_COLOR_KEY
@@ -351,6 +354,21 @@ class CycleState(QObject):
             self.date = year
             self.dateChanged.emit(year)
 
+    def set_follow(self, on: bool) -> None:
+        if bool(on) != self.follow:
+            self.follow = bool(on)
+            self.skyTimeChanged.emit(self.sky_time)      # the plots redraw their highlight
+
+    def moment_index(self, depth: int) -> int | None:
+        """
+        Index, at ``depth``, of the subcycle that contains the sky moment, if the
+        plots follow it (``None`` otherwise, or outside the cycle).
+        """
+        if not self.follow:
+            return None
+        address = self.subcycle_at(self.sky_time, depth)
+        return None if address is None else tcoord(address)
+
     def set_sky_time(self, year: float | None) -> None:
         if year != self.sky_time:
             self.sky_time = year
@@ -376,12 +394,16 @@ class CycleState(QObject):
             return time_map.start, time_map.end
         return time_map.interval(address)
 
-    def subcycle_of_date(self, depth: int) -> tuple | None:
-        """Address of the subcycle of ``depth`` containing the marked date (see ``date_position``)."""
-        u = self.date_position()
+    def subcycle_at(self, year: float | None, depth: int) -> tuple | None:
+        """Address of the subcycle of ``depth`` containing ``year`` (``None`` outside the cycle or without a model)."""
+        u = self.position(year)
         if u is None:
             return None
         return tuple(int(d) for d in find_lcoords(min(u, 1 - 1e-15), depth))
+
+    def subcycle_of_date(self, depth: int) -> tuple | None:
+        """Address of the subcycle of ``depth`` containing the marked date."""
+        return self.subcycle_at(self.date, depth)
 
     def go_to_date(self, year: float, depth: int) -> None:
         """Mark ``year`` and select the subcycle of ``depth`` containing it."""

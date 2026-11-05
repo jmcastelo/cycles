@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 
 from cycles.functions.division import CMYK_KEYS
 from cycles.functions.view import bottom_view, camera_view_angles, top_view
-from cycles.gui.state import CycleState, address_of, children_range, equal_duration_indices, tcoord
+from cycles.gui.state import MOMENT_COLOR, CycleState, address_of, children_range, equal_duration_indices, tcoord
 from cycles.plotting.color import draw_color_path_3d, draw_colors_3d, draw_rgb_cube, setup_color_axes_3d
 
 MAX_PLOT_DEPTH = 7
@@ -118,7 +118,8 @@ class ColorSpacePanel(QWidget):
         self.depth.valueChanged.connect(self._schedule)
         for widget in (self.inside, self.sized, self.cube, self.tetrahedron):
             widget.toggled.connect(self._schedule)
-        for signal in (state.selectionChanged, state.focusChanged, state.viewChanged, state.colorParametersChanged):
+        for signal in (state.selectionChanged, state.focusChanged, state.viewChanged, state.colorParametersChanged,
+                       state.skyTimeChanged):
             signal.connect(self._schedule)
 
     # -- what to plot
@@ -225,10 +226,17 @@ class ColorSpacePanel(QWidget):
         for artist in self._highlights:
             artist.remove()
         self._highlights = []
-        selection = state.selection
-        if self.ax is None or selection is None or len(selection) != self._depth:
+        if self.ax is None:
             return
         positions = {int(i): k for k, i in enumerate(self._indices)}
+        moment = positions.get(state.moment_index(self._depth))
+        if moment is not None:
+            c = self._coords[moment]
+            self._highlights.append(self.ax.scatter([c[0]], [c[1]], [c[2]], s=170, facecolors='none',
+                                                    edgecolors=MOMENT_COLOR, linewidths=2.0, depthshade=False))
+        selection = state.selection
+        if selection is None or len(selection) != self._depth:
+            return
         if state.highlight_equal:
             equal = [positions[int(i)] for i in equal_duration_indices(state.cache.level(self._depth),
                                                                        tcoord(selection)) if int(i) in positions]

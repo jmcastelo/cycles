@@ -285,12 +285,18 @@ lists the subcycle containing it at every depth, and clicking a row selects
 it.
 
 The *Sky* tab draws the zodiac with the planets (as in
-`study_of_precession.py`) at the start of the selected subcycle, or of the
-zoomed one if none is selected, with a table of their sidereal longitudes,
-signs and nakshatras. The slider, and the play button, move the chart
-through the subcycle; its moment is the dashed blue line in the navigator.
-*To marked date* moves the chart to the marked date and *Mark this moment*
-does the reverse. The tab needs the ephemeris tables (see below): it looks
+`study_of_precession.py`) at a moment of the zoomed span (what the navigator
+shows), with a table of their sidereal longitudes, signs and nakshatras.
+The moment is the dashed blue line in the navigator: the slider moves it
+across the span, Shift+click on the navigator puts it anywhere, and the play
+button advances it from where it is to the end of the span, by a chosen
+step (years, days or hours per frame; the number of frames left is shown)
+and delay. *To marked date* moves it to the marked date and *Mark this
+moment* does the reverse. With *Follow* on, every plot highlights in orange
+its subcycle that contains the moment: each row of the navigator at its own
+depth, and the point of the measures and color space plots, when they show
+it; the selection (in blue) is left as it is. The tab also lists the
+subcycles that contain the moment. The tab needs the ephemeris tables (see below): it looks
 in `$CYCLES_EPHEMERIS`, then in the folder last chosen with *Ephemeris…*,
 then in `sandbox/data/tabla70k70k`.
 

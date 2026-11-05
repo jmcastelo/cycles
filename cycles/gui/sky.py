@@ -16,7 +16,7 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from PySide6.QtCore import QSettings, Qt, QTimer
 from PySide6.QtWidgets import (
-    QAbstractItemView, QCheckBox, QFileDialog, QHBoxLayout, QHeaderView, QLabel, QPushButton, QSizePolicy,
+    QAbstractItemView, QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QHBoxLayout, QHeaderView, QLabel, QPushButton, QSizePolicy,
     QSlider, QSplitter, QTableWidget, QTableWidgetItem, QToolButton, QVBoxLayout, QWidget,
 )
 
@@ -28,9 +28,9 @@ BODY_NAMES = {'sun': 'Sun', 'mercury': 'Mercury', 'venus': 'Venus', 'mars': 'Mar
               'saturn': 'Saturn', 'uranus': 'Uranus', 'neptune': 'Neptune', 'pluto': 'Pluto'}
 SIGNS = ('Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn',
          'Aquarius', 'Pisces')
-SLIDER_STEPS = 2000      # positions of the slider across the subcycle
-PLAY_STEP = 4            # slider positions per frame when playing
-PLAY_INTERVAL_MS = 120
+SLIDER_STEPS = 10000     # positions of the slider across the span
+FRAME_DELAYS = {'Fast': 50, 'Normal': 120, 'Slow': 300}   # milliseconds between frames
+STEP_UNITS = {'years': 1.0, 'days': 1 / 365.25, 'hours': 1 / 8766.0}   # in years
 DEFAULT_TABLE = Path(__file__).resolve().parents[2] / 'sandbox' / 'data' / 'tabla70k70k'
 SETTINGS_KEY = 'sky/ephemeris'
 
@@ -62,7 +62,12 @@ def degrees_text(degrees: float) -> str:
 
 
 class SkyPanel(QWidget):
-    """Zodiac chart at a moment of the selected subcycle (or of the zoomed one, if none is selected)."""
+    """
+    Zodiac chart at a moment of the zoomed span (what the navigator shows). The
+    slider and the playback cover that span; Shift+click on the navigator also
+    sets the moment. With Follow on, every plot highlights its subcycle that
+    contains the moment.
+    """
 
     def __init__(self, state: CycleState, parent=None):
         super().__init__(parent)
@@ -70,7 +75,7 @@ class SkyPanel(QWidget):
         self.tables = None
         self.ephemeris_path: Path | None = None
         self._interval: tuple[float, float] | None = None
-        self._target = None          # (address, time map) the slider covers
+        self._span = None            # (zoomed address, cycle model) the slider covers
         self._dirty = True
 
         layout = QVBoxLayout(self)
@@ -89,11 +94,15 @@ class SkyPanel(QWidget):
         self.subcycle = QLabel()
         self.subcycle.setWordWrap(True)
         layout.addWidget(self.subcycle)
+        self.inside = QLabel()
+        self.inside.setWordWrap(True)
+        self.inside.setToolTip('The subcycles that contain the moment, down to the deepest level shown')
+        layout.addWidget(self.inside)
 
         row = QHBoxLayout()
-        self.start_button = self._tool('⏮', 'Start of the subcycle', lambda: self.slider.setValue(0))
-        self.play_button = self._tool('▶', 'Play through the subcycle', self.toggle_play)
-        self.end_button = self._tool('⏭', 'End of the subcycle', lambda: self.slider.setValue(SLIDER_STEPS))
+        self.start_button = self._tool('⏮', 'Start of the span', lambda: self.slider.setValue(0))
+        self.play_button = self._tool('▶', 'Play from the moment to the end of the span', self.toggle_play)
+        self.end_button = self._tool('⏭', 'End of the span', lambda: self.slider.setValue(SLIDER_STEPS))
         self.slider = QSlider(Qt.Orientation.Horizontal)
         self.slider.setRange(0, SLIDER_STEPS)
         self.slider.setPageStep(SLIDER_STEPS // 20)
@@ -108,7 +117,7 @@ class SkyPanel(QWidget):
         self.moment = QLabel()
         self.moment.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.to_date_button = QPushButton('To marked date')
-        self.to_date_button.setToolTip('Move the chart to the marked date (if it is inside the subcycle)')
+        self.to_date_button.setToolTip('Move the chart to the marked date (if it is inside the span)')
         self.to_date_button.clicked.connect(self.go_to_marked_date)
         self.mark_button = QPushButton('Mark this moment')
         self.mark_button.setToolTip('Make this moment the marked date')
@@ -116,6 +125,35 @@ class SkyPanel(QWidget):
         row.addWidget(self.moment, 1)
         row.addWidget(self.to_date_button)
         row.addWidget(self.mark_button)
+        layout.addLayout(row)
+
+        row = QHBoxLayout()
+        self.follow = QCheckBox('Follow')
+        self.follow.setChecked(state.follow)
+        self.follow.setToolTip('Highlight, in every plot, its subcycle that contains the moment')
+        self.follow.toggled.connect(state.set_follow)
+        row.addWidget(self.follow)
+        row.addSpacing(12)
+        row.addWidget(QLabel('Step'))
+        self.step = QDoubleSpinBox()
+        self.step.setRange(0.001, 100000)
+        self.step.setDecimals(3)
+        self.step.setValue(10)
+        self.step.setToolTip('How far the moment advances at each frame')
+        self.step_unit = QComboBox()
+        self.step_unit.addItems(list(STEP_UNITS))
+        self.delay = QComboBox()
+        for label, ms in FRAME_DELAYS.items():
+            self.delay.addItem(label, ms)
+        self.delay.setCurrentText('Normal')
+        self.delay.setToolTip('Time between frames (the chart also takes about 0.1 s to draw)')
+        self.delay.currentIndexChanged.connect(lambda _: self.play_timer.setInterval(self.delay.currentData()))
+        self.step_label = QLabel()
+        for widget in (self.step, self.step_unit, self.delay, self.step_label):
+            row.addWidget(widget)
+        self.step.valueChanged.connect(self._update_step)
+        self.step_unit.currentIndexChanged.connect(self._update_step)
+        row.addStretch(1)
         layout.addLayout(row)
 
         self.outer = QCheckBox('Uranus, Neptune and Pluto')
@@ -149,7 +187,7 @@ class SkyPanel(QWidget):
         layout.addWidget(splitter, 1)
 
         self.play_timer = QTimer(self)
-        self.play_timer.setInterval(PLAY_INTERVAL_MS)
+        self.play_timer.setInterval(FRAME_DELAYS['Normal'])
         self.play_timer.timeout.connect(self._play_step)
         # Coalesce quick changes (dragging the slider) into one redraw
         self.render_timer = QTimer(self)
@@ -157,9 +195,8 @@ class SkyPanel(QWidget):
         self.render_timer.setInterval(0)
         self.render_timer.timeout.connect(self.render)
 
-        state.selectionChanged.connect(self._retarget)
         state.focusChanged.connect(self._retarget)
-        state.viewChanged.connect(self._retarget)
+        state.viewChanged.connect(self._retarget)        # the cycle model, the names
         state.dateChanged.connect(self._update_buttons)
         state.skyTimeChanged.connect(self._sky_time_changed)
 
@@ -206,38 +243,37 @@ class SkyPanel(QWidget):
         QSettings().setValue(SETTINGS_KEY, path)
         self.load_ephemeris(path)
 
-    # -- the subcycle and the moment
-
-    def _target_address(self) -> tuple:
-        state = self.state
-        return state.selection if state.selection is not None else state.focus
+    # -- the span and the moment
 
     def _retarget(self, *_) -> None:
-        """When the subcycle or the time map changes, cover the new subcycle and go to its start."""
+        """When the zoom or the cycle model changes, cover the new span (keeping the moment if it is inside)."""
         state = self.state
-        address = self._target_address()
-        target = (address, state.model)
-        if target == self._target:
+        span = (state.focus, state.model)
+        if span == self._span:
+            self._update_buttons()       # the names may have changed
             return
-        self._target = target
-        self._interval = state.physical_interval(address)
-        self.stop()
-        names = ' › '.join(state.names[d] for d in address) or 'Whole cycle'
+        self._span = span
+        self._interval = state.physical_interval(state.focus)
+        names = ' › '.join(state.names[d] for d in state.focus) or 'Whole cycle'
         if self._interval is None:
+            self.stop()
             self.subcycle.setText(names)
             state.set_sky_time(None)
         else:
             t0, t1 = self._interval
             self.subcycle.setText(f"<b>{names}</b>: {date_text(t0)} to {date_text(t1)} ({span_text(t1 - t0)})")
-            # Go to the start of the new subcycle (if the moment is already there,
-            # no signal comes, so update the slider and chart directly)
-            if state.sky_time == t0:
-                self._sky_time_changed(t0)
+            moment = state.sky_time
+            if moment is None or not t0 <= moment <= t1:
+                moment = state.date if state.date is not None and t0 <= state.date <= t1 else t0
+                self.stop()
+            if moment == state.sky_time:
+                self._sky_time_changed(moment)       # no signal comes: update the slider directly
             else:
-                state.set_sky_time(t0)
+                state.set_sky_time(moment)
         for widget in (self.slider, self.start_button, self.end_button, self.play_button):
             widget.setEnabled(self._interval is not None)
         self._update_buttons()
+        self._update_step()
         self._schedule()
 
     def _slider_moved(self, value: int) -> None:
@@ -252,7 +288,19 @@ class SkyPanel(QWidget):
             self.slider.setValue(round((year - t0) / (t1 - t0) * SLIDER_STEPS) if t1 > t0 else 0)
             self.slider.blockSignals(False)
         self._update_buttons()
+        self._update_step()
         self._schedule()
+
+    def step_years(self) -> float:
+        """The time step of the animation, in years."""
+        return self.step.value() * STEP_UNITS[self.step_unit.currentText()]
+
+    def _update_step(self, *_) -> None:
+        if self._interval is None or self.state.sky_time is None:
+            self.step_label.setText('')
+            return
+        frames = (self._interval[1] - self.state.sky_time) / self.step_years()
+        self.step_label.setText(f"{frames:,.0f} frames to the end of the span")
 
     def _update_buttons(self, *_) -> None:
         state = self.state
@@ -262,8 +310,12 @@ class SkyPanel(QWidget):
         self.mark_button.setEnabled(state.sky_time is not None)
         if state.sky_time is None:
             self.moment.setText('Choose a cycle model (not normalized time) to see the sky.' if self._interval is None else '')
-        else:
-            self.moment.setText(f"<b>{datetime_text(state.sky_time)}</b>  ({state.sky_time:.4f})")
+            self.inside.setText('')
+            return
+        self.moment.setText(f"<b>{datetime_text(state.sky_time)}</b>  ({state.sky_time:.4f})")
+        depths = state.visible_depths()
+        address = state.subcycle_at(state.sky_time, depths[-1]) if len(depths) else None
+        self.inside.setText('In ' + ' › '.join(state.names[d] for d in address) if address else '')
 
     def go_to_marked_date(self) -> None:
         self.state.set_sky_time(self.state.date)
@@ -273,9 +325,10 @@ class SkyPanel(QWidget):
     def toggle_play(self) -> None:
         if self.play_timer.isActive():
             self.stop()
-        else:
-            if self.slider.value() >= SLIDER_STEPS:
-                self.slider.setValue(0)
+        elif self._interval is not None:
+            t0, t1 = self._interval
+            if self.state.sky_time is None or self.state.sky_time >= t1:
+                self.state.set_sky_time(t0)
             self.play_timer.start()
             self.play_button.setText('⏸')
 
@@ -284,9 +337,14 @@ class SkyPanel(QWidget):
         self.play_button.setText('▶')
 
     def _play_step(self) -> None:
-        value = min(SLIDER_STEPS, self.slider.value() + PLAY_STEP)
-        self.slider.setValue(value)
-        if value >= SLIDER_STEPS:
+        """Advance the moment by one time step, up to the end of the span."""
+        if self._interval is None or self.state.sky_time is None:
+            self.stop()
+            return
+        t1 = self._interval[1]
+        year = min(t1, self.state.sky_time + self.step_years())
+        self.state.set_sky_time(year)
+        if year >= t1:
             self.stop()
 
     # -- drawing
