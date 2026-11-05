@@ -43,6 +43,9 @@ class Inspector(QWidget):
             ('time_start', 'Starts'),
             ('time_end', 'Ends'),
             ('time_span', 'Lasts'),
+            ('ayanamsa', 'Ayanamsa'),
+            ('arc', 'Arc'),
+            ('rate', 'Mean rate'),
             ('composition', 'Composition'),
             ('equal_duration', 'Same duration'),
             ('same_composition', 'Same composition'),
@@ -109,7 +112,7 @@ class Inspector(QWidget):
         f['duration'].setText(f"{info['duration']:.12g}   (1/{1 / info['duration']:.6g} of the cycle)")
         f['end'].setText(f"{info['end']:.12g}")
         time_map = state.time_map
-        for key in ('time_start', 'time_end', 'time_span'):
+        for key in ('time_start', 'time_end', 'time_span', 'ayanamsa', 'arc', 'rate'):
             self.form.setRowVisible(f[key], time_map is not None)
         if time_map is not None:
             t0, t1 = time_map.to_physical(info['start']), time_map.to_physical(info['end'])
@@ -117,6 +120,13 @@ class Inspector(QWidget):
             f['time_end'].setText(f"{date_text(t1)}   ({t1:.2f})")
             contains = state.date is not None and t0 <= state.date < t1
             f['time_span'].setText(span_text(t1 - t0) + ('   — contains the marked date' if contains else ''))
+            model = state.model
+            a0, a1 = float(model.ayanamsa(t0)), float(model.ayanamsa(t1))
+            cycle_start = float(model.ayanamsa(time_map.start))
+            f['ayanamsa'].setText(f"{a0:.4f}° to {a1:.4f}°")
+            f['arc'].setText(f"{a1 - a0:.4f}°, from {a0 - cycle_start:.4f}° to {a1 - cycle_start:.4f}° "
+                             f"after the start of the cycle")
+            f['rate'].setText(f"{(a1 - a0) * 3600 / (t1 - t0):.3f}″ per year" if t1 > t0 else '—')
         f['composition'].setText(', '.join(f"{names[k]} {n}" for k, n in enumerate(info['composition'])))
         f['equal_duration'].setText(
             f"{info['equal_duration']} subcycles at depth {info['depth']}"

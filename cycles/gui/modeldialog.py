@@ -6,22 +6,33 @@ combinations worth comparing as presets.
 
 import html
 
+import numpy as np
+
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QButtonGroup, QComboBox, QDialog, QDoubleSpinBox, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout, QLabel,
-    QLineEdit, QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QSplitter, QVBoxLayout, QWidget,
+    QApplication, QLineEdit, QMenu, QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QSplitter, QToolButton,
+    QVBoxLayout, QWidget,
 )
 
 from cycles.functions.cycle_model import (
     ANCHOR_LABELS, BUILTIN_PRESETS, UJJAIN_LONGITUDE, CycleModel, load_user_presets, mean_rate,
     save_user_presets, USER_PRESETS_FILE,
 )
+from cycles.functions.cycle_analysis import fit_anchor, subdivision_deviations
 from cycles.gui.state import CycleState, datetime_text, span_text
 
 DIVISION_LABELS = {
     'angle': 'Precession angle, at every level',
     'time': 'Time, at every level',
     'hybrid': 'Angle for the yugas, time inside them',
+}
+# Searches offered by the Best fit button: label -> options of fit_anchor ('near' = around the current anchor)
+FIT_SEARCHES = {
+    'Anchor, same arc (100,000 BC to AD 100,000)': {},
+    'Anchor, same arc, within 2,000 years': {'near': 2000.0, 'step': 10.0},
+    'Anchor and arc (1 to 5 turns)': {'turn_range': (1.0, 5.0)},
+    'Arc only (1 to 5 turns), same anchor': {'near': 0.0, 'turn_range': (1.0, 5.0)},
 }
 PRECESSION_LABELS = {'long_term': 'Long-term model (varying rate)', 'constant': 'Constant rate'}
 
@@ -153,6 +164,16 @@ class CycleModelDialog(QDialog):
         self.status = QLabel()
         self.status.setWordWrap(True)
         row.addWidget(self.status, 1)
+        self.fit_button = QToolButton()
+        self.fit_button.setText('Best fit')
+        self.fit_button.setToolTip('Find the anchor (and arc) that best satisfy 4:3:2:1 in years and in angle '
+                                   'at once, and load it into the form')
+        self.fit_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        fit_menu = QMenu(self.fit_button)
+        for label, options in FIT_SEARCHES.items():
+            fit_menu.addAction(label, lambda o=options: self.fit(o))
+        self.fit_button.setMenu(fit_menu)
+        row.addWidget(self.fit_button)
         self.save_button = QPushButton('Save preset')
         self.save_button.setToolTip(f'Save under the name above, in {USER_PRESETS_FILE}')
         self.save_button.clicked.connect(self.save_preset)
@@ -305,6 +326,7 @@ class CycleModelDialog(QDialog):
                     f"<td></td><td align=right>{ayanamsas[4]:.3f}°</td><td></td></tr>")
         scope = ('Varying rate (Vondrák et al. 2011).' if model.precession == 'long_term'
                  else f"Constant rate: {1296000 / model.period:.3f}″ per year.")
+        deviations = subdivision_deviations(model, 1)
         warnings = []
         if solution['start'] < -68000 or solution['end'] > 72000:
             warnings.append('The cycle reaches beyond the ephemeris tables (about 68,000 BC to AD 72,000): '
@@ -321,7 +343,9 @@ class CycleModelDialog(QDialog):
             "<th align=right>Ayanamsa at start</th><th align=right>Mean rate</th></tr>"
             + ''.join(rows) + "</table>"
             "<p>The 4:3:2:1 proportions are 0.4, 0.3, 0.2 and 0.1: the <i>of time</i> and <i>of arc</i> "
-            "columns show how closely each criterion holds.</p>"
+            "columns show how closely each criterion holds. "
+            f"Largest deviation of the time shares from 4:3:2:1: <b>{np.abs(deviations).max():.5f}</b>"
+            f"{' (dividing by angle)' if model.division != 'angle' else ''}.</p>"
             + ''.join(f"<p style='color:#d62728'>{html.escape(w)}</p>" for w in warnings))
 
     # -- actions
@@ -333,6 +357,30 @@ class CycleModelDialog(QDialog):
             self.status.setText(f"<span style='color:#d62728'>{html.escape(str(error))}</span>")
             return
         self.status.setText(f"Applied: {html.escape(self.state.model.name)}")
+
+    def fit(self, options: dict) -> None:
+        """Run ``fit_anchor`` from the model in the form and load the result."""
+        options = dict(options)
+        try:
+            model = self.model()
+            if 'near' in options:
+                anchor = model.anchor_year()
+                near = options.pop('near')
+                options['anchor_range'] = (anchor - near, anchor + near)
+            if model.precession == 'constant':
+                self.status.setText('With a constant precession rate both criteria always agree: nothing to fit.')
+                return
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            try:
+                result = fit_anchor(model, **options)
+            finally:
+                QApplication.restoreOverrideCursor()
+        except ValueError as error:
+            self.status.setText(f"<span style='color:#d62728'>{html.escape(str(error))}</span>")
+            return
+        self.load(result.model)
+        self.status.setText(f"Best fit: largest deviation {result.mismatch:.5f} (was {result.original_mismatch:.5f}). "
+                            "Apply or save it to keep it.")
 
     def save_preset(self) -> None:
         try:

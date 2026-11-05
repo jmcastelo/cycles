@@ -6,7 +6,10 @@ the N-body ephemeris at their boundaries.
 import cycles.functions.nbody_ephemeris as nbe
 from cycles.functions.astro_dates import date_time_to_julian_day, julian_day_to_year
 from cycles.functions.timescale import addresses_with_prefix, address_label
+from cycles.functions.cycle_analysis import fit_anchor, mismatch_by_depth
 from cycles.functions.cycle_model import DEFAULT_PRESET, load_presets
+from cycles.functions.astro_dates import year_to_date
+from cycles.plotting.cycle_model import plot_fit_scan, plot_mismatch_by_depth, plot_precession_rate
 from cycles.plotting.equinoctial_precession import (
     plot_equinoctial_precession,
     plot_zodiac_with_planets,
@@ -123,6 +126,49 @@ def current_subcycle(ctx, opts):
             lcoords = time_map.subcycle_at(ctx.eq, depth)
             start, end = time_map.interval(lcoords)
             print(f"  depth {depth}: {address_label(lcoords):45s} {start:10.1f} to {end:10.1f} ({end - start:.1f} years)")
+
+
+
+@study(default=False)
+def precession_rate(ctx, opts):
+    """Precession rate across the cycle, with the mean rate of each yuga and the boundaries."""
+    plot_precession_rate(ctx.model, depth=2, save_path=_save_path(opts, 'precession_rate.png'), show=opts.show)
+
+
+@study(default=False)
+def criteria_by_depth(ctx, opts):
+    """How far the time shares are from 4:3:2:1 at each depth, dividing by angle."""
+    for row in mismatch_by_depth(ctx.model, 5):
+        print(f"  depth {row['depth']}: largest {row['max']:.5f}, RMS {row['rms']:.5f}")
+    plot_mismatch_by_depth(ctx.model, 5, save_path=_save_path(opts, 'criteria_by_depth.png'), show=opts.show)
+
+
+def _fit_text(result, model) -> str:
+    y, m, d = year_to_date(result.anchor_year)
+    date = f"{int(d)}/{m}/{1 - y} BC" if y <= 0 else f"{int(d)}/{m}/AD {y}"
+    years = result.model.solve()['years']
+    return (f"anchor {date} ({result.anchor_year:.1f}), {result.turns:.4f} turns ({years:,.0f} years): "
+            f"largest deviation {result.mismatch:.5f} (the preset: {result.original_mismatch:.5f})")
+
+
+@study(default=False)
+def best_fit(ctx, opts):
+    """Anchor (and arc) that best satisfy 4:3:2:1 in years and in angle at once, with the scans."""
+    model = ctx.model
+    searches = [
+        ('Anchor anywhere in 100,000 BC to AD 100,000, same arc', {}),
+        ('Anchor within 20,000 BC to AD 10,000, same arc', {'anchor_range': (-20000.0, 10000.0)}),
+        ('Anchor anywhere, arc from 1 to 5 turns', {'turn_range': (1.0, 5.0)}),
+        ('Same anchor, arc from 1 to 5 turns',
+         {'anchor_range': (model.anchor_year(), model.anchor_year()), 'turn_range': (1.0, 5.0)}),
+    ]
+    results = []
+    for label, options in searches:
+        result = fit_anchor(model, **options)
+        results.append(result)
+        print(f"{label}:\n  {_fit_text(result, model)}")
+    plot_fit_scan(results[0], model, save_path=_save_path(opts, 'best_fit_anchor.png'), show=opts.show)
+    plot_fit_scan(results[2], model, save_path=_save_path(opts, 'best_fit_anchor_arc.png'), show=opts.show)
 
 
 if __name__ == "__main__":

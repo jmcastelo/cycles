@@ -104,6 +104,19 @@ Built-in presets:
 | Kali 3104 BC, Abhyankar 1993 | sunrise at Ujjain, 7 Feb 3104 BC (Bull. Astr. Soc. India 21, 475) | 2.5 turns |
 | Precession period at constant rate | as the default | 64,430 years (Satya = 25,772 years) |
 
+`cycles.functions.cycle_analysis` measures how well the two criteria agree
+(`mismatch_by_depth`: the largest and RMS deviation of the time shares at each
+depth) and searches for the anchor, and optionally the arc, that makes them
+agree best (`fit_anchor`). With 2.5 turns, the agreement rises and falls about
+every 20,000 years as the cycle slides along the precession rate; the
+traditional anchor is near a worst placement (largest deviation 0.0085, against
+about 0.002 at the best ones), because Treta then covers the peak of the rate
+and Dvapara its trough. A free arc tends to the longest allowed, since a longer
+cycle averages out the variation of the rate. `cycles.plotting.cycle_model`
+plots the rate across the cycle, the deviations by depth and the fit scans;
+the `precession_rate`, `criteria_by_depth` and `best_fit` studies of
+`study_of_precession.py` use them.
+
 Presets you save (from the GUI, or with `save_user_presets`) go to
 `sandbox/cycle_presets.json`, or to `$CYCLES_PRESETS`. `study_of_precession.py`
 uses the preset named in its `PRESET` constant.
@@ -149,6 +162,7 @@ cycles/
     analysis.py         autocorrelation
     timescale.py        normalized time <-> physical time (TimeMap)
     cycle_model.py      the yuga cycle in history: anchor, scale, division, presets
+    cycle_analysis.py   agreement of the time and angle criteria; best-fit anchor and arc
     astro_dates.py      calendar dates <-> Julian Day <-> decimal year, UT <-> TDB
     nbody_ephemeris.py  long-term planetary ephemeris by N-body integration
     view.py             3D camera angles for matplotlib
@@ -226,7 +240,11 @@ The *Cycle* box chooses how the cycle is placed in history: one of the
 cycle model presets, or normalized time. *Model…* opens the cycle model
 editor, which shows the resulting yuga dates, lengths, arcs, ayanamsa and
 mean precession rates as you change the anchor, scale, division or
-precession, and applies the model or saves it as a preset. With a map in years, the axis below the rows
+precession, and applies the model or saves it as a preset. Its *Best fit*
+menu searches for the anchor and/or arc that best satisfy both criteria
+and loads the result into the form. For the selected subcycle, the
+inspector also shows the ayanamsa at its start and end, its arc and its
+place on the cycle's arc, and the mean precession rate over it. With a map in years, the axis below the rows
 shows years or dates, the inspector shows when the selected subcycle starts
 and ends, and a red line marks a date (the present, at start). In the *Date*
 tab, enter a date (`2026-11-05`, `3102 BC-02-18`) or a decimal year
