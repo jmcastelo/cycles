@@ -23,7 +23,7 @@ EPOCH_DISPLAY = ("year", "date", "julian_day")
 
 # Subcycles for subcycle_charts: those of depth DEPTH whose address starts with PREFIX
 # (e.g. depth 2, prefix [3]: the four subdivisions of the Kali Yuga)
-DEPTH = 2
+DEPTH = 3
 PREFIX = [3]
 
 
@@ -73,7 +73,7 @@ def yuga_epochs(ctx, opts):
 @study
 def zodiac_now(ctx, opts):
     """Zodiac with the planets at the present date."""
-    plot_zodiac_with_planets(ctx.now, ctx.ephemerides[''], time_scale='UT', epoch_display=EPOCH_DISPLAY,
+    plot_zodiac_with_planets(ctx.eq, ctx.ephemerides[''], time_scale='UT', epoch_display=EPOCH_DISPLAY,
                              sign_labels='symbol', save_path=_save_path(opts, 'now.png'), show=opts.show)
 
 
@@ -118,8 +118,8 @@ def current_subcycle(ctx, opts):
             ('dividing time linearly', ctx.linear_map)]
     for label, time_map in maps:
         print(f"Time map {label}:")
-        for depth in range(1, 6):
-            lcoords = time_map.subcycle_at(ctx.now, depth)
+        for depth in range(1, 7):
+            lcoords = time_map.subcycle_at(ctx.eq, depth)
             start, end = time_map.interval(lcoords)
             print(f"  depth {depth}: {address_label(lcoords):45s} {start:10.1f} to {end:10.1f} ({end - start:.1f} years)")
 

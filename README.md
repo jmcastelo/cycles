@@ -138,6 +138,11 @@ Options:
   `sandbox/sounds/`).
 - `--no-show` runs without opening windows or playing sounds, for batch runs.
 
+In VS Code / Code OSS, the tasks in `.vscode/tasks.json` run the study script
+that is open: `Ctrl+Shift+B` asks for the studies and options to run (empty
+runs the defaults), and *Terminal → Run Task…* also offers listing the studies
+and a batch run that saves every figure. They use the interpreter in `.venv`.
+
 | Script                       | Topic                                                     |
 |------------------------------|-----------------------------------------------------------|
 | `study_of_division.py`       | consistency checks, ring and circle diagrams              |

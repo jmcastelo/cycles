@@ -36,6 +36,7 @@ Command line::
 """
 
 import argparse
+import shlex
 import sys
 from types import SimpleNamespace
 from typing import Callable
@@ -77,6 +78,9 @@ def run(setup: Callable | None = None, argv: list[str] | None = None) -> None:
     parser.add_argument('-s', '--save', action='store_true', help='save figures and sounds to files')
     parser.add_argument('-n', '--no-show', action='store_true',
                         help="don't display figures or play sounds (batch runs)")
+    # Split arguments that hold several words (e.g. "counts trigraph --save" typed
+    # into the editor's task prompt, which arrives as a single argument)
+    argv = [word for arg in (sys.argv[1:] if argv is None else argv) for word in shlex.split(arg)]
     args = parser.parse_args(argv)
 
     if args.list:
