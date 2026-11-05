@@ -63,17 +63,50 @@ Three kinds of map are available:
 | `TimeMap.from_age_boundaries([...])` | time, fitted to 5 given age boundaries | each age fits its dates; linear inside it |
 | `precession_time_map(start, turns)` | precession angle | every subcycle boundary is a precession boundary |
 
-In `study_of_precession.py` the yugas are 1, 3/4, 1/2 and 1/4 turns of the
-ayanamsa (4:3:2:1 in angle, 2.5 turns in all). Because the precession rate
-varies, equal arcs are not equal spans of years, so the yugas are not exactly
-4:3:2:1 in time and only the precession map keeps every subdivision on a
-precession boundary; dividing time instead shifts the inner boundaries by up
-to about a century. The study uses the precession map, and its
-`current_subcycle` study compares the three.
+### The cycle model
 
-`yuga_boundaries()` and `yuga_time_maps()` (in
-`cycles.plotting.equinoctial_precession`) give these boundaries and the three
-maps, starting from `KALI_YUGA_START`.
+How the yuga cycle sits in history is an open question: sources differ on
+the moment the Kali Yuga starts and on the length of the cycle. A
+`CycleModel` (`cycles.functions.cycle_model`) makes each choice explicit and
+gives the time map:
+
+- **anchor**: a date and time (local mean time at a longitude, or UT), or a
+  value of the ayanamsa (a position of the vernal point), and the point of
+  the cycle that falls on it (start of Satya, Treta, Dvapara or Kali, or the
+  end);
+- **scale**: the total precession arc in turns, or the length in years (one
+  determines the other);
+- **division**: what 4:3:2:1 divides at every level: precession angle,
+  time, or angle for the yugas and time inside them;
+- **precession**: the long-term model (varying rate) or a constant rate
+  given by its period. With a constant rate both divisions coincide.
+
+```python
+from cycles.functions.cycle_model import load_presets
+
+model = load_presets()['Kali 3102 BC, midnight at Ujjain']
+model.boundaries()                          # years of the yuga boundaries
+model.replace(division='time').time_map()   # same anchor and arc, dividing time
+```
+
+Because the precession rate varies, the two criteria (4:3:2:1 in years and
+in angle) cannot both hold exactly: a yuga's share of the time is its share
+of the arc times the cycle's mean rate over the yuga's own mean rate. With
+2.5 turns, dividing angle, the yugas take 0.4039, 0.2915, 0.2040 and 0.1006
+of the time; inside them the deviation shrinks with depth.
+
+Built-in presets:
+
+| Preset | Anchor (start of Kali) | Scale |
+|---|---|---|
+| Kali 3102 BC, midnight at Ujjain (default) | midnight 17/18 Feb 3102 BC, Ujjain (Surya Siddhanta; Aryabhata's midnight system) | 2.5 turns |
+| Kali 3102 BC, sunrise at Lanka | mean sunrise 18 Feb 3102 BC on the Ujjain meridian (Aryabhata's sunrise system) | 2.5 turns |
+| Kali 3104 BC, Abhyankar 1993 | sunrise at Ujjain, 7 Feb 3104 BC (Bull. Astr. Soc. India 21, 475) | 2.5 turns |
+| Precession period at constant rate | as the default | 64,430 years (Satya = 25,772 years) |
+
+Presets you save (from the GUI, or with `save_user_presets`) go to
+`sandbox/cycle_presets.json`, or to `$CYCLES_PRESETS`. `study_of_precession.py`
+uses the preset named in its `PRESET` constant.
 
 ## Installation
 
@@ -115,6 +148,7 @@ cycles/
     sound.py            sound synthesis and scalograms
     analysis.py         autocorrelation
     timescale.py        normalized time <-> physical time (TimeMap)
+    cycle_model.py      the yuga cycle in history: anchor, scale, division, presets
     astro_dates.py      calendar dates <-> Julian Day <-> decimal year, UT <-> TDB
     nbody_ephemeris.py  long-term planetary ephemeris by N-body integration
     view.py             3D camera angles for matplotlib
@@ -188,9 +222,11 @@ Golden/Silver/Bronze/Iron), and can dim every subcycle whose duration
 differs from the selected one. *File → Save view as image* saves the
 navigator.
 
-The *Time* box chooses how the cycle is placed in history: the yuga cycle
-with any of the three time maps above (dividing precession angle by
-default), or normalized time. With a map in years, the axis below the rows
+The *Cycle* box chooses how the cycle is placed in history: one of the
+cycle model presets, or normalized time. *Model…* opens the cycle model
+editor, which shows the resulting yuga dates, lengths, arcs, ayanamsa and
+mean precession rates as you change the anchor, scale, division or
+precession, and applies the model or saves it as a preset. With a map in years, the axis below the rows
 shows years or dates, the inspector shows when the selected subcycle starts
 and ends, and a red line marks a date (the present, at start). In the *Date*
 tab, enter a date (`2026-11-05`, `3102 BC-02-18`) or a decimal year

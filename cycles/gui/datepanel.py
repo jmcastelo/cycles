@@ -90,7 +90,7 @@ class DatePanel(QWidget):
         for widget in (self.entry, self.go_button, self.now_button, self.depth, self.table):
             widget.setEnabled(enabled)
         if not enabled:
-            self.message.setText('Choose a time map in years to use dates.')
+            self.message.setText('Choose a cycle model (not normalized time) to use dates.')
             return
         if state.date is None:
             self.message.setText('No date marked.')

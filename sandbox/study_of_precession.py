@@ -6,11 +6,9 @@ the N-body ephemeris at their boundaries.
 import cycles.functions.nbody_ephemeris as nbe
 from cycles.functions.astro_dates import date_time_to_julian_day, julian_day_to_year
 from cycles.functions.timescale import addresses_with_prefix, address_label
+from cycles.functions.cycle_model import DEFAULT_PRESET, load_presets
 from cycles.plotting.equinoctial_precession import (
-    KALI_YUGA_START,
     plot_equinoctial_precession,
-    yuga_boundaries,
-    yuga_time_maps,
     plot_zodiac_with_planets,
     plot_zodiac_planets_grid,
 )
@@ -22,6 +20,10 @@ BASE_DIR = PLOTS_DIR / "study_of_precession"
 TABLES = {'': 'tabla70k70k', '_p': 'tabla70k70kp'}
 EPOCH_DISPLAY = ("year", "date", "julian_day")
 
+# Cycle model: a preset name (see cycles.functions.cycle_model; your own presets
+# are in sandbox/cycle_presets.json, written by the GUI)
+PRESET = DEFAULT_PRESET
+
 # Subcycles for subcycle_charts: those of depth DEPTH whose address starts with PREFIX
 # (e.g. depth 2, prefix [3]: the four subdivisions of the Kali Yuga)
 DEPTH = 3
@@ -29,21 +31,21 @@ PREFIX = [3]
 
 
 def setup():
-    # Yuga boundaries from the start of the Kali Yuga, going back and forward by
-    # the arc of each yuga (1, 3/4, 1/2 and 1/4 turns of the ayanamsa)
-    ts, tt, td, tk, tm = yuga_boundaries(KALI_YUGA_START)
-    maps = yuga_time_maps(KALI_YUGA_START)
-    # Normalized time -> year, dividing precession angle: the yugas are 1, 3/4, 1/2
-    # and 1/4 turns (4:3:2:1 in angle), and so is every subdivision
-    time_map = maps['precession']
+    model = load_presets()[PRESET]
+    print(f"Cycle model: {model.name}")
+    # Normalized time -> year with the model's division (by default precession
+    # angle: the yugas are 1, 3/4, 1/2 and 1/4 turns, and so is every subdivision)
+    time_map = model.time_map()
+    ts, tt, td, tk, tm = model.boundaries()
     return dict(
+        model=model,
         starts={'Satya': ts, 'Treta': tt, 'Dvapara': td, 'Kali': tk, 'end': tm},
         time_map=time_map,
-        # Alternatives for comparison, dividing time instead of angle:
+        # Alternatives for comparison, same anchor and arc but dividing time instead of angle:
         # each yuga fitted to its boundaries, linear inside it
-        fitted_map=maps['fitted'],
-        # one linear map over the whole span (the yugas then are exactly 4:3:2:1 in years)
-        linear_map=maps['linear'],
+        fitted_map=model.replace(division='hybrid').time_map(),
+        # time divided throughout (the yugas then are exactly 4:3:2:1 in years)
+        linear_map=model.replace(division='time').time_map(),
         # Kali Yuga divided like a whole cycle (0.4, 0.3, 0.2, 0.1 of its arc), and its end
         sub_kali=[time_map.interval(lcoords)[0] for lcoords in addresses_with_prefix([3], 2)] + [tm],
         now=julian_day_to_year(date_time_to_julian_day(2026, 11, 3, 19, 49, 0)),

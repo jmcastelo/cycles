@@ -214,7 +214,7 @@ class SkyPanel(QWidget):
         """When the subcycle or the time map changes, cover the new subcycle and go to its start."""
         state = self.state
         address = self._target_address()
-        target = (address, state.time_map_name)
+        target = (address, state.model)
         if target == self._target:
             return
         self._target = target
@@ -257,7 +257,7 @@ class SkyPanel(QWidget):
         self.to_date_button.setEnabled(inside)
         self.mark_button.setEnabled(state.sky_time is not None)
         if state.sky_time is None:
-            self.moment.setText('Choose a time map in years to see the sky.' if self._interval is None else '')
+            self.moment.setText('Choose a cycle model (not normalized time) to see the sky.' if self._interval is None else '')
         else:
             self.moment.setText(f"<b>{datetime_text(state.sky_time)}</b>  ({state.sky_time:.4f})")
 
@@ -314,7 +314,7 @@ class SkyPanel(QWidget):
         self._dirty = False
         year = self.state.sky_time
         if year is None:
-            self._message('Choose a time map in years\nto see the sky.')
+            self._message('Choose a cycle model\nto see the sky.')
             return
         if not self.tables:
             self._message('No ephemeris tables.\nUse "Ephemeris…" to choose their folder.')

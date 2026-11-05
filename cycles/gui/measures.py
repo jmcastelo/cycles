@@ -110,7 +110,7 @@ class MeasuresPanel(QWidget):
         state = self.state
         depth = self.plot_depth()
         scope = self.scope(depth)
-        base = (self.kind.currentText(), depth, scope, state.color_key, state.time_map_name, state.names)
+        base = (self.kind.currentText(), depth, scope, state.color_key, state.model, state.names)
         if base != self._base:
             self._draw_base(depth, scope)
             self._base = base

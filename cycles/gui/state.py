@@ -23,26 +23,14 @@ from cycles.functions.astro_dates import (
 )
 from cycles.functions.division import find_lcoords
 from cycles.functions.duration import count_digits
+from cycles.functions.cycle_model import DEFAULT_PRESET, CycleModel, load_presets
 from cycles.functions.timescale import AGE_NAMES, YUGA_NAMES, TimeMap
 
 # Deepest level the GUI computes (4^8 = 65536 subcycles, a few seconds the first time)
 MAX_DEPTH = 8
 # Name sets for the four ages
 NAME_SETS = {'Yugas': YUGA_NAMES, 'Ages': AGE_NAMES}
-# Time maps offered, by key: label shown in the GUI
-TIME_MAP_LABELS = {
-    'precession': 'Years, dividing precession angle',
-    'fitted': 'Years, each yuga fitted to its dates',
-    'linear': 'Years, linear',
-    'normalized': 'Normalized (0 to 1)',
-}
 MONTHS = ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
-
-
-def yuga_time_maps() -> dict[str, TimeMap | None]:
-    """The time maps of ``TIME_MAP_LABELS`` (``None`` for normalized time)."""
-    from cycles.plotting.equinoctial_precession import yuga_time_maps as maps
-    return {**maps(), 'normalized': None}
 
 
 def current_year() -> float:
@@ -192,15 +180,18 @@ class CycleState(QObject):
 
     focusChanged = Signal(tuple)
     selectionChanged = Signal(object)   # tuple, or None
-    viewChanged = Signal()              # coloring, rows, spacing, names, highlight or time map
+    viewChanged = Signal()              # coloring, rows, spacing, names, highlight or cycle model
+    modelChanged = Signal(object)       # the cycle model, or None (normalized time)
+    presetsChanged = Signal()
     dateChanged = Signal(object)        # the marked date (decimal year), or None
     skyTimeChanged = Signal(object)     # the moment of the sky chart (decimal year), or None
 
-    def __init__(self, cache: LevelCache | None = None, time_maps: dict | None = None):
+    def __init__(self, cache: LevelCache | None = None, presets: dict[str, CycleModel] | None = None):
         super().__init__()
         self.cache = cache or LevelCache()
-        self.time_maps = time_maps if time_maps is not None else yuga_time_maps()
-        self.time_map_name = next(iter(self.time_maps))
+        self.presets = presets if presets is not None else load_presets()
+        self.model: CycleModel | None = self.presets.get(DEFAULT_PRESET) or next(iter(self.presets.values()), None)
+        self._time_map = self.model.time_map() if self.model is not None else None
         self.date: float | None = current_year()
         self.sky_time: float | None = None
         self.focus: tuple = ()
@@ -283,16 +274,22 @@ class CycleState(QObject):
 
     @property
     def time_map(self) -> TimeMap | None:
-        """The current time map, or ``None`` for normalized time."""
-        return self.time_maps[self.time_map_name]
+        """The time map of the cycle model, or ``None`` for normalized time."""
+        return self._time_map
 
-    def set_time_map(self, name: str) -> None:
-        if name not in self.time_maps:
-            raise ValueError(f"unknown time map {name!r}")
-        if name != self.time_map_name:
-            self.time_map_name = name
-            self.viewChanged.emit()
-            self.dateChanged.emit(self.date)   # its place in the cycle depends on the map
+    def set_model(self, model: CycleModel | None) -> None:
+        """Use ``model`` (``None``: normalized time). Raises ``ValueError`` if it cannot be solved."""
+        if model == self.model:
+            return
+        time_map = model.time_map() if model is not None else None
+        self.model, self._time_map = model, time_map
+        self.modelChanged.emit(model)
+        self.viewChanged.emit()
+        self.dateChanged.emit(self.date)   # its place in the cycle depends on the model
+
+    def reload_presets(self) -> None:
+        self.presets = load_presets()
+        self.presetsChanged.emit()
 
     def set_date(self, year: float | None) -> None:
         if year != self.date:

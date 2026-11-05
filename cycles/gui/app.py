@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QDockWidget, QFileDialog, QLabel, QMainWindow, QMessageBox, QSpinBox,
-    QToolBar, QVBoxLayout, QWidget,
+    QToolBar, QToolButton, QVBoxLayout, QWidget,
 )
 
 from cycles.functions.division import COLOR_KEYS
@@ -16,10 +16,13 @@ from cycles.gui.measures import MeasuresPanel
 from cycles.gui.navigator import Breadcrumb, Navigator
 from cycles.gui.sky import SkyPanel
 from cycles.gui.studies import StudyLauncher
-from cycles.gui.state import MAX_DEPTH, NAME_SETS, TIME_MAP_LABELS, CycleState
+from cycles.gui.modeldialog import CycleModelDialog
+from cycles.gui.state import MAX_DEPTH, NAME_SETS, CycleState
 
 
 class MainWindow(QMainWindow):
+    # Special entries of the cycle box
+    CURRENT, NORMALIZED = '\x00current', '\x00normalized'
     def __init__(self, state: CycleState | None = None):
         super().__init__()
         self.state = state or CycleState()
@@ -68,6 +71,7 @@ class MainWindow(QMainWindow):
         dock.raise_()
         self.docks = {'inspector': dock, 'date': date_dock, 'sky': sky_dock, 'measures': measures_dock}
         self.launcher: StudyLauncher | None = None
+        self.model_dialog: CycleModelDialog | None = None
 
         self._build_toolbar()
         self._build_menus()
@@ -83,14 +87,20 @@ class MainWindow(QMainWindow):
         bar.setObjectName('view')
         self.addToolBar(bar)
 
-        bar.addWidget(QLabel(' Time '))
-        self.time_box = QComboBox()
-        for name in state.time_maps:
-            self.time_box.addItem(TIME_MAP_LABELS.get(name, name), name)
-        self.time_box.setToolTip('Physical time of the yuga cycle, from the precession of the equinoxes. '
-                                 'Dividing precession angle, every boundary is a precession boundary.')
-        self.time_box.currentIndexChanged.connect(lambda i: state.set_time_map(self.time_box.itemData(i)))
-        bar.addWidget(self.time_box)
+        bar.addWidget(QLabel(' Cycle '))
+        self.model_box = QComboBox()
+        self.model_box.setToolTip('How the yuga cycle sits in history (a preset), or normalized time')
+        self.model_box.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self.model_box.activated.connect(self._model_chosen)
+        bar.addWidget(self.model_box)
+        model_button = QToolButton()
+        model_button.setText('Model…')
+        model_button.setToolTip('Edit the cycle model: anchor, length, division, precession; save presets')
+        model_button.clicked.connect(self.show_model_dialog)
+        bar.addWidget(model_button)
+        self._fill_model_box()
+        state.modelChanged.connect(self._fill_model_box)
+        state.presetsChanged.connect(self._fill_model_box)
 
         bar.addWidget(QLabel('  Color '))
         self.color_box = QComboBox()
@@ -130,6 +140,44 @@ class MainWindow(QMainWindow):
         bar.addWidget(self.equal_box)
 
         state.viewChanged.connect(self._sync_toolbar)
+
+    def _fill_model_box(self, *_) -> None:
+        """Presets, the current model if it is not one of them, and normalized time."""
+        state = self.state
+        box = self.model_box
+        box.blockSignals(True)
+        box.clear()
+        for name in state.presets:
+            box.addItem(name, name)
+        if state.model is not None and state.presets.get(state.model.name) != state.model:
+            box.insertItem(0, f"{state.model.name} (modified)", self.CURRENT)
+        box.addItem('Normalized time (0 to 1)', self.NORMALIZED)
+        if state.model is None:
+            box.setCurrentIndex(box.findData(self.NORMALIZED))
+        elif state.presets.get(state.model.name) == state.model:
+            box.setCurrentIndex(box.findData(state.model.name))
+        else:
+            box.setCurrentIndex(box.findData(self.CURRENT))
+        box.blockSignals(False)
+
+    def _model_chosen(self, index: int) -> None:
+        key = self.model_box.itemData(index)
+        if key == self.CURRENT:
+            return
+        try:
+            self.state.set_model(None if key == self.NORMALIZED else self.state.presets[key])
+        except ValueError as error:
+            self.statusBar().showMessage(f"Cannot use this cycle model: {error}", 10000)
+            self._fill_model_box()
+
+    def show_model_dialog(self) -> None:
+        if self.model_dialog is None:
+            self.model_dialog = CycleModelDialog(self.state, self)
+        elif self.state.model is not None:
+            self.model_dialog.load(self.state.model)
+        self.model_dialog.show()
+        self.model_dialog.raise_()
+        self.model_dialog.activateWindow()
 
     def _sync_toolbar(self) -> None:
         """Keep the toolbar in step with changes made elsewhere (e.g. from the inspector)."""
