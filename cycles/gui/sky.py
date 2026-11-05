@@ -229,8 +229,10 @@ class SkyPanel(QWidget):
         else:
             t0, t1 = self._interval
             self.subcycle.setText(f"<b>{names}</b>: {date_text(t0)} to {date_text(t1)} ({span_text(t1 - t0)})")
-            if state.sky_time is not None and t0 <= state.sky_time <= t1:
-                self._sky_time_changed(state.sky_time)       # keep the moment if it is still inside
+            # Go to the start of the new subcycle (if the moment is already there,
+            # no signal comes, so update the slider and chart directly)
+            if state.sky_time == t0:
+                self._sky_time_changed(t0)
             else:
                 state.set_sky_time(t0)
         for widget in (self.slider, self.start_button, self.end_button, self.play_button):
