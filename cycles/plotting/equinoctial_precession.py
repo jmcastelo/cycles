@@ -184,6 +184,10 @@ _LABEL_JUNE = "Solsticio\nde junio"
 _LABEL_AUTUMNAL = "Punto otoñal"
 _LABEL_DECEMBER = "Solsticio\nde diciembre"
 _LABEL_SPICA = "Spica (Chitrā)"
+# glyphs of the four points (the signs they open in the tropical zodiac), drawn near the centre
+_AXIS_GLYPHS = ((0, "♈"), (90, "♋"), (180, "♎"), (270, "♑"))
+_LEGEND_EQUINOXES = "equinoxes"
+_LEGEND_SOLSTICES = "solstices"
 _TITLE_HEAD = "Precesión de los equinoccios"
 _TITLE_TEMPLATE = _TITLE_HEAD + " · año {year}"
 _EPOCH_PARTS = ("year", "date", "julian_day")      # canonical order of the epoch display
@@ -697,6 +701,8 @@ def plot_equinoctial_precession(
     calendar: str = "auto",
     epoch_position: str = "title",
     center_symbol: bool = False,
+    axis_labels: str = "inner",
+    axis_glyph_radius: Optional[float] = None,
 ):
     """
     Draw the equinoctial and solstitial axes against the sidereal zodiac.
@@ -763,6 +769,17 @@ def plot_equinoctial_precession(
     epoch_position : {"title", "center"}
         Where the epoch items go: under the title (default) or in a box in the
         centre of the diagram (the title then has no epoch line).
+    axis_labels : {"inner", "outer"}
+        How the ends of the equinoctial and solstitial axes are marked. "inner"
+        (default): the axes stop at the ring of the signs and the four points
+        carry their glyphs (♈ vernal, ♋ June, ♎ autumnal, ♑ December, the signs
+        they open in the tropical zodiac) near the centre, explained by a small
+        legend in a corner; nothing outside the circle turns with the axes, so
+        the size of the diagram does not depend on the year. "outer": the axes
+        reach beyond the ring, with their names at the ends.
+    axis_glyph_radius : float, optional
+        Radius of the glyphs of the four points (with "inner"); by default near
+        the centre, or clear of the epoch box when it is in the centre.
 
     Returns
     -------
@@ -783,6 +800,8 @@ def plot_equinoctial_precession(
     _check_calendar_name(calendar)
     _check_epoch_position(epoch_position)
     _check_sign_labels(sign_labels)
+    if axis_labels not in ("inner", "outer"):
+        raise ValueError("axis_labels must be 'inner' or 'outer'")
     center_in_box = (epoch_position == "center" and bool(epoch_parts) and center_symbol
                      and center in ("sun", "earth"))
     custom_model = ayanamsa_function is not None
@@ -879,18 +898,48 @@ def plot_equinoctial_precession(
                 color=_RED, linewidth=1.3, alpha=0.85, zorder=2)
 
     # --- Equinoctial and solstitial axes -------------------------------------
-    axis_length = 1.13 + extra
+    inner_axes = axis_labels == "inner"
+    axis_length = inner_radius if inner_axes else 1.13 + extra
     for tropical_angle, color in ((0, _RED), (90, _GREEN)):
         theta = rad(tropical_angle - ayanamsa)
         for end_theta in (theta, theta + math.pi):
             ax.plot([end_theta, end_theta], [0, axis_length], color=color,
                     linewidth=2.4, zorder=4, solid_capstyle="round")
 
-    axis_labels = [(0, _LABEL_VERNAL, _RED),
-                   (90, _LABEL_JUNE, _GREEN),
-                   (180, _LABEL_AUTUMNAL, _RED),
-                   (270, _LABEL_DECEMBER, _GREEN)]
-    for tropical_angle, text, color in (axis_labels if annotations else ()):
+    glyph_handles = []
+    if inner_axes:
+        # the glyphs of the four points near the centre (clear of an epoch box there)
+        glyph_radius = axis_glyph_radius or (0.33 if epoch_position == "center" and epoch_parts else 0.21)
+        disc_area = (_DISC_AREA if annotations else _DISC_AREA_COMPACT) * 0.6
+        glyph_size = _GLYPH_FILL * math.sqrt(4.0 * disc_area / math.pi)
+        for tropical_angle, glyph in _AXIS_GLYPHS:
+            color = _RED if tropical_angle % 180 == 0 else _GREEN
+            theta = rad(tropical_angle - ayanamsa)
+            ax.scatter([theta], [glyph_radius], s=disc_area, c="white", edgecolors=color,
+                       linewidths=1.4, zorder=6)
+            ax.scatter([theta], [glyph_radius], s=glyph_size ** 2,
+                       marker=_centered_glyph(glyph, _PLANET_FONT), c=color,
+                       edgecolors=color, linewidths=0.25, zorder=7)
+        if annotations:
+            from matplotlib.legend_handler import HandlerTuple
+
+            def glyph_marker(glyph, color):
+                return Line2D([], [], linestyle="none", marker=_centered_glyph(glyph, _PLANET_FONT),
+                              markersize=9, color=color, markeredgewidth=0.2)
+            glyph_handles = [(glyph_marker("♈", _RED), glyph_marker("♎", _RED)),
+                             (glyph_marker("♋", _GREEN), glyph_marker("♑", _GREEN))]
+            key = ax.legend(glyph_handles, [_LEGEND_EQUINOXES, _LEGEND_SOLSTICES],
+                            handler_map={tuple: HandlerTuple(ndivide=None, pad=0.6)},
+                            loc="lower left", bbox_to_anchor=(0.0, 0.0), frameon=False,
+                            fontsize=7.5, handlelength=2.6, handletextpad=0.5,
+                            borderaxespad=0.0, labelspacing=0.5)
+            ax.add_artist(key)          # kept when the main legend is drawn
+
+    outer_labels = [(0, _LABEL_VERNAL, _RED),
+                    (90, _LABEL_JUNE, _GREEN),
+                    (180, _LABEL_AUTUMNAL, _RED),
+                    (270, _LABEL_DECEMBER, _GREEN)]
+    for tropical_angle, text, color in (outer_labels if annotations and not inner_axes else ()):
         theta = rad(tropical_angle - ayanamsa)
         ux, uy = -math.sin(theta), math.cos(theta)  # visual direction of the tip
         ha = "left" if ux > 0.35 else ("right" if ux < -0.35 else "center")
@@ -1438,7 +1487,8 @@ def plot_zodiac_with_planets(
         rate_arcsec_per_year=rate_arcsec_per_year, ax=ax, legend=False,
         show=False, center="none" if (centered and center_symbol) else "earth",
         show_arc=False, annotations=not compact, nakshatras=nakshatras,
-        sign_labels=sign_labels, epoch_display=(), center_symbol=center_symbol)
+        sign_labels=sign_labels, epoch_display=(), center_symbol=center_symbol,
+        axis_glyph_radius=0.33 if centered else None)          # clear of the epoch box
     summary_lines = ax.get_title().split("\n")[1:]    # ayanamsa and vernal point
     epoch_texts = _epoch_texts(year_given, year, time_scale, epoch_parts, calendar,
                                compact=compact)
