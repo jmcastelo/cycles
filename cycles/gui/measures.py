@@ -55,6 +55,11 @@ class MeasuresPanel(QWidget):
         self.inside.setChecked(True)
         self.inside.toggled.connect(self._schedule)
         row.addWidget(self.inside)
+        self.sized = QCheckBox('Size by duration')
+        self.sized.setChecked(True)
+        self.sized.setToolTip('Point areas proportional to the durations of the subcycles')
+        self.sized.toggled.connect(self._schedule)
+        row.addWidget(self.sized)
         row.addStretch(1)
         layout.addLayout(row)
 
@@ -115,12 +120,25 @@ class MeasuresPanel(QWidget):
         y_name, x_name = KINDS[self.kind.currentText()]
         measures = {y_name, x_name} & {'dharma', 'purity'}
         parameters = (state.parameters_of(state.color_key), *(state.parameters_of(m) for m in sorted(measures)))
-        base = (self.kind.currentText(), depth, scope, state.color_key, state.model, state.names, parameters)
+        base = (self.kind.currentText(), depth, scope, state.color_key, state.model, state.names, parameters,
+                self.sized.isChecked())
         if base != self._base:
             self._draw_base(depth, scope)
             self._base = base
         self._draw_highlights(depth)
         self.canvas.draw_idle()
+
+    def point_sizes(self, durations: np.ndarray, scatter: bool):
+        """
+        Point areas: proportional to the durations (the longest gets the largest
+        area) or all equal, smaller when there are many points. ``scatter``: the
+        purity-dharma plot, whose points overlap less and can be larger.
+        """
+        many = len(durations) > 256
+        if self.sized.isChecked():
+            largest = (300 if scatter else 120) if not many else (150 if scatter else 60)
+            return largest * durations / durations.max()
+        return (40 if scatter else 16) if not many else (10 if scatter else 4)
 
     def _draw_base(self, depth: int, scope: tuple) -> None:
         state = self.state
@@ -134,8 +152,9 @@ class MeasuresPanel(QWidget):
 
         self.figure.clear()
         ax = self.figure.add_subplot(111)
+        sizes = self.point_sizes(part.durations, scatter=x_name == 'dharma')
         if x_name == 'dharma':
-            plot_purity_and_dharma(ax, part, colors=colors, max_size=300)
+            plot_purity_and_dharma(ax, part, colors=colors, sizes=sizes)
             ax.set_title(title, fontsize=9)
             x, y = part.dharmas, part.purities
         else:
@@ -147,9 +166,8 @@ class MeasuresPanel(QWidget):
                 xlabel = 'Normalized time'
                 if state.time_map is not None:
                     x, xlabel = state.time_map.to_physical(x), 'Year'
-            size = 4.0 if len(indices) > 256 else 16.0
             plot_y_vs_x(x, y, (None, None), title, xlabel, y_name.capitalize(), ax=ax, show=False,
-                        colors=colors, size=size)
+                        colors=colors, size=sizes)
             ax.title.set_fontsize(9)
             ax.xaxis.set_major_locator(MaxNLocator(5))
         self.ax = ax

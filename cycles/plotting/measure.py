@@ -65,16 +65,18 @@ def plot_purity_vs_dharma(level: Level, rgb_key: str=DEFAULT_COLOR_KEY) -> plt.F
     return fig
 
 
-def plot_purity_and_dharma(ax, level: Level, rgb_key: str=DEFAULT_COLOR_KEY, colors=None, max_size: float=500):
+def plot_purity_and_dharma(ax, level: Level, rgb_key: str=DEFAULT_COLOR_KEY, colors=None, max_size: float=500,
+                           sizes=None):
     """
     Scatter of purity against dharma on ``ax``: one point per subcycle, sized by
-    its duration (the longest gets area ``max_size``) and filled with its color
-    (``colors``, an (N, 3) array, overrides ``rgb_key``). Returns the scatter.
+    its duration (the longest gets area ``max_size``; ``sizes``, areas, override
+    it) and filled with its color (``colors``, an (N, 3) array, overrides
+    ``rgb_key``). Returns the scatter.
     """
     durations, dharma, purity = level.durations, level.dharmas, level.purities
     rgb = level.rgb(rgb_key) if colors is None else colors
-    max_duration = np.max(durations, axis=0)
-    sizes = max_size * durations / max_duration
+    if sizes is None:
+        sizes = max_size * durations / np.max(durations, axis=0)
 
     scatter = ax.scatter(
         x=dharma,

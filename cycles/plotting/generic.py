@@ -26,7 +26,7 @@ def plot_y_vs_x(
     save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
     ax : existing Axes to draw on (then the title goes on the Axes and nothing
         is shown); ``show`` as usual otherwise.
-    colors, size : colors (e.g. an (N, 3) array) and area of the points; with
+    colors, size : colors (e.g. an (N, 3) array) and area (scalar, or one per point) of the points; with
         colors, the line is drawn in light gray.
 
     Returns the scatter.

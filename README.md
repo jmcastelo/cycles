@@ -296,7 +296,8 @@ then in `sandbox/data/tabla70k70k`.
 
 The *Measures* tab plots dharma and purity (against each other, against
 time, or against index) for the level of the selected subcycle, or for a
-chosen depth, inside the zoomed subcycle or over the whole cycle. The
+chosen depth, inside the zoomed subcycle or over the whole cycle, with
+points sized by duration or all alike. The
 selected subcycle is ringed in blue and, with *Equal durations* on, those
 sharing its duration in black; clicking a point selects that subcycle.
 
