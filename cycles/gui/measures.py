@@ -58,7 +58,7 @@ class MeasuresPanel(QWidget):
         row.addStretch(1)
         layout.addLayout(row)
 
-        self.figure = Figure(figsize=(5, 4))
+        self.figure = Figure(figsize=(5, 4), layout='constrained')
         self.canvas = FigureCanvasQTAgg(self.figure)
         self.canvas.setMinimumSize(260, 220)
         self.canvas.mpl_connect('button_press_event', self._clicked)
@@ -147,7 +147,6 @@ class MeasuresPanel(QWidget):
                         colors=colors, size=size)
             ax.title.set_fontsize(9)
             ax.xaxis.set_major_locator(MaxNLocator(5))
-        self.figure.tight_layout()
         self.ax = ax
         self._x, self._y, self._indices = np.asarray(x, dtype=float), np.asarray(y, dtype=float), indices
         self._highlights = []

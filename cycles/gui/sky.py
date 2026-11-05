@@ -124,6 +124,8 @@ class SkyPanel(QWidget):
 
         self.figure = Figure(figsize=(5, 5), layout=None)
         self.canvas = FigureCanvasQTAgg(self.figure)
+        self.canvas.mpl_connect('resize_event', self.fit_chart)
+        self.ax = None
         self.canvas.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.canvas.setMinimumSize(260, 260)
 
@@ -301,7 +303,37 @@ class SkyPanel(QWidget):
         super().hideEvent(event)
         self.stop()
 
+    def fit_chart(self, *_) -> None:
+        """
+        Make the disk as large as the canvas allows, keeping the labels around
+        it (which keep their size in points) inside: measure how far they reach
+        beyond the disk, size the disk to fit, and repeat once with the new size.
+        """
+        ax = getattr(self, 'ax', None)
+        if ax is None or ax.figure is not self.figure:
+            return
+        width, height = self.figure.bbox.width, self.figure.bbox.height
+        if width < 10 or height < 10:
+            return
+        renderer = self.canvas.get_renderer()
+        side = 0.6 * min(width, height)
+        x0, y0 = (width - side) / 2, (height - side) / 2
+        for _ in range(3):
+            ax.set_position([x0 / width, y0 / height, side / width, side / height])
+            disk = ax.get_window_extent(renderer)
+            labels = ax.get_tightbbox(renderer)
+            left, right = disk.x0 - labels.x0, labels.x1 - disk.x1
+            bottom, top = disk.y0 - labels.y0, labels.y1 - disk.y1
+            pad = 4.0
+            side = max(20.0, min(width - left - right - 2 * pad, height - bottom - top - 2 * pad))
+            # centre the disk with its labels in the canvas
+            x0 = (width - (side + left + right)) / 2 + left
+            y0 = (height - (side + bottom + top)) / 2 + bottom
+        ax.set_position([x0 / width, y0 / height, side / width, side / height])
+        self.canvas.draw_idle()
+
     def _message(self, text: str) -> None:
+        self.ax = None
         self.figure.clear()
         self.figure.text(0.5, 0.5, text, ha='center', va='center', wrap=True, color='#555555')
         self.canvas.draw_idle()
@@ -332,7 +364,8 @@ class SkyPanel(QWidget):
             self._message(f"Cannot compute the sky at {date_text(year)}:\n{error}")
             return
         ax.set_title('')
-        self.figure.subplots_adjust(left=0.12, right=0.88, top=0.9, bottom=0.1)
+        self.ax = ax
+        self.fit_chart()
         self.canvas.draw_idle()
 
         self.table.setRowCount(len(positions))

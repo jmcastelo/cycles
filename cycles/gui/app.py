@@ -2,7 +2,7 @@
 
 import sys
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QDockWidget, QFileDialog, QLabel, QMainWindow, QMessageBox, QSpinBox,
@@ -20,9 +20,14 @@ from cycles.gui.modeldialog import CycleModelDialog
 from cycles.gui.state import MAX_DEPTH, NAME_SETS, CycleState
 
 
+# Version of the saved panel layout (increase when the panels change)
+LAYOUT_VERSION = 1
+
+
 class MainWindow(QMainWindow):
     # Special entries of the cycle box
     CURRENT, NORMALIZED = '\x00current', '\x00normalized'
+
     def __init__(self, state: CycleState | None = None):
         super().__init__()
         self.state = state or CycleState()
@@ -37,39 +42,19 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.navigator, 1)
         self.setCentralWidget(central)
 
+        self.setDockOptions(QMainWindow.DockOption.AllowNestedDocks | QMainWindow.DockOption.AllowTabbedDocks
+                            | QMainWindow.DockOption.AnimatedDocks)
         self.inspector = Inspector(self.state)
-        dock = QDockWidget('Subcycle', self)
-        dock.setObjectName('inspector')
-        dock.setWidget(self.inspector)
-        dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetMovable
-                         | QDockWidget.DockWidgetFeature.DockWidgetFloatable)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
-
+        self.inspector.setMinimumWidth(330)
         self.date_panel = DatePanel(self.state)
-        date_dock = QDockWidget('Date', self)
-        date_dock.setObjectName('date')
-        date_dock.setWidget(self.date_panel)
-        date_dock.setFeatures(dock.features())
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, date_dock)
-        self.tabifyDockWidget(dock, date_dock)
-
         self.sky_panel = SkyPanel(self.state)
-        sky_dock = QDockWidget('Sky', self)
-        sky_dock.setObjectName('sky')
-        sky_dock.setWidget(self.sky_panel)
-        sky_dock.setFeatures(dock.features())
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, sky_dock)
-        self.tabifyDockWidget(date_dock, sky_dock)
-
         self.measures_panel = MeasuresPanel(self.state)
-        measures_dock = QDockWidget('Measures', self)
-        measures_dock.setObjectName('measures')
-        measures_dock.setWidget(self.measures_panel)
-        measures_dock.setFeatures(dock.features())
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, measures_dock)
-        self.tabifyDockWidget(sky_dock, measures_dock)
-        dock.raise_()
-        self.docks = {'inspector': dock, 'date': date_dock, 'sky': sky_dock, 'measures': measures_dock}
+        self.docks = {
+            'inspector': self._make_dock('Subcycle', 'inspector', self.inspector),
+            'date': self._make_dock('Date', 'date', self.date_panel),
+            'sky': self._make_dock('Sky', 'sky', self.sky_panel),
+            'measures': self._make_dock('Measures', 'measures', self.measures_panel),
+        }
         self.launcher: StudyLauncher | None = None
         self.model_dialog: CycleModelDialog | None = None
 
@@ -78,8 +63,85 @@ class MainWindow(QMainWindow):
         self.navigator.hovered.connect(self._show_hovered)
         self.navigator.busy.connect(self._show_busy)
         self.resize(1400, 760)
-        self.resizeDocks([dock], [430], Qt.Orientation.Horizontal)
+        self.arrange_panels('tabs')
+        self._restore_layout()
         self.navigator.setFocus()
+
+    # -- panels
+
+    def _make_dock(self, title: str, name: str, widget: QWidget) -> QDockWidget:
+        dock = QDockWidget(title, self)
+        dock.setObjectName(name)
+        dock.setWidget(widget)
+        dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetMovable
+                         | QDockWidget.DockWidgetFeature.DockWidgetFloatable
+                         | QDockWidget.DockWidgetFeature.DockWidgetClosable)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+        return dock
+
+    def arrange_panels(self, layout: str) -> None:
+        """
+        Arrange the open panels (all of them if none is open): ``'tabs'``,
+        ``'side'`` (side by side), ``'stacked'``, ``'grid'`` (2 x 2), or
+        ``'below'`` (side by side under the navigator).
+        """
+        docks = [dock for dock in self.docks.values() if dock.isVisible()] or list(self.docks.values())
+        area = (Qt.DockWidgetArea.BottomDockWidgetArea if layout == 'below'
+                else Qt.DockWidgetArea.RightDockWidgetArea)
+        for dock in self.docks.values():
+            self.removeDockWidget(dock)
+        first = docks[0]
+        first.setFloating(False)
+        self.addDockWidget(area, first)
+        first.show()
+        horizontal, vertical = Qt.Orientation.Horizontal, Qt.Orientation.Vertical
+        for k, dock in enumerate(docks[1:], 1):
+            dock.setFloating(False)
+            if layout == 'tabs':
+                self.tabifyDockWidget(first, dock)
+            elif layout in ('side', 'below'):
+                self.splitDockWidget(docks[k - 1], dock, horizontal)
+            elif layout == 'stacked':
+                self.splitDockWidget(docks[k - 1], dock, vertical)
+            elif layout == 'grid':
+                # 0 | 1 on top, 2 under 0, 3 under 1
+                if k == 1:
+                    self.splitDockWidget(first, dock, horizontal)
+                else:
+                    self.splitDockWidget(docks[k - 2], dock, vertical)
+            dock.show()
+        first.raise_()
+        width, height = self.width(), self.height()
+        if layout == 'below':
+            self.resizeDocks(docks, [width // len(docks)] * len(docks), horizontal)
+            self.resizeDocks([first], [int(height * 0.45)], vertical)
+        elif layout == 'side':
+            self.resizeDocks(docks, [int(width * 0.6) // len(docks)] * len(docks), horizontal)
+        elif layout == 'grid' and len(docks) > 1:
+            self.resizeDocks(docks[:2], [int(width * 0.3)] * 2, horizontal)
+        else:
+            self.resizeDocks([first], [430], horizontal)
+
+    def _restore_layout(self) -> None:
+        settings = QSettings()
+        geometry, state = settings.value('window/geometry'), settings.value('window/state')
+        if geometry is not None:
+            self.restoreGeometry(geometry)
+        if state is not None:
+            self.restoreState(state, LAYOUT_VERSION)
+
+    def reset_layout(self) -> None:
+        for dock in self.docks.values():
+            dock.show()
+        self.resize(1400, 760)
+        self.arrange_panels('tabs')
+        self.docks['inspector'].raise_()
+
+    def closeEvent(self, event) -> None:
+        settings = QSettings()
+        settings.setValue('window/geometry', self.saveGeometry())
+        settings.setValue('window/state', self.saveState(LAYOUT_VERSION))
+        super().closeEvent(event)
 
     def _build_toolbar(self) -> None:
         state = self.state
@@ -209,6 +271,28 @@ class MainWindow(QMainWindow):
         whole.setShortcut(QKeySequence('Ctrl+Home'))
         whole.triggered.connect(lambda: self.state.set_focus(()))
         view_menu.addAction(whole)
+
+        panels_menu = self.menuBar().addMenu('&Panels')
+        for k, dock in enumerate(self.docks.values(), 1):
+            action = dock.toggleViewAction()
+            action.setShortcut(QKeySequence(f'Alt+{k}'))
+            panels_menu.addAction(action)
+        panels_menu.addSeparator()
+        for label, layout, key in (('Arrange as &tabs', 'tabs', 'Ctrl+Alt+T'),
+                                   ('Arrange side by &side', 'side', 'Ctrl+Alt+S'),
+                                   ('Arrange s&tacked', 'stacked', 'Ctrl+Alt+V'),
+                                   ('Arrange in a &grid', 'grid', 'Ctrl+Alt+G'),
+                                   ('Arrange side by side &below the navigator', 'below', 'Ctrl+Alt+B')):
+            action = QAction(label, self)
+            action.setShortcut(QKeySequence(key))
+            action.setToolTip('Arranges the open panels (all of them if none is open)')
+            action.triggered.connect(lambda _=False, l=layout: self.arrange_panels(l))
+            panels_menu.addAction(action)
+        panels_menu.addSeparator()
+        reset = QAction('&Reset layout', self)
+        reset.triggered.connect(self.reset_layout)
+        panels_menu.addAction(reset)
+        panels_menu.setToolTipsVisible(True)
 
         help_menu = self.menuBar().addMenu('&Help')
         about = QAction('&Navigation', self)

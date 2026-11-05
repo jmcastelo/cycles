@@ -268,6 +268,14 @@ chosen depth, inside the zoomed subcycle or over the whole cycle. The
 selected subcycle is ringed in blue and, with *Equal durations* on, those
 sharing its duration in black; clicking a point selects that subcycle.
 
+The four panels (Subcycle, Date, Sky, Measures) can be open at the same
+time, to compare a chart with a measure plot and the inspector. The
+*Panels* menu shows or hides each one (`Alt+1` to `Alt+4`) and arranges the
+open ones as tabs, side by side, stacked, in a 2 × 2 grid, or side by side
+below the navigator; panels can also be dragged anywhere, docked or
+floating. The arrangement is remembered between sessions (*Panels → Reset
+layout* restores the tabs).
+
 *File → Studies…* (`Ctrl+T`) opens the study launcher: every study of the
 sandbox scripts, with each script's defaults checked. It runs the checked
 ones (or a double-clicked one) as on the command line, each script in its
