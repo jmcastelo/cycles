@@ -265,8 +265,15 @@ vertex colors, one per age) within the
 ranges that keep the colors of each level unique, and shows for any depth
 how many colors are different and how many a display can show apart. Changes
 apply as they are made, so the plots recolor while you edit; *Revert* goes
-back to the values the window opened with. *File → Save view as image* saves the
-navigator.
+back to the values the window opened with.
+
+*File → Save graph…* (`Ctrl+S`), or the *Save…* button of the Sky, Measures
+and Color space panels, saves the navigator or a panel's graph as it is shown
+(view angles, selection and moment included): on a paper format (A5 to A1,
+Letter, Legal, Tabloid; portrait or landscape), at the size on screen, or at a
+custom size in mm, cm or inches, with margins and an optional title, as PNG or
+JPEG at a chosen resolution, or as PDF, SVG or EPS (vectors; EPS for the
+panels only), on a white or transparent background.
 
 The *Cycle* box chooses how the cycle is placed in history: one of the
 cycle model presets, or normalized time. *Model…* opens the cycle model

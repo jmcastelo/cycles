@@ -14,7 +14,7 @@ from pathlib import Path
 
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from PySide6.QtCore import QSettings, Qt, QTimer
+from PySide6.QtCore import QSettings, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView, QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QHBoxLayout, QHeaderView, QLabel, QPushButton, QSizePolicy,
     QSlider, QSplitter, QTableWidget, QTableWidgetItem, QToolButton, QVBoxLayout, QWidget,
@@ -69,6 +69,8 @@ class SkyPanel(QWidget):
     contains the moment.
     """
 
+    saveRequested = Signal()     # the Save… button
+
     def __init__(self, state: CycleState, parent=None):
         super().__init__(parent)
         self.state = state
@@ -87,8 +89,13 @@ class SkyPanel(QWidget):
         open_button.setToolTip('Folder of an ephemeris table (with back/ and forward/), '
                                'built with python -m cycles.functions.nbody_ephemeris')
         open_button.clicked.connect(self.choose_ephemeris)
+        save_button = QToolButton()
+        save_button.setText('Save…')
+        save_button.setToolTip('Save this graph to a file (page size, resolution, format…)')
+        save_button.clicked.connect(self.saveRequested)
         row.addWidget(self.source, 1)
         row.addWidget(open_button)
+        row.addWidget(save_button)
         layout.addLayout(row)
 
         self.subcycle = QLabel()

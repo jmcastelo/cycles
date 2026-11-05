@@ -10,9 +10,9 @@ import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from matplotlib.ticker import FuncFormatter, MaxNLocator
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, Signal
 from PySide6.QtGui import QCursor
-from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox, QToolTip, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox, QToolTip, QToolButton, QVBoxLayout, QWidget
 
 from cycles.gui.state import MAX_DEPTH, MOMENT_COLOR, CycleState, address_of, children_range, equal_duration_indices, tcoord
 from cycles.plotting.generic import plot_y_vs_x
@@ -44,6 +44,8 @@ DRAG_THRESHOLD = 4  # pixels moved between press and release that make it a rota
 
 class MeasuresPanel(QWidget):
     """Dharma and purity plots of the level of the selection (or a chosen depth)."""
+
+    saveRequested = Signal()     # the Save… button
 
     def __init__(self, state: CycleState, parent=None):
         super().__init__(parent)
@@ -87,6 +89,11 @@ class MeasuresPanel(QWidget):
         self.view.currentIndexChanged.connect(self._apply_view)
         row.addWidget(self.view_label)
         row.addWidget(self.view)
+        save_button = QToolButton()
+        save_button.setText('Save…')
+        save_button.setToolTip('Save this graph to a file (page size, resolution, format…)')
+        save_button.clicked.connect(self.saveRequested)
+        row.addWidget(save_button)
         layout.addLayout(row)
 
         self.figure = Figure(figsize=(5, 4), layout='constrained')

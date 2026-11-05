@@ -5,7 +5,7 @@ import sys
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
-    QApplication, QCheckBox, QComboBox, QDockWidget, QFileDialog, QLabel, QMainWindow, QMessageBox, QSpinBox,
+    QApplication, QCheckBox, QComboBox, QDockWidget, QLabel, QMainWindow, QMessageBox, QSpinBox,
     QToolBar, QToolButton, QVBoxLayout, QWidget,
 )
 
@@ -13,13 +13,14 @@ from cycles.functions.division import COLOR_KEYS
 from cycles.gui.colordialog import ColorDialog
 from cycles.gui.colorspace import ColorSpacePanel
 from cycles.gui.datepanel import DatePanel
+from cycles.gui.export import LOGICAL_DPI, ExportDialog, GraphSource, save_figure, save_widget
 from cycles.gui.inspector import Inspector
 from cycles.gui.measures import MeasuresPanel
 from cycles.gui.navigator import Breadcrumb, Navigator
 from cycles.gui.sky import SkyPanel
 from cycles.gui.studies import StudyLauncher
 from cycles.gui.modeldialog import CycleModelDialog
-from cycles.gui.state import LABEL_MODES, MAX_DEPTH, NAME_SETS, CycleState
+from cycles.gui.state import LABEL_MODES, MAX_DEPTH, NAME_SETS, CycleState, datetime_text
 
 
 # Version of the saved panel layout (increase when the panels change)
@@ -62,6 +63,10 @@ class MainWindow(QMainWindow):
         self.launcher: StudyLauncher | None = None
         self.model_dialog: CycleModelDialog | None = None
         self.color_dialog: ColorDialog | None = None
+        self.export_dialog: ExportDialog | None = None
+        for key, panel in (('sky', self.sky_panel), ('measures', self.measures_panel),
+                           ('colorspace', self.colorspace_panel)):
+            panel.saveRequested.connect(lambda key=key: self.save_graph(key))
 
         self._build_toolbar()
         self._build_menus()
@@ -285,9 +290,10 @@ class MainWindow(QMainWindow):
 
     def _build_menus(self) -> None:
         file_menu = self.menuBar().addMenu('&File')
-        save = QAction('&Save view as image…', self)
+        save = QAction('&Save graph…', self)
         save.setShortcut(QKeySequence.StandardKey.Save)
-        save.triggered.connect(self.save_view)
+        save.setToolTip('Save the navigator or a panel\'s graph to a file')
+        save.triggered.connect(lambda: self.save_graph())
         file_menu.addAction(save)
         file_menu.addSeparator()
         studies = QAction('S&tudies…', self)
@@ -358,10 +364,53 @@ class MainWindow(QMainWindow):
         self.launcher.raise_()
         self.launcher.activateWindow()
 
-    def save_view(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, 'Save view', 'cycles.png', 'Images (*.png *.jpg *.bmp)')
-        if path:
-            self.navigator.grab().save(path)
+    # -- saving graphs
+
+    def graph_sources(self) -> list[GraphSource]:
+        state = self.state
+
+        def navigator_title() -> str:
+            path = ' › '.join(state.names[d] for d in state.focus) or 'The whole cycle'
+            return f"{path} · {state.color_key}"
+
+        def sky_title() -> str:
+            return f"Sky at {datetime_text(state.sky_time)}" if state.sky_time is not None else 'Sky'
+
+        def figure_source(key, label, panel, title, relayout=None) -> GraphSource:
+            def save(options):
+                if panel._dirty:                  # hidden panels draw only when asked
+                    panel.render()
+                save_figure(panel.figure, options, relayout)
+            return GraphSource(key, label, lambda: tuple(panel.figure.get_size_inches()), title, save)
+
+        navigator = self.navigator
+        return [
+            GraphSource('navigator', 'Subcycles (navigator)',
+                        lambda: (navigator.width() / LOGICAL_DPI, navigator.height() / LOGICAL_DPI),
+                        navigator_title,
+                        lambda options: save_widget(lambda: Navigator(state), options),
+                        formats=('png', 'jpg', 'pdf', 'svg')),
+            figure_source('sky', 'Sky chart', self.sky_panel, sky_title, self.sky_panel.fit_chart),
+            figure_source('measures', 'Measures', self.measures_panel,
+                          lambda: self.measures_panel.kind.currentText()),
+            figure_source('colorspace', 'Color space', self.colorspace_panel,
+                          lambda: f"{self.colorspace_panel.plot.currentText()} · {state.color_key}"),
+        ]
+
+    def save_graph(self, key: str | None = None) -> None:
+        """Open the dialog to save a graph: ``key``, or the panel being used, or the navigator."""
+        if key is None:
+            focus = QApplication.focusWidget()
+            key = next((name for name, dock in self.docks.items()
+                        if focus is not None and dock.isAncestorOf(focus) and name in
+                        ('sky', 'measures', 'colorspace')), 'navigator')
+        if self.export_dialog is None:
+            self.export_dialog = ExportDialog(self.graph_sources(), key, self)
+        else:
+            self.export_dialog.select(key)
+        self.export_dialog.show()
+        self.export_dialog.raise_()
+        self.export_dialog.activateWindow()
 
     def show_help(self) -> None:
         QMessageBox.information(self, 'Navigation', (

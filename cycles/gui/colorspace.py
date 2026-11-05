@@ -11,10 +11,10 @@ follows the coloring and the live color parameters.
 import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, Signal
 from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox, QToolTip, QVBoxLayout, QWidget,
+    QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox, QToolTip, QToolButton, QVBoxLayout, QWidget,
 )
 
 from cycles.functions.division import CMYK_KEYS
@@ -40,6 +40,8 @@ TETRAHEDRON_EDGES = ((0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3))
 
 class ColorSpacePanel(QWidget):
     """Colors of the subcycles of one level in a 3D color space."""
+
+    saveRequested = Signal()     # the Save… button
 
     def __init__(self, state: CycleState, parent=None):
         super().__init__(parent)
@@ -72,6 +74,11 @@ class ColorSpacePanel(QWidget):
                 row.addWidget(QLabel(label))
             row.addWidget(widget)
         row.addStretch(1)
+        save_button = QToolButton()
+        save_button.setText('Save…')
+        save_button.setToolTip('Save this graph to a file (page size, resolution, format…)')
+        save_button.clicked.connect(self.saveRequested)
+        row.addWidget(save_button)
         layout.addLayout(row)
 
         row = QHBoxLayout()
