@@ -278,7 +278,9 @@ and loads the result into the form. For the selected subcycle, the
 inspector also shows the ayanamsa at its start and end, its arc and its
 place on the cycle's arc, and the mean precession rate over it. With a map in years, the axis below the rows
 shows years or dates, the inspector shows when the selected subcycle starts
-and ends, and a red line marks a date (the present, at start). In the *Date*
+and ends, and a red line marks a date (the present, at start). Its tag, in
+the band between the cycle strip and the rows, can be dragged along the rows
+to move the date (Escape cancels the drag). In the *Date*
 tab, enter a date (`2026-11-05`, `3102 BC-02-18`) or a decimal year
 (`-3101.5`) to mark it and select the subcycle that contains it; the table
 lists the subcycle containing it at every depth, and clicking a row selects
@@ -288,7 +290,8 @@ The *Sky* tab draws the zodiac with the planets (as in
 `study_of_precession.py`) at a moment of the zoomed span (what the navigator
 shows), with a table of their sidereal longitudes, signs and nakshatras.
 The moment is the dashed blue line in the navigator: the slider moves it
-across the span, Shift+click on the navigator puts it anywhere, and the play
+across the span, dragging its *sky* tag or Shift+clicking on the navigator
+puts it anywhere, and the play
 button advances it from where it is to the end of the span, by a chosen
 step (years, days or hours per frame; the number of frames left is shown)
 and delay. *To marked date* moves it to the marked date and *Mark this

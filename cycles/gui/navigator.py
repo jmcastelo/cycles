@@ -6,6 +6,8 @@ column of dots (4, 3, 2, 1 for Satya, Treta, Dvapara, Kali).
 
 Mouse: click selects, double-click zooms in, right-click zooms out; a click on
 the overview zooms to that yuga; Shift+click sets the moment of the sky chart.
+The tags of the marked date and of the sky moment, in a band under the
+overview, can be dragged along the rows (Escape cancels a drag).
 Keys: Left/Right previous/next subcycle, Up parent, Down first part,
 Enter zoom into the selection, Backspace/Escape zoom out.
 """
@@ -22,7 +24,7 @@ from cycles.gui.state import (
 LABEL_WIDTH = 44     # left margin, for the depth of each row
 AXIS_HEIGHT = 24     # bottom margin, for the time axis
 OVERVIEW_HEIGHT = 22  # strip of the whole cycle, at the top
-OVERVIEW_GAP = 8
+TAG_GAP = 3          # around the band of the marker tags, between the overview and the rows
 ROW_GAP = 2          # between rows
 MAX_DOT = 5.0        # diameter of the dots (px): proportional to the cell width, within these
 MIN_DOT = 1.5
@@ -48,6 +50,8 @@ class Navigator(QWidget):
         super().__init__(parent)
         self.state = state
         self._cells: list[tuple[QRectF, tuple]] = []
+        self._tags: dict[str, QRectF] = {}     # 'date' and 'sky': where their tags are drawn
+        self._drag: tuple[str, float] | None = None   # marker being dragged, and its year before the drag
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMouseTracking(True)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -86,11 +90,19 @@ class Navigator(QWidget):
     def _overview_rect(self) -> QRectF:
         return QRectF(LABEL_WIDTH, 4, self.width() - LABEL_WIDTH - 8, OVERVIEW_HEIGHT)
 
+    def _tag_height(self) -> float:
+        return self.fontMetrics().height() + 2
+
+    def _tag_band(self) -> QRectF:
+        """Band between the overview and the rows, with a line for each marker tag (date, then sky)."""
+        top = self._overview_rect().bottom() + TAG_GAP
+        return QRectF(LABEL_WIDTH, top, self.width() - LABEL_WIDTH - 8, 2 * self._tag_height() + 2)
+
     def _layout(self) -> list[tuple[QRectF, tuple, int, int]]:
         """Cells to draw: (rectangle, address, depth, index)."""
         state = self.state
         rows = self._rows()
-        top = 4 + OVERVIEW_HEIGHT + OVERVIEW_GAP
+        top = self._tag_band().bottom() + TAG_GAP
         area = QRectF(LABEL_WIDTH, top, self.width() - LABEL_WIDTH - 8, self.height() - AXIS_HEIGHT - 4 - top)
         row_height = area.height() / len(rows)
         focus = state.focus
@@ -339,16 +351,24 @@ class Navigator(QWidget):
     def _draw_markers(self, painter: QPainter, cells) -> None:
         """The marked date (red) and the moment of the sky chart (dashed blue)."""
         state = self.state
+        self._tags = {}
+        dragged = self._drag[0] if self._drag else None
         date_label = None
         if state.date is not None:
-            date_label = 'now' if abs(state.date - current_year()) < 1 / 365.25 else date_text(state.date)
-        self._draw_marker(painter, cells, state.date, QColor('#d62728'), Qt.PenStyle.SolidLine, date_label, 0)
+            date_label = ('now' if abs(state.date - current_year()) < 1 / 365.25 and dragged != 'date'
+                          else date_text(state.date))
+        self._draw_marker(painter, cells, 'date', state.date, QColor('#d62728'), Qt.PenStyle.SolidLine,
+                          date_label, 0)
         if state.sky_time is not None:
-            self._draw_marker(painter, cells, state.sky_time, QColor('#1f77b4'), Qt.PenStyle.DashLine,
-                              'sky', 1)
+            self._draw_marker(painter, cells, 'sky', state.sky_time, QColor('#1f77b4'), Qt.PenStyle.DashLine,
+                              date_text(state.sky_time) if dragged == 'sky' else 'sky', 1)
 
-    def _draw_marker(self, painter: QPainter, cells, year, color: QColor, style, label, line: int) -> None:
-        """Line at ``year`` through every row (also with equal widths), labelled on text line ``line``."""
+    def _draw_marker(self, painter: QPainter, cells, kind: str, year, color: QColor, style, label,
+                     line: int) -> None:
+        """
+        Line at ``year`` through every row (also with equal widths), with its tag on line ``line``
+        of the tag band, joined to the line in the first row.
+        """
         state = self.state
         u = state.position(year)
         if u is None:
@@ -367,13 +387,24 @@ class Navigator(QWidget):
                 painter.drawLine(QPointF(x, rect.top()), QPointF(x, rect.bottom()))
                 top = x if top is None else top
         if top is not None and label:
-            painter.setPen(color)
             metrics = painter.fontMetrics()
-            width = metrics.horizontalAdvance(label)
-            left = top + 4 if top + 4 + width < self.width() - 8 else top - 4 - width
-            y = self._overview_rect().bottom() + OVERVIEW_GAP + 2 + line * (metrics.height() + 2)
-            painter.fillRect(QRectF(left - 2, y, width + 4, metrics.height()), self.palette().base())
-            painter.drawText(QPointF(left, y + metrics.ascent()), label)
+            band = self._tag_band()
+            height = self._tag_height()
+            y = band.top() + line * (height + 2)
+            # the line goes on up through the band to the tag
+            painter.drawLine(QPointF(top, y + height / 2), QPointF(top, band.bottom() + TAG_GAP))
+            width = metrics.horizontalAdvance(label) + 8
+            left = top if top + width < self.width() - 8 else top - width
+            tag = QRectF(left, y, width, height)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(color)
+            painter.drawRoundedRect(tag, 3, 3)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+            painter.setPen(QColor('white'))
+            painter.drawText(tag, Qt.AlignmentFlag.AlignCenter, label)
+            self._tags[kind] = tag
 
     def _focus_extent(self) -> tuple[float, float]:
         focus = self.state.focus
@@ -385,8 +416,34 @@ class Navigator(QWidget):
 
     # -- interaction
 
+    def _tag_at(self, pos: QPointF) -> str | None:
+        return next((kind for kind, rect in self._tags.items() if rect.adjusted(-2, -2, 2, 2).contains(pos)), None)
+
+    def _year_at_x(self, x: float) -> float | None:
+        """Year at ``x`` along the first row (where the tags are joined to their lines)."""
+        rows = self._rows()
+        first = [rect for rect, address in self._cells if len(address) == rows[0]] if rows else []
+        if not first:
+            return None
+        x = min(max(x, first[0].left()), first[-1].right() - 1e-6)
+        return self.moment_at(QPointF(x, first[0].center().y()))
+
+    def _move_marker(self, kind: str, year: float | None) -> None:
+        if year is None:
+            return
+        if kind == 'date':
+            self.state.set_date(year)
+        else:
+            self.state.set_sky_time(year)
+
     def mousePressEvent(self, event) -> None:
         self.setFocus()
+        tag = self._tag_at(event.position()) if event.button() == Qt.MouseButton.LeftButton else None
+        if tag is not None:
+            self._drag = (tag, self.state.date if tag == 'date' else self.state.sky_time)
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            self.update()
+            return
         if event.button() == Qt.MouseButton.RightButton:
             self.state.zoom_out()
         elif event.button() == Qt.MouseButton.LeftButton and \
@@ -419,20 +476,50 @@ class Navigator(QWidget):
         u = float(level.starts[i] + fraction * level.durations[i])
         return time_map.to_physical(min(1.0, max(0.0, u)))
 
+    def mouseReleaseEvent(self, event) -> None:
+        if self._drag is not None and event.button() == Qt.MouseButton.LeftButton:
+            self._end_drag()
+        else:
+            super().mouseReleaseEvent(event)
+
+    def _end_drag(self, cancel: bool = False) -> None:
+        kind, before = self._drag
+        self._drag = None
+        if cancel:
+            self._move_marker(kind, before)
+        self.unsetCursor()
+        self.update()
+
     def mouseDoubleClickEvent(self, event) -> None:
+        if self._tag_at(event.position()) is not None:
+            return
         if event.button() == Qt.MouseButton.LeftButton:
             address = self.cell_at(event.position())
             if address:
                 self.state.zoom_in(address)
 
     def mouseMoveEvent(self, event) -> None:
-        self.hovered.emit(self.cell_at(event.position()))
+        pos = event.position()
+        if self._drag is not None:
+            self._move_marker(self._drag[0], self._year_at_x(pos.x()))
+            return
+        if self._tag_at(pos) is not None:
+            self.setCursor(Qt.CursorShape.OpenHandCursor)
+        else:
+            self.unsetCursor()
+        self.hovered.emit(self.cell_at(pos))
 
     def leaveEvent(self, event) -> None:
         self.hovered.emit(None)
 
     def event(self, event) -> bool:
         if event.type() == event.Type.ToolTip:
+            tag = self._tag_at(QPointF(event.pos()))
+            if tag is not None:
+                year = self.state.date if tag == 'date' else self.state.sky_time
+                what = 'Marked date' if tag == 'date' else 'Moment of the sky chart'
+                QToolTip.showText(event.globalPos(), f"{what}: {date_text(year)}\nDrag to move it", self)
+                return True
             yuga = self._overview_yuga(QPointF(event.pos()))
             if yuga is not None:
                 QToolTip.showText(event.globalPos(), f"{self.state.names[yuga]}: click to zoom here", self)
@@ -454,7 +541,9 @@ class Navigator(QWidget):
         state = self.state
         key = event.key()
         selection = state.selection
-        if key in (Qt.Key.Key_Backspace, Qt.Key.Key_Escape):
+        if key == Qt.Key.Key_Escape and self._drag is not None:
+            self._end_drag(cancel=True)
+        elif key in (Qt.Key.Key_Backspace, Qt.Key.Key_Escape):
             state.zoom_out()
         elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and selection:
             state.zoom_in(selection)
