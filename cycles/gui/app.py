@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 
 from cycles.functions.division import COLOR_KEYS
 from cycles.gui.colordialog import ColorDialog
+from cycles.gui.colorspace import ColorSpacePanel
 from cycles.gui.datepanel import DatePanel
 from cycles.gui.inspector import Inspector
 from cycles.gui.measures import MeasuresPanel
@@ -22,7 +23,7 @@ from cycles.gui.state import LABEL_MODES, MAX_DEPTH, NAME_SETS, CycleState
 
 
 # Version of the saved panel layout (increase when the panels change)
-LAYOUT_VERSION = 1
+LAYOUT_VERSION = 2
 
 
 class MainWindow(QMainWindow):
@@ -50,11 +51,13 @@ class MainWindow(QMainWindow):
         self.date_panel = DatePanel(self.state)
         self.sky_panel = SkyPanel(self.state)
         self.measures_panel = MeasuresPanel(self.state)
+        self.colorspace_panel = ColorSpacePanel(self.state)
         self.docks = {
             'inspector': self._make_dock('Subcycle', 'inspector', self.inspector),
             'date': self._make_dock('Date', 'date', self.date_panel),
             'sky': self._make_dock('Sky', 'sky', self.sky_panel),
             'measures': self._make_dock('Measures', 'measures', self.measures_panel),
+            'colorspace': self._make_dock('Color space', 'colorspace', self.colorspace_panel),
         }
         self.launcher: StudyLauncher | None = None
         self.model_dialog: CycleModelDialog | None = None

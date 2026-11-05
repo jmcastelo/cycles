@@ -300,9 +300,19 @@ chosen depth, inside the zoomed subcycle or over the whole cycle. The
 selected subcycle is ringed in blue and, with *Equal durations* on, those
 sharing its duration in black; clicking a point selects that subcycle.
 
-The four panels (Subcycle, Date, Sky, Measures) can be open at the same
+The *Color space* tab shows the colors of the subcycles of a level as
+points in 3D, the path joining them in time order, or both: in the RGB cube
+(with its corners named) or, for the CMYK colorings, in CMY ink
+coordinates. It follows the coloring and the color parameters as they
+change, draws the tetrahedron of the tetrahedron coloring, can size points
+by duration, and has camera presets (gray axis vertical, down or up the gray
+axis, the faces of the cube); drag to rotate. Like the measures plot, it
+rings the selected subcycle (and those of equal duration), and clicking a
+point selects it.
+
+The five panels (Subcycle, Date, Sky, Measures, Color space) can be open at the same
 time, to compare a chart with a measure plot and the inspector. The
-*Panels* menu shows or hides each one (`Alt+1` to `Alt+4`) and arranges the
+*Panels* menu shows or hides each one (`Alt+1` to `Alt+5`) and arranges the
 open ones as tabs, side by side, stacked, in a 2 × 2 grid, or side by side
 below the navigator; panels can also be dragged anywhere, docked or
 floating. The arrangement is remembered between sessions (*Panels → Reset

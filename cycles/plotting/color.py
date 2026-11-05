@@ -69,6 +69,57 @@ def plot_level_bars(
     plt.show()
 
 
+# Corners of the RGB cube and their names (for draw_rgb_cube)
+CUBE_CORNERS = {'K': (0, 0, 0), 'R': (1, 0, 0), 'G': (0, 1, 0), 'B': (0, 0, 1),
+                'Y': (1, 1, 0), 'M': (1, 0, 1), 'C': (0, 1, 1), 'W': (1, 1, 1)}
+
+
+def draw_colors_3d(ax, coords: np.ndarray, rgbs: np.ndarray, sizes=10.0, alpha: float = 0.8):
+    """
+    Points at ``coords`` (N, 3) on the 3D Axes ``ax``, filled with ``rgbs``
+    (N, 3) and ``sizes`` (areas, scalar or (N,)). Returns the scatter.
+    """
+    coords = np.asarray(coords, dtype=float)
+    return ax.scatter(xs=coords[:, 0], ys=coords[:, 1], zs=coords[:, 2], c=np.clip(rgbs, 0, 1), s=sizes,
+                      alpha=alpha, lw=0.3, edgecolors='gray', depthshade=False)
+
+
+def draw_color_path_3d(ax, coords: np.ndarray, rgbs: np.ndarray, lw: float = 0.5):
+    """
+    Path joining consecutive points ``coords`` (N, 3) on the 3D Axes ``ax``,
+    each segment in the color (``rgbs``) of its first point. Returns the lines.
+    """
+    from mpl_toolkits.mplot3d.art3d import Line3DCollection
+    coords = np.asarray(coords, dtype=float)
+    segments = np.stack([coords[:-1], coords[1:]], axis=1)
+    lines = Line3DCollection(segments, colors=np.clip(rgbs[:-1], 0, 1), linewidths=lw)
+    ax.add_collection3d(lines)
+    return lines
+
+
+def draw_rgb_cube(ax, labels: bool = True, color: str = '0.6', lw: float = 0.6) -> None:
+    """Edges of the unit RGB cube on the 3D Axes ``ax``, with its corners named (K, R, G, B, C, M, Y, W)."""
+    corners = CUBE_CORNERS
+    for a, pa in corners.items():
+        for b, pb in corners.items():
+            if a < b and sum(abs(x - y) for x, y in zip(pa, pb)) == 1:      # cube edge
+                ax.plot(*zip(pa, pb), color=color, lw=lw)
+    if labels:
+        for name, (x, y, z) in corners.items():
+            offset = 0.06
+            ax.text(x + (offset if x else -offset), y + (offset if y else -offset), z + (offset if z else -offset),
+                    name, fontsize=8, color='0.35', ha='center', va='center')
+
+
+def setup_color_axes_3d(ax, view: tuple | None = None, orthographic: bool = True) -> None:
+    """Equal aspect, no panes or ticks, and optionally the camera ``view`` (elev, azim, roll)."""
+    ax.axis('off')
+    ax.set_aspect('equal')
+    ax.set_proj_type('ortho' if orthographic else 'persp')
+    if view is not None:
+        ax.view_init(*view)
+
+
 def plot_colors_scatter_3d(
     colors: list[np.ndarray],
     rgbs: np.ndarray,
@@ -86,32 +137,15 @@ def plot_colors_scatter_3d(
 
     save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
     """
-    sizes = 100 * durations / np.max(durations, axis=0)
-
     nrows = int(np.sqrt(len(views)))
     ncols = int(len(views) / nrows)
+    coords = np.column_stack(colors)
 
     fig = plt.figure()
-    k = 0
-    for i in range(nrows):
-        for j in range(ncols):
-            ax = fig.add_subplot(nrows, ncols, k+1, projection='3d')
-            ax.scatter(
-                xs=colors[0],
-                ys=colors[1],
-                zs=colors[2],
-                c=rgbs,
-                s=10.0,
-                alpha=0.8,
-                lw=0.3,
-                edgecolors='gray'
-            )
-
-            ax.axis('off')
-            ax.set_aspect('equal')
-            ax.set_proj_type('ortho')
-            ax.view_init(*views[k])
-            k += 1
+    for k in range(nrows * ncols):
+        ax = fig.add_subplot(nrows, ncols, k + 1, projection='3d')
+        draw_colors_3d(ax, coords, rgbs)
+        setup_color_axes_3d(ax, views[k])
 
     fig.tight_layout()
     if fig_data is not None:
@@ -138,24 +172,11 @@ def plot_rgb_lines_3d(
     ncols = int(len(views) / nrows)
 
     fig = plt.figure()
-    k = 0
-    for i in range(nrows):
-        for j in range(ncols):
-            ax = fig.add_subplot(nrows, ncols, k+1, projection='3d')
-            for n in range(2, len(rgb) + 2):
-                ax.plot(
-                    xs=rgb[n - 2:n, 0],
-                    ys=rgb[n - 2:n, 1],
-                    zs=rgb[n - 2:n, 2],
-                    c=rgb[n - 2],
-                    lw=0.5
-                )
-
-            ax.axis('off')
-            ax.set_aspect('equal')
-            ax.set_proj_type('ortho')
-            ax.view_init(*views[k])
-            k += 1
+    for k in range(nrows * ncols):
+        ax = fig.add_subplot(nrows, ncols, k + 1, projection='3d')
+        draw_color_path_3d(ax, rgb, rgb)
+        ax.auto_scale_xyz(rgb[:, 0], rgb[:, 1], rgb[:, 2])
+        setup_color_axes_3d(ax, views[k])
 
     if fig_data is not None:
         format_plot(fig, fig_data, save_fig)
