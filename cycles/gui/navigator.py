@@ -47,6 +47,7 @@ class Navigator(QWidget):
         state.selectionChanged.connect(self.update)
         state.viewChanged.connect(self._changed)
         state.dateChanged.connect(self.update)
+        state.skyTimeChanged.connect(self.update)
 
     def sizeHint(self) -> QSize:
         return QSize(900, 420)
@@ -175,7 +176,7 @@ class Navigator(QWidget):
                 painter.drawText(QRectF(0, rect.top(), LABEL_WIDTH - 6, rect.height()),
                                  Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, f"d{depth}")
         self._draw_axis(painter, cells)
-        self._draw_date(painter, cells)
+        self._draw_markers(painter, cells)
         painter.end()
 
     def _time_label(self, u: float, span: float) -> str:
@@ -213,20 +214,30 @@ class Navigator(QWidget):
                 painter.drawText(QPointF(left, bottom + 6 + metrics.ascent()), text)
                 last_right = left + width
 
-    def _draw_date(self, painter: QPainter, cells) -> None:
-        """Line at the marked date, through every row (also with equal widths)."""
+    def _draw_markers(self, painter: QPainter, cells) -> None:
+        """The marked date (red) and the moment of the sky chart (dashed blue)."""
         state = self.state
-        u = state.date_position()
+        date_label = None
+        if state.date is not None:
+            date_label = 'now' if abs(state.date - current_year()) < 1 / 365.25 else date_text(state.date)
+        self._draw_marker(painter, cells, state.date, QColor('#d62728'), Qt.PenStyle.SolidLine, date_label, 0)
+        if state.sky_time is not None:
+            self._draw_marker(painter, cells, state.sky_time, QColor('#1f77b4'), Qt.PenStyle.DashLine,
+                              'sky', 1)
+
+    def _draw_marker(self, painter: QPainter, cells, year, color: QColor, style, label, line: int) -> None:
+        """Line at ``year`` through every row (also with equal widths), labelled on text line ``line``."""
+        state = self.state
+        u = state.position(year)
         if u is None:
             return
         start, end = self._focus_extent()
         if not start <= u <= end:
             return
-        color = QColor('#d62728')
-        painter.setPen(QPen(color, 2))
+        painter.setPen(QPen(color, 2, style))
         top = None
         for rect, address, depth, index in cells:
-            # the cell of each row that contains the date
+            # the cell of each row that contains the time
             if depth == 0:
                 c_start, c_duration = 0.0, 1.0
             else:
@@ -236,14 +247,14 @@ class Navigator(QWidget):
                 x = rect.left() + (u - c_start) / c_duration * rect.width()
                 painter.drawLine(QPointF(x, rect.top()), QPointF(x, rect.bottom()))
                 top = x if top is None else top
-        if top is not None:
-            label = 'now' if abs(state.date - current_year()) < 1 / 365.25 else date_text(state.date)
+        if top is not None and label:
             painter.setPen(color)
             metrics = painter.fontMetrics()
             width = metrics.horizontalAdvance(label)
             left = top + 4 if top + 4 + width < self.width() - 8 else top - 4 - width
-            painter.fillRect(QRectF(left - 2, 6, width + 4, metrics.height()), self.palette().base())
-            painter.drawText(QPointF(left, 6 + metrics.ascent()), label)
+            y = 6 + line * (metrics.height() + 2)
+            painter.fillRect(QRectF(left - 2, y, width + 4, metrics.height()), self.palette().base())
+            painter.drawText(QPointF(left, y + metrics.ascent()), label)
 
     def _focus_extent(self) -> tuple[float, float]:
         focus = self.state.focus

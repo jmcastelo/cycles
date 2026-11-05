@@ -196,7 +196,17 @@ and ends, and a red line marks a date (the present, at start). In the *Date*
 tab, enter a date (`2026-11-05`, `3102 BC-02-18`) or a decimal year
 (`-3101.5`) to mark it and select the subcycle that contains it; the table
 lists the subcycle containing it at every depth, and clicking a row selects
-it. Levels down to depth 8 are available; the deepest take a few
+it.
+
+The *Sky* tab draws the zodiac with the planets (as in
+`study_of_precession.py`) at the start of the selected subcycle, or of the
+zoomed one if none is selected, with a table of their sidereal longitudes,
+signs and nakshatras. The slider, and the play button, move the chart
+through the subcycle; its moment is the dashed blue line in the navigator.
+*To marked date* moves the chart to the marked date and *Mark this moment*
+does the reverse. The tab needs the ephemeris tables (see below): it looks
+in `$CYCLES_EPHEMERIS`, then in the folder last chosen with *Ephemeris…*,
+then in `sandbox/data/tabla70k70k`. Levels down to depth 8 are available; the deepest take a few
 seconds the first time.
 
 ## The ephemeris data

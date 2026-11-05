@@ -78,6 +78,16 @@ def date_text(year: float) -> str:
     return f"{int(d)} {MONTHS[m - 1]} {era}"
 
 
+def datetime_text(year: float) -> str:
+    """Calendar date and time (UT) of a decimal year: ``'18 Feb 3102 BC, 06:30 UT'``."""
+    y, m, d = year_to_date(year)
+    minutes = round((d % 1) * 1440)
+    if minutes == 1440:            # rounding reached midnight: show the next day
+        return datetime_text(year + 0.5 / 525960)
+    era = f"AD {y}" if y > 0 else f"{1 - y} BC"
+    return f"{int(d)} {MONTHS[m - 1]} {era}, {minutes // 60:02d}:{minutes % 60:02d} UT"
+
+
 def time_text(year: float, span: float) -> str:
     """A year, as a date when ``span`` (years) is short enough to need one."""
     return date_text(year) if span < 200 else year_text(year)
@@ -184,6 +194,7 @@ class CycleState(QObject):
     selectionChanged = Signal(object)   # tuple, or None
     viewChanged = Signal()              # coloring, rows, spacing, names, highlight or time map
     dateChanged = Signal(object)        # the marked date (decimal year), or None
+    skyTimeChanged = Signal(object)     # the moment of the sky chart (decimal year), or None
 
     def __init__(self, cache: LevelCache | None = None, time_maps: dict | None = None):
         super().__init__()
@@ -191,6 +202,7 @@ class CycleState(QObject):
         self.time_maps = time_maps if time_maps is not None else yuga_time_maps()
         self.time_map_name = next(iter(self.time_maps))
         self.date: float | None = current_year()
+        self.sky_time: float | None = None
         self.focus: tuple = ()
         self.selection: tuple | None = None
         self.color_key: str = DEFAULT_COLOR_KEY
@@ -287,12 +299,30 @@ class CycleState(QObject):
             self.date = year
             self.dateChanged.emit(year)
 
-    def date_position(self) -> float | None:
-        """Normalized time of the marked date, or ``None`` (no date, no map, or outside the cycle)."""
+    def set_sky_time(self, year: float | None) -> None:
+        if year != self.sky_time:
+            self.sky_time = year
+            self.skyTimeChanged.emit(year)
+
+    def position(self, year: float | None) -> float | None:
+        """Normalized time of ``year``, or ``None`` (no year, no map, or outside the cycle)."""
         time_map = self.time_map
-        if self.date is None or time_map is None or not time_map.start <= self.date <= time_map.end:
+        if year is None or time_map is None or not time_map.start <= year <= time_map.end:
             return None
-        return time_map.to_normalized(self.date)
+        return time_map.to_normalized(year)
+
+    def date_position(self) -> float | None:
+        """Normalized time of the marked date (see ``position``)."""
+        return self.position(self.date)
+
+    def physical_interval(self, address: tuple) -> tuple[float, float] | None:
+        """Start and end of ``address`` in the current time map (``None`` for normalized time)."""
+        time_map = self.time_map
+        if time_map is None:
+            return None
+        if not address:
+            return time_map.start, time_map.end
+        return time_map.interval(address)
 
     def subcycle_of_date(self, depth: int) -> tuple | None:
         """Address of the subcycle of ``depth`` containing the marked date (see ``date_position``)."""

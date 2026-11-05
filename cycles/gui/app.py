@@ -13,6 +13,7 @@ from cycles.functions.division import COLOR_KEYS
 from cycles.gui.datepanel import DatePanel
 from cycles.gui.inspector import Inspector
 from cycles.gui.navigator import Breadcrumb, Navigator
+from cycles.gui.sky import SkyPanel
 from cycles.gui.state import MAX_DEPTH, NAME_SETS, TIME_MAP_LABELS, CycleState
 
 
@@ -46,7 +47,16 @@ class MainWindow(QMainWindow):
         date_dock.setFeatures(dock.features())
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, date_dock)
         self.tabifyDockWidget(dock, date_dock)
+
+        self.sky_panel = SkyPanel(self.state)
+        sky_dock = QDockWidget('Sky', self)
+        sky_dock.setObjectName('sky')
+        sky_dock.setWidget(self.sky_panel)
+        sky_dock.setFeatures(dock.features())
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, sky_dock)
+        self.tabifyDockWidget(date_dock, sky_dock)
         dock.raise_()
+        self.docks = {'inspector': dock, 'date': date_dock, 'sky': sky_dock}
 
         self._build_toolbar()
         self._build_menus()
@@ -174,7 +184,8 @@ class MainWindow(QMainWindow):
 
 def main(argv: list[str] | None = None) -> int:
     app = QApplication.instance() or QApplication(sys.argv if argv is None else argv)
-    app.setApplicationName('Cycles')
+    app.setOrganizationName('cycles')
+    app.setApplicationName('cycles-gui')
     window = MainWindow()
     window.show()
     return app.exec()
