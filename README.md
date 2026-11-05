@@ -121,6 +121,26 @@ Presets you save (from the GUI, or with `save_user_presets`) go to
 `sandbox/cycle_presets.json`, or to `$CYCLES_PRESETS`. `study_of_precession.py`
 uses the preset named in its `PRESET` constant.
 
+### Color parameters
+
+The colorings keep every subcycle of a level a different color when their
+parameters (see `compute_level`) stay within these ranges, checked by
+`color.color_parameter_problems`:
+
+| Parameter | Range | Why |
+|---|---|---|
+| `bases[1]`, color weight base | ≥ 2 | each weight then outweighs all the later ones together, so the ink sums give back the address (below 2 colors repeat at isolated bases, e.g. the golden ratio) |
+| `scales[0]`, cmyk_scaled | (0, 1] | the CMYK to RGB conversion is then one-to-one |
+| `scales[1]`, cmyk_kscaled black | [0, 0.25] or [0.5, 1] | in between the conversion can have two preimages |
+| `scales[2]`, tetrahedron step | [0.5, 1) | the last digit then outweighs all the earlier ones |
+| `colors`, tetrahedron vertices | four RGB colors not in one plane | each color then gives back its barycentric coordinates; flat sets may repeat colors (four on a line, from depth 2) |
+
+`bases[1]` also weights dharma; `bases[2]` weights purity and needs no
+bound (1 weighs all levels equally). Within the ranges, larger bases and
+steps keep the colors different but bring deep levels closer than a display
+can show: at depth 7, base 2 gives 15,764 colors apart on screen out of
+16,384, and base 3 only 4,442.
+
 ## Installation
 
 Requires Python 3.11 or later.
@@ -237,7 +257,15 @@ duration (time) or are equal (index), the names of the ages (yugas or
 Golden/Silver/Bronze/Iron), the labels (names, which run vertically in
 tall narrow cells; dots, four for Satya, three for Treta, two for Dvapara and
 one for Kali; both; or none), whether cells have borders, and can dim every
-subcycle whose duration differs from the selected one. *File → Save view as image* saves the
+subcycle whose duration differs from the selected one. *Parameters…*, next
+to the coloring, sets the bases and scales of the colorings and measures
+(the color weight base, which also weights dharma; the purity weight base;
+the cmyk_scaled and cmyk_kscaled scales; the tetrahedron step and its four
+vertex colors, one per age) within the
+ranges that keep the colors of each level unique, and shows for any depth
+how many colors are different and how many a display can show apart. Changes
+apply as they are made, so the plots recolor while you edit; *Revert* goes
+back to the values the window opened with. *File → Save view as image* saves the
 navigator.
 
 The *Cycle* box chooses how the cycle is placed in history: one of the

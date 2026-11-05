@@ -72,7 +72,8 @@ class MeasuresPanel(QWidget):
         self.render_timer.setSingleShot(True)
         self.render_timer.setInterval(0)
         self.render_timer.timeout.connect(self.render)
-        for signal in (state.selectionChanged, state.focusChanged, state.viewChanged):
+        for signal in (state.selectionChanged, state.focusChanged, state.viewChanged,
+                       state.colorParametersChanged):
             signal.connect(self._schedule)
 
     # -- what to plot
@@ -110,7 +111,11 @@ class MeasuresPanel(QWidget):
         state = self.state
         depth = self.plot_depth()
         scope = self.scope(depth)
-        base = (self.kind.currentText(), depth, scope, state.color_key, state.model, state.names)
+        # redraw the plot only if what it shows changed: the point colors, and dharma or purity
+        y_name, x_name = KINDS[self.kind.currentText()]
+        measures = {y_name, x_name} & {'dharma', 'purity'}
+        parameters = (state.parameters_of(state.color_key), *(state.parameters_of(m) for m in sorted(measures)))
+        base = (self.kind.currentText(), depth, scope, state.color_key, state.model, state.names, parameters)
         if base != self._base:
             self._draw_base(depth, scope)
             self._base = base

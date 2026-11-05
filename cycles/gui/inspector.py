@@ -85,6 +85,7 @@ class Inspector(QWidget):
         state.selectionChanged.connect(self.refresh)
         state.viewChanged.connect(self.refresh)
         state.dateChanged.connect(self.refresh)
+        state.colorParametersChanged.connect(self.refresh)   # it shows every coloring
         self.refresh()
 
     def refresh(self, *_) -> None:

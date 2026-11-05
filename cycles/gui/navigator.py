@@ -56,6 +56,8 @@ class Navigator(QWidget):
         state.viewChanged.connect(self._changed)
         state.dateChanged.connect(self.update)
         state.skyTimeChanged.connect(self.update)
+        state.colorParametersChanged.connect(
+            lambda affected: self._changed() if state.color_key in affected else None)
 
     def sizeHint(self) -> QSize:
         return QSize(900, 420)

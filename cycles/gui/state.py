@@ -16,8 +16,11 @@ import numpy as np
 from PySide6.QtCore import QObject, Signal
 
 from cycles.functions.division import (
-    CMYK_KEYS, COLOR_KEYS, DEFAULT_COLOR_KEY, Level, compute_level, level_colors,
+    CMYK_KEYS, COLOR_KEYS, DEFAULT_BASES, DEFAULT_COLOR_KEY, DEFAULT_SCALES, TETRAHEDRON_COLORS, Level, compute_level,
+    level_colors,
 )
+from cycles.functions.color import color_parameter_problems
+from cycles.functions.division import COLOR_PARAMETER_EFFECTS
 from cycles.functions.astro_dates import (
     date_time_to_julian_day, date_to_year, julian_day_to_year, parse_date, year_to_date,
 )
@@ -117,9 +120,11 @@ def children_range(address: tuple, depth: int) -> range:
 
 
 class LevelCache:
-    """Levels and their colors, computed with the default parameters on first use."""
+    """Levels and their colors, computed with the given parameters (see ``compute_level``) on first use."""
 
-    def __init__(self):
+    def __init__(self, bases=DEFAULT_BASES, scales=DEFAULT_SCALES, colors=TETRAHEDRON_COLORS):
+        self.bases, self.scales = list(bases), list(scales)
+        self.vertices = np.asarray(colors, dtype=float)    # of the tetrahedron coloring
         self._levels: dict[int, Level] = {}
         self._colors: dict[int, dict[str, np.ndarray]] = {}
 
@@ -128,7 +133,7 @@ class LevelCache:
 
     def level(self, depth: int) -> Level:
         if depth not in self._levels:
-            self._levels[depth] = compute_level(depth)
+            self._levels[depth] = compute_level(depth, self.bases, self.scales, self.vertices)
         return self._levels[depth]
 
     def colors(self, depth: int, key: str) -> np.ndarray:
@@ -185,6 +190,7 @@ class CycleState(QObject):
     viewChanged = Signal()              # coloring, rows, spacing, names, highlight or cycle model
     modelChanged = Signal(object)       # the cycle model, or None (normalized time)
     presetsChanged = Signal()
+    colorParametersChanged = Signal(frozenset)   # names of the colorings that changed (COLOR_PARAMETER_EFFECTS)
     dateChanged = Signal(object)        # the marked date (decimal year), or None
     skyTimeChanged = Signal(object)     # the moment of the sky chart (decimal year), or None
 
@@ -274,6 +280,42 @@ class CycleState(QObject):
 
     def set_highlight_equal(self, on: bool) -> None:
         self._set('highlight_equal', bool(on))
+
+    @property
+    def color_parameters(self) -> tuple:
+        """``(bases, scales, tetrahedron colors)`` of the colorings and measures, as tuples."""
+        return (tuple(self.cache.bases), tuple(self.cache.scales),
+                tuple(tuple(float(c) for c in row) for row in self.cache.vertices))
+
+    def set_color_parameters(self, bases, scales, colors=None) -> None:
+        """
+        Use new bases, scales and tetrahedron vertex colors (the current ones
+        if not given) for the colorings and measures. ``ValueError`` if they
+        could give repeated colors (see ``color_parameter_problems``).
+        """
+        colors = self.cache.vertices if colors is None else np.asarray(colors, dtype=float)
+        problems = color_parameter_problems(bases, scales, colors)
+        if problems:
+            raise ValueError('; '.join(problems))
+        new = (tuple(bases), tuple(scales), tuple(tuple(float(c) for c in row) for row in colors))
+        old = self.color_parameters
+        if new == old:
+            return
+        changed = self._named_parameters(*old).items() ^ self._named_parameters(*new).items()
+        affected = frozenset(key for name, _ in changed for key in COLOR_PARAMETER_EFFECTS[name])
+        self.cache = LevelCache(bases, scales, colors)     # levels are recomputed when next needed
+        self.colorParametersChanged.emit(affected)
+
+    @staticmethod
+    def _named_parameters(bases, scales, colors) -> dict:
+        """The parameters by the names of ``COLOR_PARAMETER_EFFECTS``."""
+        return {'color_base': bases[1], 'purity_base': bases[2], 'cmyk_scale': scales[0],
+                'black_scale': scales[1], 'tetrahedron_step': scales[2], 'tetrahedron_colors': tuple(colors)}
+
+    def parameters_of(self, key: str) -> tuple:
+        """Values of the parameters that the coloring (or measure) ``key`` depends on."""
+        named = self._named_parameters(*self.color_parameters)
+        return tuple(value for name, value in named.items() if key in COLOR_PARAMETER_EFFECTS[name])
 
     def set_borders(self, on: bool) -> None:
         self._set('borders', bool(on))

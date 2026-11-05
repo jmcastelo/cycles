@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from cycles.functions.division import COLOR_KEYS
+from cycles.gui.colordialog import ColorDialog
 from cycles.gui.datepanel import DatePanel
 from cycles.gui.inspector import Inspector
 from cycles.gui.measures import MeasuresPanel
@@ -57,6 +58,7 @@ class MainWindow(QMainWindow):
         }
         self.launcher: StudyLauncher | None = None
         self.model_dialog: CycleModelDialog | None = None
+        self.color_dialog: ColorDialog | None = None
 
         self._build_toolbar()
         self._build_menus()
@@ -170,6 +172,11 @@ class MainWindow(QMainWindow):
         self.color_box.setCurrentText(state.color_key)
         self.color_box.currentTextChanged.connect(state.set_color_key)
         bar.addWidget(self.color_box)
+        color_button = QToolButton()
+        color_button.setText('Parameters…')
+        color_button.setToolTip('Bases and scales of the colorings and measures')
+        color_button.clicked.connect(self.show_color_dialog)
+        bar.addWidget(color_button)
 
         bar.addWidget(QLabel('  Levels '))
         self.rows_box = QSpinBox()
@@ -245,6 +252,15 @@ class MainWindow(QMainWindow):
         except ValueError as error:
             self.statusBar().showMessage(f"Cannot use this cycle model: {error}", 10000)
             self._fill_model_box()
+
+    def show_color_dialog(self) -> None:
+        if self.color_dialog is None:
+            self.color_dialog = ColorDialog(self.state, self)
+        elif not self.color_dialog.isVisible():
+            self.color_dialog.open_from_state()
+        self.color_dialog.show()
+        self.color_dialog.raise_()
+        self.color_dialog.activateWindow()
 
     def show_model_dialog(self) -> None:
         if self.model_dialog is None:

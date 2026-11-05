@@ -44,6 +44,18 @@ TETRAHEDRON_COLORS = np.array([[1, 1, 0], [0, 1, 1], [1, 0, 1], [0, 0, 0]])
 # Names accepted by level_colors: the RGB variants of a Level, plus three more
 COLOR_KEYS = RGB_KEYS + ('lrgb', 'dharma', 'purity')
 
+# Colorings (names of level_colors) that each parameter of compute_level changes;
+# cmyk_composition and lrgb depend on none. The color base also changes the
+# dharma values, and the purity base the purity values.
+COLOR_PARAMETER_EFFECTS = {
+    'color_base': ('cmyk', 'cmyk_normalised', 'cmyk_scaled', 'cmyk_kscaled', 'wcmy', 'dharma'),   # bases[1]
+    'purity_base': ('purity',),                                                                 # bases[2]
+    'cmyk_scale': ('cmyk_scaled',),                                                             # scales[0]
+    'black_scale': ('cmyk_kscaled',),                                                           # scales[1]
+    'tetrahedron_step': ('tetrahedron',),                                                       # scales[2]
+    'tetrahedron_colors': ('tetrahedron',),                                                     # colors
+}
+
 
 class Level(NamedTuple):
     """
