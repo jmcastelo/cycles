@@ -206,7 +206,20 @@ through the subcycle; its moment is the dashed blue line in the navigator.
 *To marked date* moves the chart to the marked date and *Mark this moment*
 does the reverse. The tab needs the ephemeris tables (see below): it looks
 in `$CYCLES_EPHEMERIS`, then in the folder last chosen with *Ephemeris…*,
-then in `sandbox/data/tabla70k70k`. Levels down to depth 8 are available; the deepest take a few
+then in `sandbox/data/tabla70k70k`.
+
+The *Measures* tab plots dharma and purity (against each other, against
+time, or against index) for the level of the selected subcycle, or for a
+chosen depth, inside the zoomed subcycle or over the whole cycle. The
+selected subcycle is ringed in blue and, with *Equal durations* on, those
+sharing its duration in black; clicking a point selects that subcycle.
+
+*File → Studies…* (`Ctrl+T`) opens the study launcher: every study of the
+sandbox scripts, with each script's defaults checked. It runs the checked
+ones (or a double-clicked one) as on the command line, each script in its
+own process, with *Save figures* and *Show figures* as `--save` and
+`--no-show`, and shows their output. The list comes from
+`python sandbox/runner.py --catalog`. Levels down to depth 8 are available; the deepest take a few
 seconds the first time.
 
 ## The ephemeris data

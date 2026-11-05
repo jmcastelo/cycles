@@ -14,29 +14,45 @@ def plot_y_vs_x(
     xlabel: str = '',
     ylabel: str = '',
     save_fig: bool=False,
-    fig_data: tuple[str, str, str, int, bool]|None=None
+    fig_data: tuple[str, str, str, int, bool]|None=None,
+    ax=None,
+    show: bool=True,
+    colors=None,
+    size: float=4.0,
 ):
     """
     Line and scatter plot of ``y`` against ``x``.
 
     save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    ax : existing Axes to draw on (then the title goes on the Axes and nothing
+        is shown); ``show`` as usual otherwise.
+    colors, size : colors (e.g. an (N, 3) array) and area of the points; with
+        colors, the line is drawn in light gray.
+
+    Returns the scatter.
     """
-    fig, ax = plt.subplots()
+    own_figure = ax is None
+    if own_figure:
+        fig, ax = plt.subplots()
+        fig.suptitle(title)
+    else:
+        fig = ax.figure
+        ax.set_title(title)
 
-    fig.suptitle(title)
-
-    ax.plot(x, y, lw=0.5)
-    ax.scatter(x, y, s=4.0)
+    ax.plot(x, y, lw=0.5, **({} if colors is None else {'color': '0.75', 'zorder': 1}))
+    scatter = ax.scatter(x, y, s=size, c=colors, zorder=2)
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_xlim(*xlim)
 
-    if fig_data is not None:
-        format_plot(fig, fig_data, save_fig)
-
-    plt.tight_layout()
-    plt.show()
+    if own_figure:
+        if fig_data is not None:
+            format_plot(fig, fig_data, save_fig)
+        plt.tight_layout()
+        if show:
+            plt.show()
+    return scatter
 
 
 def plot_multi_y_vs_x(

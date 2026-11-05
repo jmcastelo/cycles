@@ -2,7 +2,8 @@
 Plots of the dharma and purity measures of subcycles.
 
 Functions taking a ``Level`` color the points with ``rgb_key`` (names in
-``division.RGB_KEYS``).
+``division.RGB_KEYS``). Those that draw a single panel accept an existing
+``ax`` to draw on (nothing is shown then) and return what they drew.
 """
 
 import numpy as np
@@ -12,30 +13,44 @@ from cycles.plotting.helpers import format_plot
 from cycles.functions.division import Level, DEFAULT_COLOR_KEY
 
 
-def plot_dharma_vs_index(level: Level, save_fig: bool=False, fig_data: tuple[str, str, str, int, bool]|None=None):
+def plot_dharma_vs_index(level: Level, save_fig: bool=False, fig_data: tuple[str, str, str, int, bool]|None=None,
+                         ax=None, show: bool=True, indices=None):
     """
     Dharma of each subcycle against its time-order index.
 
     save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    ax : existing Axes to draw on (then nothing is shown); ``show`` as usual
+        otherwise.
+    indices : x values (default 0, 1, 2...; e.g. the indices in the whole level
+        when ``level`` is part of one).
+
+    Returns the line.
     """
     lcoords = level.lcoords
     dharma = level.dharmas
 
     depth = len(lcoords[0])
-    indices = [n for n in range(len(lcoords))]
+    if indices is None:
+        indices = np.arange(len(lcoords))
 
-    fig, ax = plt.subplots()
+    own_figure = ax is None
+    if own_figure:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.figure
 
-    ax.plot(indices, dharma, lw=0.5)
+    line, = ax.plot(indices, dharma, lw=0.5)
     ax.set_title(f"Dharma for level: {depth}")
     ax.set_xlabel('Index')
     ax.set_ylabel('Dharma')
 
-    if fig_data is not None:
-        format_plot(fig, fig_data, save_fig)
-
-    plt.tight_layout()
-    plt.show()
+    if own_figure:
+        if fig_data is not None:
+            format_plot(fig, fig_data, save_fig)
+        plt.tight_layout()
+        if show:
+            plt.show()
+    return line
 
 
 def plot_purity_vs_dharma(level: Level, rgb_key: str=DEFAULT_COLOR_KEY) -> plt.Figure:
@@ -50,17 +65,18 @@ def plot_purity_vs_dharma(level: Level, rgb_key: str=DEFAULT_COLOR_KEY) -> plt.F
     return fig
 
 
-def plot_purity_and_dharma(ax, level: Level, rgb_key: str=DEFAULT_COLOR_KEY):
+def plot_purity_and_dharma(ax, level: Level, rgb_key: str=DEFAULT_COLOR_KEY, colors=None, max_size: float=500):
     """
     Scatter of purity against dharma on ``ax``: one point per subcycle, sized by
-    its duration and filled with its color.
+    its duration (the longest gets area ``max_size``) and filled with its color
+    (``colors``, an (N, 3) array, overrides ``rgb_key``). Returns the scatter.
     """
     durations, dharma, purity = level.durations, level.dharmas, level.purities
-    rgb = level.rgb(rgb_key)
+    rgb = level.rgb(rgb_key) if colors is None else colors
     max_duration = np.max(durations, axis=0)
-    sizes = 500 * durations / max_duration
+    sizes = max_size * durations / max_duration
 
-    ax.scatter(
+    scatter = ax.scatter(
         x=dharma,
         y=purity,
         c=rgb,
@@ -71,6 +87,7 @@ def plot_purity_and_dharma(ax, level: Level, rgb_key: str=DEFAULT_COLOR_KEY):
     ax.set_ylabel('Purity')
     ax.label_outer()
     ax.grid(False)
+    return scatter
 
 
 def plot_quality_grid(levels: list[Level], rgb_key: str=DEFAULT_COLOR_KEY):
@@ -131,6 +148,4 @@ def plot_quality_scatter_3d(level: Level, rgb_key: str=DEFAULT_COLOR_KEY) -> plt
     plt.margins(x=0, y=0)
     plt.tight_layout()
     plt.show()
-    return fig
-
     return fig

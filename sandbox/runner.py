@@ -33,11 +33,17 @@ Command line::
     python study_of_x.py --list          # names, defaults and descriptions
     python study_of_x.py NAME --save     # also save the results
     python study_of_x.py NAME --no-show  # don't open windows or play sounds
+
+``python runner.py --catalog`` prints, as JSON, the studies of every
+``study_of_*.py`` script in this folder (used by the GUI's study launcher).
 """
 
 import argparse
+import importlib
+import json
 import shlex
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Callable
 
@@ -112,3 +118,40 @@ def run(setup: Callable | None = None, argv: list[str] | None = None) -> None:
     for name in selected:
         print(f"== {name}", flush=True)
         studies[name][0](ctx, opts)
+
+
+def catalog(folder: Path | None = None) -> dict:
+    """
+    Studies of every ``study_of_*.py`` script in ``folder`` (default: this
+    one), importing each script without running it: ``{script stem: {"doc":
+    first line of its docstring, "studies": [[name, default, summary], ...]}}``,
+    or ``{"error": message}`` for a script that cannot be imported.
+    """
+    folder = Path(folder or Path(__file__).resolve().parent)
+    if str(folder) not in sys.path:
+        sys.path.insert(0, str(folder))
+    # The scripts register their studies in the module ``runner``, which is not
+    # this one when this file runs as ``__main__``
+    registry = importlib.import_module('runner')._REGISTRY
+    result = {}
+    for script in sorted(folder.glob('study_of_*.py')):
+        try:
+            module = importlib.import_module(script.stem)
+        except Exception as error:      # report it and go on with the other scripts
+            result[script.stem] = {'error': f"{type(error).__name__}: {error}"}
+            continue
+        doc = (module.__doc__ or '').strip()
+        result[script.stem] = {
+            'doc': doc.splitlines()[0] if doc else '',
+            'studies': [[name, default, _summary(f)] for name, (f, default) in registry.get(script.stem, {}).items()],
+        }
+    return result
+
+
+if __name__ == "__main__":
+    if sys.argv[1:] == ['--catalog']:
+        import matplotlib
+        matplotlib.use('Agg')
+        print(json.dumps(catalog()))
+    else:
+        sys.exit("usage: python runner.py --catalog")

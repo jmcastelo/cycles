@@ -12,8 +12,10 @@ from PySide6.QtWidgets import (
 from cycles.functions.division import COLOR_KEYS
 from cycles.gui.datepanel import DatePanel
 from cycles.gui.inspector import Inspector
+from cycles.gui.measures import MeasuresPanel
 from cycles.gui.navigator import Breadcrumb, Navigator
 from cycles.gui.sky import SkyPanel
+from cycles.gui.studies import StudyLauncher
 from cycles.gui.state import MAX_DEPTH, NAME_SETS, TIME_MAP_LABELS, CycleState
 
 
@@ -55,8 +57,17 @@ class MainWindow(QMainWindow):
         sky_dock.setFeatures(dock.features())
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, sky_dock)
         self.tabifyDockWidget(date_dock, sky_dock)
+
+        self.measures_panel = MeasuresPanel(self.state)
+        measures_dock = QDockWidget('Measures', self)
+        measures_dock.setObjectName('measures')
+        measures_dock.setWidget(self.measures_panel)
+        measures_dock.setFeatures(dock.features())
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, measures_dock)
+        self.tabifyDockWidget(sky_dock, measures_dock)
         dock.raise_()
-        self.docks = {'inspector': dock, 'date': date_dock, 'sky': sky_dock}
+        self.docks = {'inspector': dock, 'date': date_dock, 'sky': sky_dock, 'measures': measures_dock}
+        self.launcher: StudyLauncher | None = None
 
         self._build_toolbar()
         self._build_menus()
@@ -131,6 +142,11 @@ class MainWindow(QMainWindow):
         save.triggered.connect(self.save_view)
         file_menu.addAction(save)
         file_menu.addSeparator()
+        studies = QAction('S&tudies…', self)
+        studies.setShortcut(QKeySequence('Ctrl+T'))
+        studies.triggered.connect(self.show_studies)
+        file_menu.addAction(studies)
+        file_menu.addSeparator()
         quit_action = QAction('&Quit', self)
         quit_action.setShortcut(QKeySequence.StandardKey.Quit)
         quit_action.triggered.connect(self.close)
@@ -164,6 +180,13 @@ class MainWindow(QMainWindow):
             self.statusBar().repaint()   # the computation blocks the event loop
         else:
             self.statusBar().clearMessage()
+
+    def show_studies(self) -> None:
+        if self.launcher is None:
+            self.launcher = StudyLauncher(self)
+        self.launcher.show()
+        self.launcher.raise_()
+        self.launcher.activateWindow()
 
     def save_view(self) -> None:
         path, _ = QFileDialog.getSaveFileName(self, 'Save view', 'cycles.png', 'Images (*.png *.jpg *.bmp)')
