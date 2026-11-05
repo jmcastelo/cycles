@@ -1,8 +1,11 @@
 """
-The cycle navigator: the zoomed subcycle and its subdivisions, one row per
-depth, each subcycle drawn in its color.
+The cycle navigator: an overview strip of the whole cycle, with the zoomed
+part framed, and below it the subdivisions of the zoomed subcycle, one row per
+depth, each subcycle drawn in its color and labelled with its name and/or a
+column of dots (4, 3, 2, 1 for Satya, Treta, Dvapara, Kali).
 
-Mouse: click selects, double-click zooms in, right-click zooms out.
+Mouse: click selects, double-click zooms in, right-click zooms out; a click on
+the overview zooms to that yuga.
 Keys: Left/Right previous/next subcycle, Up parent, Down first part,
 Enter zoom into the selection, Backspace/Escape zoom out.
 """
@@ -18,6 +21,11 @@ from cycles.gui.state import (
 
 LABEL_WIDTH = 44     # left margin, for the depth of each row
 AXIS_HEIGHT = 24     # bottom margin, for the time axis
+OVERVIEW_HEIGHT = 22  # strip of the whole cycle, at the top
+OVERVIEW_GAP = 8
+ROW_GAP = 2          # between rows
+MAX_DOT = 5.0        # diameter of the dots (px): proportional to the cell width, within these
+MIN_DOT = 1.5
 
 
 def rgb_to_qcolor(rgb) -> QColor:
@@ -70,14 +78,18 @@ class Navigator(QWidget):
     # -- geometry
 
     def _rows(self) -> list[int]:
-        """Depth of each row, from the focus down."""
-        return [len(self.state.focus), *self.state.visible_depths()]
+        """Depth of each row: the levels below the zoom."""
+        return list(self.state.visible_depths())
+
+    def _overview_rect(self) -> QRectF:
+        return QRectF(LABEL_WIDTH, 4, self.width() - LABEL_WIDTH - 8, OVERVIEW_HEIGHT)
 
     def _layout(self) -> list[tuple[QRectF, tuple, int, int]]:
         """Cells to draw: (rectangle, address, depth, index)."""
         state = self.state
         rows = self._rows()
-        area = QRectF(LABEL_WIDTH, 4, self.width() - LABEL_WIDTH - 8, self.height() - AXIS_HEIGHT - 8)
+        top = 4 + OVERVIEW_HEIGHT + OVERVIEW_GAP
+        area = QRectF(LABEL_WIDTH, top, self.width() - LABEL_WIDTH - 8, self.height() - AXIS_HEIGHT - 4 - top)
         row_height = area.height() / len(rows)
         focus = state.focus
         if focus:
@@ -100,7 +112,7 @@ class Navigator(QWidget):
                 lefts = [k / n for k in range(n)]
                 widths = [1 / n] * n
             for index, left, width in zip(indices, lefts, widths):
-                rect = QRectF(area.left() + left * area.width(), top, width * area.width(), row_height)
+                rect = QRectF(area.left() + left * area.width(), top, width * area.width(), row_height - ROW_GAP)
                 cells.append((rect, address_of(index, depth), depth, index))
         return cells
 
@@ -116,6 +128,7 @@ class Navigator(QWidget):
         state = self.state
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
         palette = self.palette()
         painter.fillRect(self.rect(), palette.base())
         cells = self._layout()
@@ -132,36 +145,26 @@ class Navigator(QWidget):
         metrics = painter.fontMetrics()
         dim = QColor(palette.base().color())
         dim.setAlphaF(0.75)
-        border = QPen(palette.mid().color(), 1)
+        border = QPen(QColor(0, 0, 0, 45), 0)    # hairline
 
         for rect, address, depth, index in cells:
-            if depth:
-                color = rgb_to_qcolor(state.cache.colors(depth, state.color_key)[index])
-            else:
-                color = palette.button().color()
+            color = rgb_to_qcolor(state.cache.colors(depth, state.color_key)[index])
             painter.fillRect(rect, color)
-            if rect.width() >= 4:
+            if state.borders and rect.width() >= 3:
                 painter.setPen(border)
                 painter.drawRect(rect)
             if equal and depth == len(selection) and address not in equal:
                 painter.fillRect(rect, dim)
                 continue
-            # Name of the innermost age, or its initial, if it fits
-            if depth:
-                name = state.names[address[-1]]
-            else:
-                name = 'Whole cycle'
-            for text in (name, name[0]):
-                if metrics.horizontalAdvance(text) + 6 <= rect.width() and metrics.height() <= rect.height():
-                    painter.setPen(text_color(color))
-                    painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, text)
-                    break
+            self._draw_label(painter, metrics, rect, address[-1], text_color(color))
+
+        self._draw_overview(painter, metrics)
 
         # Selection and its ancestors
         if selection:
             highlight = palette.highlight().color()
             for rect, address, depth, _ in cells:
-                if depth and address == selection[:depth]:
+                if address == selection[:depth]:
                     width = 3 if address == selection else 1.5
                     painter.setPen(QPen(highlight, width))
                     painter.drawRect(rect.adjusted(width / 2, width / 2, -width / 2, -width / 2))
@@ -179,6 +182,115 @@ class Navigator(QWidget):
         self._draw_markers(painter, cells)
         painter.end()
 
+    # -- labels
+
+    @staticmethod
+    def _dot_size(rect: QRectF) -> float:
+        """Diameter of the dots of a cell: proportional to its width, up to ``MAX_DOT``, and room for four."""
+        return min(MAX_DOT, rect.width() * 0.4, rect.height() / 7.0)
+
+    def _draw_dots(self, painter: QPainter, center: QPointF, count: int, size: float, color: QColor) -> None:
+        """A vertical column of ``count`` dots of diameter ``size`` centred on ``center``."""
+        pitch = size * 1.7
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(color)
+        y0 = center.y() - pitch * (count - 1) / 2
+        for k in range(count):
+            painter.drawEllipse(QPointF(center.x(), y0 + k * pitch), size / 2, size / 2)
+        painter.restore()
+
+    def _draw_label(self, painter: QPainter, metrics, rect: QRectF, digit: int, color: QColor) -> None:
+        """
+        Label a cell of the age ``digit``: its name, horizontal if it fits, else
+        rotated if the cell is tall, else its initial; and/or its dots.
+        """
+        mode = self.state.labels
+        if mode == 'none':
+            return
+        name = self.state.names[digit]
+        dots = 4 - digit
+        dot_size = self._dot_size(rect)
+        show_dots = mode in ('dots', 'both') and dot_size >= MIN_DOT
+        dots_width = dot_size * 1.6 if show_dots else 0.0
+        if mode in ('names', 'both'):
+            height = metrics.height()
+            for text in (name, name[0]):
+                width = metrics.horizontalAdvance(text)
+                gap = 4 if show_dots else 0
+                if width + dots_width + gap + 6 <= rect.width() and height <= rect.height():
+                    left = rect.center().x() - (width + dots_width + gap) / 2
+                    if show_dots:
+                        self._draw_dots(painter, QPointF(left + dot_size / 2, rect.center().y()), dots, dot_size,
+                                        color)
+                    painter.setPen(color)
+                    painter.drawText(QRectF(left + dots_width + gap, rect.top(), width + 2, rect.height()),
+                                     Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, text)
+                    return
+                if text == name and rect.height() > rect.width() and not show_dots \
+                        and width + 6 <= rect.height() and height <= rect.width():
+                    # tall, narrow cell: the name reads upwards
+                    painter.save()
+                    painter.translate(rect.center())
+                    painter.rotate(-90)
+                    painter.setPen(color)
+                    painter.drawText(QRectF(-rect.height() / 2, -rect.width() / 2, rect.height(), rect.width()),
+                                     Qt.AlignmentFlag.AlignCenter, text)
+                    painter.restore()
+                    return
+        if show_dots:
+            self._draw_dots(painter, rect.center(), dots, dot_size, color)
+
+    # -- overview
+
+    def _draw_overview(self, painter: QPainter, metrics) -> None:
+        """The whole cycle's four yugas, with the zoomed part framed and the markers."""
+        state = self.state
+        strip = self._overview_rect()
+        level = state.cache.level(1)
+        colors = state.cache.colors(1, state.color_key)
+        for k in range(4):
+            rect = QRectF(strip.left() + level.starts[k] * strip.width(), strip.top(),
+                          level.durations[k] * strip.width(), strip.height())
+            color = rgb_to_qcolor(colors[k])
+            painter.fillRect(rect, color)
+            name = state.names[k]
+            for text in (name, name[0]):
+                if metrics.horizontalAdvance(text) + 6 <= rect.width():
+                    painter.setPen(text_color(color))
+                    painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, text)
+                    break
+        painter.setPen(self.palette().text().color())
+        painter.drawText(QRectF(0, strip.top(), LABEL_WIDTH - 6, strip.height()),
+                         Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, 'cycle')
+        # the zoomed part: dim the rest and frame it
+        start, end = self._focus_extent()
+        if state.focus:
+            x0 = strip.left() + start * strip.width()
+            x1 = max(strip.left() + end * strip.width(), x0 + 3)
+            shade = QColor(self.palette().base().color())
+            shade.setAlphaF(0.6)
+            painter.fillRect(QRectF(strip.left(), strip.top(), x0 - strip.left(), strip.height()), shade)
+            painter.fillRect(QRectF(x1, strip.top(), strip.right() - x1, strip.height()), shade)
+            painter.setPen(QPen(self.palette().highlight().color(), 2))
+            painter.drawRect(QRectF(x0 - 1, strip.top() + 1, x1 - x0 + 2, strip.height() - 2))
+        for year, color, style in ((state.date, QColor('#d62728'), Qt.PenStyle.SolidLine),
+                                   (state.sky_time, QColor('#1f77b4'), Qt.PenStyle.DashLine)):
+            u = state.position(year)
+            if u is not None:
+                x = strip.left() + u * strip.width()
+                painter.setPen(QPen(color, 2, style))
+                painter.drawLine(QPointF(x, strip.top()), QPointF(x, strip.bottom()))
+
+    def _overview_yuga(self, pos: QPointF) -> int | None:
+        strip = self._overview_rect()
+        if not strip.contains(pos):
+            return None
+        u = (pos.x() - strip.left()) / strip.width()
+        level = self.state.cache.level(1)
+        return int(min(3, max(0, sum(1 for start in level.starts[1:] if u >= start))))
+
     def _time_label(self, u: float, span: float) -> str:
         """Label of the normalized time ``u``, in the units of the current time map."""
         time_map = self.state.time_map
@@ -190,9 +302,9 @@ class Navigator(QWidget):
         """Ticks at the boundaries of the first row below the zoom, labelled in the current time units."""
         state = self.state
         rows = self._rows()
-        if len(rows) < 2:
+        if not rows:
             return
-        depth = rows[1]
+        depth = rows[0]
         children = [(rect, address) for rect, address, d, _ in cells if d == depth]
         level = state.cache.level(depth)
         start, end = self._focus_extent()
@@ -238,11 +350,8 @@ class Navigator(QWidget):
         top = None
         for rect, address, depth, index in cells:
             # the cell of each row that contains the time
-            if depth == 0:
-                c_start, c_duration = 0.0, 1.0
-            else:
-                level = state.cache.level(depth)
-                c_start, c_duration = float(level.starts[index]), float(level.durations[index])
+            level = state.cache.level(depth)
+            c_start, c_duration = float(level.starts[index]), float(level.durations[index])
             if c_start <= u < c_start + c_duration or (u == 1.0 and c_start + c_duration >= 1.0 - 1e-12):
                 x = rect.left() + (u - c_start) / c_duration * rect.width()
                 painter.drawLine(QPointF(x, rect.top()), QPointF(x, rect.bottom()))
@@ -252,7 +361,7 @@ class Navigator(QWidget):
             metrics = painter.fontMetrics()
             width = metrics.horizontalAdvance(label)
             left = top + 4 if top + 4 + width < self.width() - 8 else top - 4 - width
-            y = 6 + line * (metrics.height() + 2)
+            y = self._overview_rect().bottom() + OVERVIEW_GAP + 2 + line * (metrics.height() + 2)
             painter.fillRect(QRectF(left - 2, y, width + 4, metrics.height()), self.palette().base())
             painter.drawText(QPointF(left, y + metrics.ascent()), label)
 
@@ -271,6 +380,10 @@ class Navigator(QWidget):
         if event.button() == Qt.MouseButton.RightButton:
             self.state.zoom_out()
         elif event.button() == Qt.MouseButton.LeftButton:
+            yuga = self._overview_yuga(event.position())
+            if yuga is not None:
+                self.state.set_focus((yuga,))
+                return
             address = self.cell_at(event.position())
             if address is not None:
                 self.state.select(address)
@@ -289,6 +402,10 @@ class Navigator(QWidget):
 
     def event(self, event) -> bool:
         if event.type() == event.Type.ToolTip:
+            yuga = self._overview_yuga(QPointF(event.pos()))
+            if yuga is not None:
+                QToolTip.showText(event.globalPos(), f"{self.state.names[yuga]}: click to zoom here", self)
+                return True
             address = self.cell_at(QPointF(event.pos()))
             if address:
                 text = ' › '.join(self.state.names[d] for d in address)

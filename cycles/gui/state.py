@@ -30,6 +30,8 @@ from cycles.functions.timescale import AGE_NAMES, YUGA_NAMES, TimeMap
 MAX_DEPTH = 8
 # Name sets for the four ages
 NAME_SETS = {'Yugas': YUGA_NAMES, 'Ages': AGE_NAMES}
+# How subcycles are labelled in the navigator
+LABEL_MODES = {'names': 'Names', 'dots': 'Dots (4, 3, 2, 1)', 'both': 'Names and dots', 'none': 'None'}
 MONTHS = ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
 
 
@@ -197,10 +199,12 @@ class CycleState(QObject):
         self.focus: tuple = ()
         self.selection: tuple | None = None
         self.color_key: str = DEFAULT_COLOR_KEY
-        self.rows: int = 4
+        self.rows: int = 5
         self.spacing: str = 'time'      # 'time' (widths by duration) or 'index' (equal widths)
         self.names: tuple = YUGA_NAMES
         self.highlight_equal: bool = False
+        self.borders: bool = False
+        self.labels: str = 'none'       # 'names', 'dots' (4, 3, 2, 1 for the four ages), 'both' or 'none'
 
     # -- focus and selection
 
@@ -233,7 +237,8 @@ class CycleState(QObject):
         """Select ``address``, moving the zoom (keeping its depth if possible) so that it is in view."""
         address = tuple(address)
         focus = self.focus
-        if address[:len(focus)] != focus or len(address) < len(focus):
+        # the navigator shows the levels below the zoom, so the zoom must be above the address
+        if address[:len(focus)] != focus or len(address) <= len(focus):
             focus = address[:min(len(focus), max(0, len(address) - 1))]
         if len(address) > len(focus) + self.rows:
             focus = address[:len(address) - self.rows]
@@ -269,6 +274,14 @@ class CycleState(QObject):
 
     def set_highlight_equal(self, on: bool) -> None:
         self._set('highlight_equal', bool(on))
+
+    def set_borders(self, on: bool) -> None:
+        self._set('borders', bool(on))
+
+    def set_labels(self, labels: str) -> None:
+        if labels not in LABEL_MODES:
+            raise ValueError(f"labels must be one of {list(LABEL_MODES)}")
+        self._set('labels', labels)
 
     # -- physical time
 

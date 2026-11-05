@@ -17,7 +17,7 @@ from cycles.gui.navigator import Breadcrumb, Navigator
 from cycles.gui.sky import SkyPanel
 from cycles.gui.studies import StudyLauncher
 from cycles.gui.modeldialog import CycleModelDialog
-from cycles.gui.state import MAX_DEPTH, NAME_SETS, CycleState
+from cycles.gui.state import LABEL_MODES, MAX_DEPTH, NAME_SETS, CycleState
 
 
 # Version of the saved panel layout (increase when the panels change)
@@ -194,6 +194,20 @@ class MainWindow(QMainWindow):
             self.names_box.addItem(label, names)
         self.names_box.currentIndexChanged.connect(lambda i: state.set_names(self.names_box.itemData(i)))
         bar.addWidget(self.names_box)
+
+        bar.addWidget(QLabel('  Labels '))
+        self.labels_box = QComboBox()
+        for key, label in LABEL_MODES.items():
+            self.labels_box.addItem(label, key)
+        self.labels_box.setToolTip('Names (rotated in tall cells) and/or dots: 4 for Satya, 3 Treta, 2 Dvapara, '
+                                   '1 Kali')
+        self.labels_box.setCurrentIndex(self.labels_box.findData(state.labels))
+        self.labels_box.currentIndexChanged.connect(lambda i: state.set_labels(self.labels_box.itemData(i)))
+        bar.addWidget(self.labels_box)
+        self.borders_box = QCheckBox('Borders')
+        self.borders_box.setChecked(state.borders)
+        self.borders_box.toggled.connect(state.set_borders)
+        bar.addWidget(self.borders_box)
 
         bar.addSeparator()
         self.equal_box = QCheckBox('Equal durations')

@@ -220,8 +220,10 @@ pip install -e ".[gui]"
 cycles-gui                 # or: python -m cycles.gui
 ```
 
-The window shows the subcycle you have zoomed into and its subdivisions, one
-row per depth, each in its color. Click a subcycle to select it,
+The window shows the subdivisions of the subcycle you have zoomed into, one
+row per depth, each subcycle in its color. A strip at the top shows the
+whole cycle, with the zoomed part framed and the marked date and sky moment;
+clicking a yuga there zooms to it. Click a subcycle to select it,
 double-click to zoom in, right-click to zoom out; the breadcrumb above
 returns to any outer level. In the navigator, the arrow keys move to the
 previous or next subcycle, the parent and the first part, Enter zooms in and
@@ -232,8 +234,10 @@ duration, composition, how many subcycles share its duration or its
 composition, dharma, purity, and its color in every variant. The toolbar
 chooses the coloring, how many levels to draw, whether widths follow
 duration (time) or are equal (index), the names of the ages (yugas or
-Golden/Silver/Bronze/Iron), and can dim every subcycle whose duration
-differs from the selected one. *File → Save view as image* saves the
+Golden/Silver/Bronze/Iron), the labels (names, which run vertically in
+tall narrow cells; dots, four for Satya, three for Treta, two for Dvapara and
+one for Kali; both; or none), whether cells have borders, and can dim every
+subcycle whose duration differs from the selected one. *File → Save view as image* saves the
 navigator.
 
 The *Cycle* box chooses how the cycle is placed in history: one of the
