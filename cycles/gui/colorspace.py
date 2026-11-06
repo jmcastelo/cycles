@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 
 from cycles.functions.division import CMYK_KEYS
 from cycles.functions.view import bottom_view, camera_view_angles, top_view
-from cycles.gui.state import MOMENT_COLOR, CycleState, address_of, children_range, equal_duration_indices, tcoord
+from cycles.gui.state import MOMENT_COLOR, CycleState, address_of, children_range, tcoord
 from cycles.plotting.color import draw_color_path_3d, draw_colors_3d, draw_rgb_cube, setup_color_axes_3d
 
 MAX_PLOT_DEPTH = 7
@@ -126,7 +126,7 @@ class ColorSpacePanel(QWidget):
         for widget in (self.inside, self.sized, self.cube, self.tetrahedron):
             widget.toggled.connect(self._schedule)
         for signal in (state.selectionChanged, state.focusChanged, state.viewChanged, state.colorParametersChanged,
-                       state.skyTimeChanged):
+                       state.skyTimeChanged, state.permutationChanged):
             signal.connect(self._schedule)
 
     # -- what to plot
@@ -244,9 +244,9 @@ class ColorSpacePanel(QWidget):
         selection = state.selection
         if selection is None or len(selection) != self._depth:
             return
-        if state.highlight_equal:
-            equal = [positions[int(i)] for i in equal_duration_indices(state.cache.level(self._depth),
-                                                                       tcoord(selection)) if int(i) in positions]
+        bright = state.highlight_indices(selection)
+        if bright is not None:
+            equal = [positions[int(i)] for i in bright if int(i) in positions]
             if equal:
                 c = self._coords[equal]
                 self._highlights.append(self.ax.scatter(c[:, 0], c[:, 1], c[:, 2], s=70, facecolors='none',

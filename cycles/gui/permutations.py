@@ -205,8 +205,19 @@ class PermutationsPanel(QWidget):
 
     def _schedule(self, *_) -> None:
         self._dirty = True
+        self._publish()
         if self.isVisible():
             self.render_timer.start()
+
+    def _publish(self) -> None:
+        """Tell the other views which σ acts, and on which positions (even while this panel is hidden)."""
+        depth = self.plot_depth()
+        scope = self.scope(depth)
+        try:
+            sigma = self.permutation(depth - scope[1]) if scope is not None else None
+        except ValueError:
+            sigma = None
+        self.state.set_permutation(sigma, scope[1] if scope is not None else 0)
 
     def showEvent(self, event) -> None:
         super().showEvent(event)

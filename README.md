@@ -251,13 +251,20 @@ Backspace zooms out.
 
 The panel on the right shows the selected subcycle: address, index, start,
 duration, composition, how many subcycles share its duration or its
-composition, dharma, purity, and its color in every variant. The toolbar
+composition (and its place in time among the latter), its image under the σ
+of the *Permutations* tab and the size of its orbit, dharma, purity, and its
+color in every variant. The toolbar
 chooses the coloring, how many levels to draw, whether widths follow
 duration (time) or are equal (index), the names of the ages (yugas or
 Golden/Silver/Bronze/Iron), the labels (names, which run vertically in
 tall narrow cells; dots, four for Satya, three for Treta, two for Dvapara and
-one for Kali; both; or none), whether cells have borders, and can dim every
-subcycle whose duration differs from the selected one. *Parameters…*, next
+one for Kali; both; or none), whether cells have borders, and what to
+highlight around the selection: the subcycles of its depth with the same
+duration, with the same composition (the orderings of its ages, a class
+inside those of equal duration), or its orbit under the powers of the σ of
+the *Permutations* tab (with its image under σ outlined in dashed purple);
+the others are dimmed in the navigator and the highlighted ones ringed in
+the plots. *Parameters…*, next
 to the coloring, sets the bases and scales of the colorings and measures
 (the color weight base, which also weights dharma; the purity weight base;
 the cmyk_scaled and cmyk_kscaled scales; the tetrahedron step and its four
@@ -316,8 +323,8 @@ a faint line in time order, camera presets looking along each axis, and
 dragging to rotate) for the level of the selected subcycle, or for a
 chosen depth, inside the zoomed subcycle or over the whole cycle, with
 points sized by duration or all alike. The
-selected subcycle is ringed in blue and, with *Equal durations* on, those
-sharing its duration in black; clicking a point selects that subcycle.
+selected subcycle is ringed in blue and, with a highlight chosen in the
+toolbar, those sharing its duration, its composition or its ⟨σ⟩ orbit in black; clicking a point selects that subcycle.
 
 The *Color space* tab shows the colors of the subcycles of a level as
 points in 3D, the path joining them in time order, or both: in the RGB cube

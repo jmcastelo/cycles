@@ -14,7 +14,7 @@ from PySide6.QtCore import QTimer, Signal
 from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox, QToolTip, QToolButton, QVBoxLayout, QWidget
 
-from cycles.gui.state import MAX_DEPTH, MOMENT_COLOR, CycleState, address_of, children_range, equal_duration_indices, tcoord
+from cycles.gui.state import MAX_DEPTH, MOMENT_COLOR, CycleState, address_of, children_range, tcoord
 from cycles.plotting.generic import plot_y_vs_x
 from cycles.plotting.measure import plot_purity_and_dharma, plot_quality_scatter_3d
 
@@ -112,7 +112,7 @@ class MeasuresPanel(QWidget):
         self.render_timer.setInterval(0)
         self.render_timer.timeout.connect(self.render)
         for signal in (state.selectionChanged, state.focusChanged, state.viewChanged,
-                       state.colorParametersChanged, state.skyTimeChanged):
+                       state.colorParametersChanged, state.skyTimeChanged, state.permutationChanged):
             signal.connect(self._schedule)
 
     # -- what to plot
@@ -258,9 +258,9 @@ class MeasuresPanel(QWidget):
         selection = state.selection
         if selection is None or len(selection) != depth:
             return
-        if state.highlight_equal:
-            equal = [positions[int(i)] for i in equal_duration_indices(state.cache.level(depth), tcoord(selection))
-                     if int(i) in positions]
+        bright = state.highlight_indices(selection)
+        if bright is not None:
+            equal = [positions[int(i)] for i in bright if int(i) in positions]
             if equal:
                 self._highlights.append(self._ring(equal, s=90, color='black', width=0.8))
         k = positions.get(tcoord(selection))

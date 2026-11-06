@@ -17,7 +17,7 @@ from PySide6.QtGui import QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QSizePolicy, QToolButton, QToolTip, QWidget
 
 from cycles.gui.state import (
-    MAX_DEPTH, MOMENT_COLOR, CycleState, address_of, children_range, current_year, date_text, equal_duration_indices, tcoord,
+    MAX_DEPTH, MOMENT_COLOR, PERMUTATION_COLOR, CycleState, address_of, children_range, current_year, date_text, tcoord,
     span_text, time_text,
 )
 
@@ -60,6 +60,7 @@ class Navigator(QWidget):
         state.viewChanged.connect(self._changed)
         state.dateChanged.connect(self.update)
         state.skyTimeChanged.connect(self.update)
+        state.permutationChanged.connect(lambda: self.update() if state.highlight == 'orbit' else None)
         state.colorParametersChanged.connect(
             lambda affected: self._changed() if state.color_key in affected else None)
 
@@ -150,10 +151,9 @@ class Navigator(QWidget):
 
         selection = state.selection
         equal = set()
-        if state.highlight_equal and selection:
-            level = state.cache.level(len(selection))
-            equal = {address_of(int(i), len(selection))
-                     for i in equal_duration_indices(level, tcoord(selection))}
+        bright = state.highlight_indices(selection)
+        if bright is not None:
+            equal = {address_of(int(i), len(selection)) for i in bright}
 
         font = QFont(self.font())
         metrics = painter.fontMetrics()
@@ -182,6 +182,13 @@ class Navigator(QWidget):
                     width = 3 if address == selection else 1.5
                     painter.setPen(QPen(highlight, width))
                     painter.drawRect(rect.adjusted(width / 2, width / 2, -width / 2, -width / 2))
+            # its image under the σ of the Permutations panel, with the orbit highlighted
+            orbit = state.permutation_orbit(selection) if state.highlight == 'orbit' else None
+            if orbit and len(orbit) > 1:
+                painter.setPen(QPen(QColor(PERMUTATION_COLOR), 2, Qt.PenStyle.DashLine))
+                for rect, address, depth, _ in cells:
+                    if address == orbit[1]:
+                        painter.drawRect(rect.adjusted(1, 1, -1, -1))
 
         # The subcycles that contain the sky moment (Follow)
         if state.follow and state.sky_time is not None:

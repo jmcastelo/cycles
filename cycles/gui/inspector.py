@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 
 from cycles.functions.division import CMYK_KEYS, COLOR_KEYS
 from cycles.gui.navigator import rgb_to_qcolor
+from cycles.functions.permutation import cycle_text
 from cycles.gui.state import CycleState, date_text, span_text, subcycle_info
 
 
@@ -49,6 +50,7 @@ class Inspector(QWidget):
             ('composition', 'Composition'),
             ('equal_duration', 'Same duration'),
             ('same_composition', 'Same composition'),
+            ('permutation', 'Under σ'),
             ('dharma', 'Dharma'),
             ('purity', 'Purity'),
         ]
@@ -86,7 +88,24 @@ class Inspector(QWidget):
         state.viewChanged.connect(self.refresh)
         state.dateChanged.connect(self.refresh)
         state.colorParametersChanged.connect(self.refresh)   # it shows every coloring
+        state.permutationChanged.connect(self.refresh)
         self.refresh()
+
+    def _permutation_text(self, address: tuple) -> str:
+        """The image of ``address`` under the σ of the Permutations panel, and the size of its orbit."""
+        state = self.state
+        if state.permutation is None:
+            return '—'
+        sigma, first = state.permutation
+        orbit = state.permutation_orbit(address)
+        if orbit is None:
+            return (f"σ = {cycle_text(sigma)} of the Permutations panel acts on subcycles of depth "
+                    f"{first + len(sigma)}" + (f" inside {' › '.join(state.names[d] for d in address[:first])}"
+                                                if first else ''))
+        if len(orbit) == 1:
+            return f"fixed by σ = {cycle_text(sigma)}"
+        image = ' › '.join(state.names[d] for d in orbit[1])
+        return f"σ = {cycle_text(sigma)} takes it to {image}; its orbit has {len(orbit)} subcycles"
 
     def refresh(self, *_) -> None:
         state = self.state
@@ -132,7 +151,9 @@ class Inspector(QWidget):
         f['equal_duration'].setText(
             f"{info['equal_duration']} subcycles at depth {info['depth']}"
             f" ({info['equal_compositions']} composition{'s' if info['equal_compositions'] > 1 else ''})")
-        f['same_composition'].setText(f"{info['same_composition']} subcycles (orderings of its ages)")
+        f['same_composition'].setText(f"{info['same_composition']} subcycles (orderings of its ages); "
+                                      f"it is number {info['composition_rank']} in time order")
+        f['permutation'].setText(self._permutation_text(address))
         f['dharma'].setText(f"{info['dharma']:.6f}")
         f['purity'].setText(f"{info['purity']:.6f}")
 

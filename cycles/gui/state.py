@@ -150,6 +150,30 @@ def equal_duration_indices(level: Level, index: int) -> np.ndarray:
     return np.flatnonzero(np.isclose(level.durations, level.durations[index], rtol=1e-9, atol=0.0))
 
 
+def same_composition_indices(level: Level, address: tuple) -> np.ndarray:
+    """Indices of the subcycles of ``level`` whose addresses are digit permutations of ``address``."""
+    lcoords = np.asarray(level.lcoords)
+    counts = np.stack([(lcoords == k).sum(axis=1) for k in range(4)], axis=1)
+    return np.flatnonzero(np.all(counts == count_digits(np.array(address)), axis=1))
+
+
+def permuted_address(address: tuple, sigma: tuple, first: int) -> tuple:
+    """``address`` with its digits from position ``first`` on permuted by ``σ`` (``a ∘ σ``)."""
+    tail = address[first:]
+    return tuple(address[:first]) + tuple(tail[i] for i in sigma)
+
+
+PERMUTATION_COLOR = '#9467bd'   # the image of the selection under σ
+
+# What the views highlight around the selection
+HIGHLIGHTS = {
+    'none': 'No highlight',
+    'duration': 'Equal durations',
+    'composition': 'Same composition',
+    'orbit': '⟨σ⟩ orbit',
+}
+
+
 def subcycle_info(cache: LevelCache, address: tuple) -> dict:
     """Everything the inspector shows about the subcycle ``address`` (not the whole cycle)."""
     depth = len(address)
@@ -173,6 +197,7 @@ def subcycle_info(cache: LevelCache, address: tuple) -> dict:
         equal_duration=len(equal),
         equal_compositions=len(compositions),
         same_composition=same_composition,
+        composition_rank=int(np.searchsorted(same_composition_indices(level, address), index)) + 1,
         dharma=float(level.dharmas[index]),
         purity=float(level.purities[index]),
         cmyk={key: level.cmyks[index, k] for k, key in enumerate(CMYK_KEYS)},
@@ -195,6 +220,7 @@ class CycleState(QObject):
     colorParametersChanged = Signal(frozenset)   # names of the colorings that changed (COLOR_PARAMETER_EFFECTS)
     dateChanged = Signal(object)        # the marked date (decimal year), or None
     skyTimeChanged = Signal(object)     # the moment of the sky chart (decimal year), or None
+    permutationChanged = Signal()       # the σ of the Permutations panel
 
     def __init__(self, cache: LevelCache | None = None, presets: dict[str, CycleModel] | None = None):
         super().__init__()
@@ -211,7 +237,8 @@ class CycleState(QObject):
         self.rows: int = 5
         self.spacing: str = 'time'      # 'time' (widths by duration) or 'index' (equal widths)
         self.names: tuple = YUGA_NAMES
-        self.highlight_equal: bool = False
+        self.highlight: str = 'none'    # a key of HIGHLIGHTS
+        self.permutation: tuple | None = None   # (σ, first permuted position) of the Permutations panel
         self.borders: bool = False
         self.labels: str = 'none'       # 'names', 'dots' (4, 3, 2, 1 for the four ages), 'both' or 'none'
 
@@ -281,8 +308,48 @@ class CycleState(QObject):
     def set_names(self, names: tuple) -> None:
         self._set('names', tuple(names))
 
-    def set_highlight_equal(self, on: bool) -> None:
-        self._set('highlight_equal', bool(on))
+    def set_highlight(self, mode: str) -> None:
+        if mode not in HIGHLIGHTS:
+            raise ValueError(f"unknown highlight {mode!r}")
+        self._set('highlight', mode)
+
+    def set_permutation(self, sigma: tuple | None, first: int = 0) -> None:
+        value = None if sigma is None else (tuple(sigma), int(first))
+        if value != self.permutation:
+            self.permutation = value
+            self.permutationChanged.emit()
+
+    def permutation_orbit(self, address: tuple) -> list[tuple] | None:
+        """
+        The orbit of ``address`` under the powers of the panel's σ (starting
+        with ``address``), or None if σ does not act on addresses of its depth.
+        """
+        if self.permutation is None or address is None:
+            return None
+        sigma, first = self.permutation
+        if len(address) != first + len(sigma):
+            return None
+        orbit = [tuple(address)]
+        while True:
+            image = permuted_address(orbit[-1], sigma, first)
+            if image == orbit[0]:
+                return orbit
+            orbit.append(image)
+
+    def highlight_indices(self, address: tuple | None) -> np.ndarray | None:
+        """
+        Indices, in the level of ``address``, of the subcycles to keep bright
+        with the current highlight; None if nothing is highlighted.
+        """
+        if address is None or not address or self.highlight == 'none':
+            return None
+        level = self.cache.level(len(address))
+        if self.highlight == 'duration':
+            return equal_duration_indices(level, tcoord(address))
+        if self.highlight == 'composition':
+            return same_composition_indices(level, address)
+        orbit = self.permutation_orbit(address)
+        return None if orbit is None else np.array(sorted(tcoord(a) for a in orbit))
 
     @property
     def color_parameters(self) -> tuple:

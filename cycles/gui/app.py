@@ -21,7 +21,7 @@ from cycles.gui.navigator import Breadcrumb, Navigator
 from cycles.gui.sky import SkyPanel
 from cycles.gui.studies import StudyLauncher
 from cycles.gui.modeldialog import CycleModelDialog
-from cycles.gui.state import LABEL_MODES, MAX_DEPTH, NAME_SETS, CycleState, datetime_text
+from cycles.gui.state import HIGHLIGHTS, LABEL_MODES, MAX_DEPTH, NAME_SETS, CycleState, datetime_text
 
 
 # Version of the saved panel layout (increase when the panels change)
@@ -233,10 +233,16 @@ class MainWindow(QMainWindow):
         bar.addWidget(self.borders_box)
 
         bar.addSeparator()
-        self.equal_box = QCheckBox('Equal durations')
-        self.equal_box.setToolTip('Dim the subcycles whose duration differs from the selected one')
-        self.equal_box.toggled.connect(state.set_highlight_equal)
-        bar.addWidget(self.equal_box)
+        self.highlight_box = QComboBox()
+        for key, label in HIGHLIGHTS.items():
+            self.highlight_box.addItem(label, key)
+        self.highlight_box.setToolTip(
+            'Around the selection, keep bright (and ring in the plots) the subcycles of its depth with the same '
+            'duration,\nthe same composition (the orderings of its ages, a class inside the equal durations), or '
+            'its orbit under the powers\nof the σ of the Permutations panel (its image under σ outlined in purple); '
+            'dim the others.')
+        self.highlight_box.currentIndexChanged.connect(lambda i: state.set_highlight(self.highlight_box.itemData(i)))
+        bar.addWidget(self.highlight_box)
 
         state.viewChanged.connect(self._sync_toolbar)
 
@@ -290,6 +296,7 @@ class MainWindow(QMainWindow):
     def _sync_toolbar(self) -> None:
         """Keep the toolbar in step with changes made elsewhere (e.g. from the inspector)."""
         self.color_box.setCurrentText(self.state.color_key)
+        self.highlight_box.setCurrentIndex(self.highlight_box.findData(self.state.highlight))
 
     def _build_menus(self) -> None:
         file_menu = self.menuBar().addMenu('&File')
