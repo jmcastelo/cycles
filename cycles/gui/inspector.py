@@ -1,5 +1,6 @@
 """Inspector: everything known about the selected subcycle."""
 
+import numpy as np
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
@@ -9,7 +10,7 @@ from PySide6.QtWidgets import (
 from cycles.functions.division import CMYK_KEYS, COLOR_KEYS
 from cycles.gui.navigator import rgb_to_qcolor
 from cycles.functions.permutation import cycle_text
-from cycles.gui.state import CycleState, date_text, span_text, subcycle_info
+from cycles.gui.state import CycleState, date_text, measure_breakdown, span_text, subcycle_info
 
 
 def _hex(rgb) -> str:
@@ -63,6 +64,26 @@ class Inspector(QWidget):
         self.form = form
         layout.addLayout(form)
 
+        # how each level adds to dharma, and the shares of the ages that give purity
+        self.levels_title = QLabel('Measures by level:')
+        layout.addWidget(self.levels_title)
+        self.levels = QTableWidget(0, 5)
+        self.levels.setHorizontalHeaderLabels(['Age', 'Weight', 'Virtue', 'Dharma +', 'Purity weight'])
+        for col, tip in enumerate(['The age of the digit of this level',
+                                   'Its weight in dharma (color weight base), the weights adding up to 1',
+                                   'Value of the age: Satya 1, Treta 3/4, Dvapara 1/2, Kali 1/4',
+                                   'What this level adds to dharma: weight × virtue',
+                                   'Its weight in purity (purity weight base), adding up to 1']):
+            self.levels.horizontalHeaderItem(col).setToolTip(tip)
+        self.levels.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.levels.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        self.levels.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.levels.verticalHeader().setDefaultSectionSize(self.levels.fontMetrics().height() + 4)
+        layout.addWidget(self.levels)
+        self.levels_note = QLabel()
+        self.levels_note.setWordWrap(True)
+        layout.addWidget(self.levels_note)
+
         layout.addWidget(QLabel('Colors (double-click to use):'))
         self.colors = QTableWidget(len(COLOR_KEYS), 3)
         self.colors.setHorizontalHeaderLabels(['', 'RGB', 'CMYK'])
@@ -107,6 +128,42 @@ class Inspector(QWidget):
         image = ' › '.join(state.names[d] for d in orbit[1])
         return f"σ = {cycle_text(sigma)} takes it to {image}; its orbit has {len(orbit)} subcycles"
 
+    def _show_levels(self, address: tuple) -> None:
+        """The per-level table of dharma and the age shares of purity, and their range over the orderings."""
+        state = self.state
+        names = state.names
+        bases = state.color_parameters[0]
+        b = measure_breakdown(state.cache.level(len(address)), address, bases)
+        self.levels.setRowCount(len(address))
+        self.levels.setVerticalHeaderLabels([str(k + 1) for k in range(len(address))])
+        for k, digit in enumerate(address):
+            cells = [names[digit], f"{b['dharma_weights'][k]:.4f}", f"{b['virtues'][k]:g}",
+                     f"{b['dharma_parts'][k]:.4f}", f"{b['purity_weights'][k]:.4f}"]
+            for col, text in enumerate(cells):
+                item = QTableWidgetItem(text)
+                if col:
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                self.levels.setItem(k, col, item)
+        rows = min(len(address), 8)
+        self.levels.setFixedHeight(self.levels.horizontalHeader().sizeHint().height()
+                                   + rows * self.levels.verticalHeader().defaultSectionSize() + 4)
+        shares = b['shares']
+        top, bottom = int(np.argmax(shares)), int(np.argmin(shares))
+        lo_d, hi_d = b['dharma_range']
+        lo_p, hi_p = b['purity_range']
+        n = b['orderings']
+        if n == 1:
+            orderings = 'Its ages have a single ordering.'
+        else:
+            dharma = 'the same dharma' if hi_d - lo_d < 1e-12 else f"dharma from {lo_d:.4f} to {hi_d:.4f}"
+            purity = 'the same purity' if hi_p - lo_p < 1e-12 else f"purity from {lo_p:.4f} to {hi_p:.4f}"
+            orderings = (f"Its {n} orderings (same composition) have {dharma} and {purity}: outer levels weigh "
+                         f"more (bases {bases[1]:g} and {bases[2]:g}); a base of 1 would weigh all levels alike.")
+        self.levels_note.setText(
+            f"Dharma = the sum of the column Dharma + = {b['dharma']:.4f}. Shares of the ages for purity: "
+            + ', '.join(f"{names[a]} {shares[a]:.4f}" for a in range(4))
+            + f"; purity = {names[top]} − {names[bottom]} = {b['purity']:.4f}. " + orderings)
+
     def refresh(self, *_) -> None:
         state = self.state
         address = state.selection
@@ -120,6 +177,8 @@ class Inspector(QWidget):
             for row in range(self.colors.rowCount()):
                 for col in range(3):
                     self.colors.setItem(row, col, QTableWidgetItem(''))
+            self.levels.setRowCount(0)
+            self.levels_note.setText('')
             return
 
         info = subcycle_info(state.cache, address)
@@ -156,6 +215,7 @@ class Inspector(QWidget):
         f['permutation'].setText(self._permutation_text(address))
         f['dharma'].setText(f"{info['dharma']:.6f}")
         f['purity'].setText(f"{info['purity']:.6f}")
+        self._show_levels(address)
 
         bold = QFont(self.colors.font())
         bold.setBold(True)

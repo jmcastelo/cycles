@@ -53,7 +53,7 @@ def test_the_dialog_converts_sizes_and_units(window, spin):
     assert d.paper.currentText() == 'Custom'
 
 
-@pytest.mark.parametrize('key', ['navigator', 'measures', 'colorspace', 'permutations'])
+@pytest.mark.parametrize('key', ['navigator', 'measures', 'colorspace', 'permutations', 'compositions'])
 def test_graphs_are_saved_in_every_format(dialog, tmp_path, key):
     from PySide6.QtGui import QImage
     for fmt in ('png', 'jpg', 'pdf', 'svg') + (('eps',) if key != 'navigator' else ()):

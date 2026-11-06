@@ -8,7 +8,8 @@ LAYOUTS = ['tabs', 'side', 'stacked', 'grid', 'below']
 
 
 def test_all_panels_exist(window):
-    assert list(window.docks) == ['inspector', 'date', 'sky', 'measures', 'colorspace', 'permutations']
+    assert list(window.docks) == ['inspector', 'date', 'sky', 'measures', 'colorspace', 'permutations',
+                                  'compositions']
 
 
 @pytest.mark.parametrize('layout', LAYOUTS)

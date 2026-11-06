@@ -157,6 +157,39 @@ def same_composition_indices(level: Level, address: tuple) -> np.ndarray:
     return np.flatnonzero(np.all(counts == count_digits(np.array(address)), axis=1))
 
 
+def measure_breakdown(level: Level, address: tuple, bases) -> dict:
+    """
+    How the levels of ``address`` make up its dharma and purity (``measure.py``):
+
+    * dharma = Σ_k w_k v_k, with v_k = (4 - a_k) / 4 the virtue of the age of
+      digit k (1, 3/4, 1/2, 1/4) and w_k the weights base⁻ᵏ of ``bases[1]``,
+      normalized to add up to 1;
+    * purity = the largest minus the smallest share of an age, the share of
+      an age being the sum of the weights (of ``bases[2]``) of its digits.
+
+    Also the range of both over the orderings of its ages (the subcycles of
+    the same composition): equal weights (base 1) would make it a single value.
+    """
+    from cycles.functions.division import weights
+    digits = np.array(address)
+    depth = len(digits)
+    dharma_weights = weights(bases[1], depth)
+    dharma_weights = dharma_weights / dharma_weights.sum()
+    virtues = (4 - digits) / 4
+    purity_weights = weights(bases[2], depth)
+    purity_weights = purity_weights / purity_weights.sum()
+    shares = np.array([purity_weights[digits == k].sum() for k in range(4)])
+    same = same_composition_indices(level, address)
+    return dict(
+        dharma_weights=dharma_weights, virtues=virtues, dharma_parts=dharma_weights * virtues,
+        dharma=float(np.dot(dharma_weights, virtues)),
+        purity_weights=purity_weights, shares=shares, purity=float(shares.max() - shares.min()),
+        orderings=len(same),
+        dharma_range=(float(level.dharmas[same].min()), float(level.dharmas[same].max())),
+        purity_range=(float(level.purities[same].min()), float(level.purities[same].max())),
+    )
+
+
 def permuted_address(address: tuple, sigma: tuple, first: int) -> tuple:
     """``address`` with its digits from position ``first`` on permuted by ``σ`` (``a ∘ σ``)."""
     tail = address[first:]

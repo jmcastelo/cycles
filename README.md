@@ -272,7 +272,12 @@ The panel on the right shows the selected subcycle: address, index, start,
 duration, composition, how many subcycles share its duration or its
 composition (and its place in time among the latter), its image under the σ
 of the *Permutations* tab and the size of its orbit, dharma, purity, and its
-color in every variant. The toolbar
+color in every variant. *Measures by level* shows how each level makes up
+dharma (its weight times the virtue of its age: 1, 3/4, 1/2, 1/4) and the
+shares of the ages whose spread is purity, and how far both range over the
+orderings of its ages: the weights fall with depth (bases of the *Parameters*
+dialog), so the order matters; a base of 1 would make both depend only on the
+composition. The toolbar
 chooses the coloring, how many levels to draw, whether widths follow
 duration (time) or are equal (index), the names of the ages (yugas or
 Golden/Silver/Bronze/Iron), the labels (names, which run vertically in
@@ -294,7 +299,7 @@ apply as they are made, so the plots recolor while you edit; *Revert* goes
 back to the values the window opened with.
 
 *File → Save graph…* (`Ctrl+S`), or the *Save…* button of the Sky, Measures,
-Color space and Permutations panels, saves the navigator or a panel's graph as it is shown
+Color space, Permutations and Compositions panels, saves the navigator or a panel's graph as it is shown
 (view angles, selection and moment included): on a paper format (A5 to A1,
 Letter, Legal, Tabloid; portrait or landscape), at the size on screen, or at a
 custom size in mm, cm or inches, with margins and an optional title, as PNG or
@@ -384,9 +389,22 @@ and a half; *Stop* interrupts it), and a line checks Burnside's lemma: the
 mean number of fixed subcycles is the number of compositions. Clicking a
 row loads that element into the panel.
 
-The six panels (Subcycle, Date, Sky, Measures, Color space, Permutations) can be open at the same
+The *Compositions* tab draws the compositions (n₀, n₁, n₂, n₃) of a level,
+how many digits of each age its addresses have, as the points of a discrete
+tetrahedron with one vertex per age (a composition at the mean of the
+vertices of its digits), sized by how many subcycles have it (inside the
+zoom, or in the whole cycle) and colored by duration, by the
+cmyk_composition coloring or by that number. Compositions of equal duration
+differ by multiples of (1, 0, −2, 1) (one Satya and one Kali digit last as
+long as two Dvapara ones), so they lie on parallel lines, drawn joining them;
+the view *Along the lines of equal duration* turns each class into a single
+point. The selection's composition is ringed in blue and its class drawn in
+black, the moment's composition in orange; clicking a composition selects
+its first subcycle and highlights all of them (*Same composition*).
+
+The seven panels (Subcycle, Date, Sky, Measures, Color space, Permutations, Compositions) can be open at the same
 time, to compare a chart with a measure plot and the inspector. The
-*Panels* menu shows or hides each one (`Alt+1` to `Alt+6`) and arranges the
+*Panels* menu shows or hides each one (`Alt+1` to `Alt+7`) and arranges the
 open ones as tabs, side by side, stacked, in a 2 × 2 grid, or side by side
 below the navigator; panels can also be dragged anywhere, docked or
 floating. The arrangement is remembered between sessions (*Panels → Reset
