@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 from cycles.functions.division import COLOR_KEYS
 from cycles.gui.colordialog import ColorDialog
 from cycles.gui.colorspace import ColorSpacePanel
+from cycles.gui.permutations import PermutationsPanel
 from cycles.gui.datepanel import DatePanel
 from cycles.gui.export import LOGICAL_DPI, ExportDialog, GraphSource, save_figure, save_widget
 from cycles.gui.inspector import Inspector
@@ -24,7 +25,7 @@ from cycles.gui.state import LABEL_MODES, MAX_DEPTH, NAME_SETS, CycleState, date
 
 
 # Version of the saved panel layout (increase when the panels change)
-LAYOUT_VERSION = 2
+LAYOUT_VERSION = 3
 
 
 class MainWindow(QMainWindow):
@@ -53,19 +54,21 @@ class MainWindow(QMainWindow):
         self.sky_panel = SkyPanel(self.state)
         self.measures_panel = MeasuresPanel(self.state)
         self.colorspace_panel = ColorSpacePanel(self.state)
+        self.permutations_panel = PermutationsPanel(self.state)
         self.docks = {
             'inspector': self._make_dock('Subcycle', 'inspector', self.inspector),
             'date': self._make_dock('Date', 'date', self.date_panel),
             'sky': self._make_dock('Sky', 'sky', self.sky_panel),
             'measures': self._make_dock('Measures', 'measures', self.measures_panel),
             'colorspace': self._make_dock('Color space', 'colorspace', self.colorspace_panel),
+            'permutations': self._make_dock('Permutations', 'permutations', self.permutations_panel),
         }
         self.launcher: StudyLauncher | None = None
         self.model_dialog: CycleModelDialog | None = None
         self.color_dialog: ColorDialog | None = None
         self.export_dialog: ExportDialog | None = None
         for key, panel in (('sky', self.sky_panel), ('measures', self.measures_panel),
-                           ('colorspace', self.colorspace_panel)):
+                           ('colorspace', self.colorspace_panel), ('permutations', self.permutations_panel)):
             panel.saveRequested.connect(lambda key=key: self.save_graph(key))
 
         self._build_toolbar()
@@ -395,6 +398,8 @@ class MainWindow(QMainWindow):
                           lambda: self.measures_panel.kind.currentText()),
             figure_source('colorspace', 'Color space', self.colorspace_panel,
                           lambda: f"{self.colorspace_panel.plot.currentText()} · {state.color_key}"),
+            figure_source('permutations', 'Permutations', self.permutations_panel,
+                          lambda: f"{self.permutations_panel.view.currentText()} · {state.color_key}"),
         ]
 
     def save_graph(self, key: str | None = None) -> None:
@@ -403,7 +408,7 @@ class MainWindow(QMainWindow):
             focus = QApplication.focusWidget()
             key = next((name for name, dock in self.docks.items()
                         if focus is not None and dock.isAncestorOf(focus) and name in
-                        ('sky', 'measures', 'colorspace')), 'navigator')
+                        ('sky', 'measures', 'colorspace', 'permutations')), 'navigator')
         if self.export_dialog is None:
             self.export_dialog = ExportDialog(self.graph_sources(), key, self)
         else:

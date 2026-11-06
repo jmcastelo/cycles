@@ -267,8 +267,8 @@ how many colors are different and how many a display can show apart. Changes
 apply as they are made, so the plots recolor while you edit; *Revert* goes
 back to the values the window opened with.
 
-*File → Save graph…* (`Ctrl+S`), or the *Save…* button of the Sky, Measures
-and Color space panels, saves the navigator or a panel's graph as it is shown
+*File → Save graph…* (`Ctrl+S`), or the *Save…* button of the Sky, Measures,
+Color space and Permutations panels, saves the navigator or a panel's graph as it is shown
 (view angles, selection and moment included): on a paper format (A5 to A1,
 Letter, Legal, Tabloid; portrait or landscape), at the size on screen, or at a
 custom size in mm, cm or inches, with margins and an optional title, as PNG or
@@ -329,9 +329,26 @@ axis, the faces of the cube); drag to rotate. Like the measures plot, it
 rings the selected subcycle (and those of equal duration), and clicking a
 point selects it.
 
-The five panels (Subcycle, Date, Sky, Measures, Color space) can be open at the same
+The *Permutations* tab shows how a permutation σ of the digit positions of
+the addresses (as in `study_of_permutations.py`: an address `a` becomes
+`a ∘ σ`) moves the subcycles of a level, keeping their durations. σ is a
+preset (cyclic shift, inverse shift, reversal, a swap of the first or last
+two positions, random) or typed in one-line notation (`1 2 0`) or as cycles
+(`(0 1 2)(3 4)`); the panel gives its order, parity and cycle type, how many
+subcycles it fixes and in how many orbits ⟨σ⟩ moves them. It acts on the
+digits below the zoom (the subcycles stay inside it) or on all of them (the
+whole cycle), at a chosen depth or automatically (as in the other panels:
+the depth of the selection, or the level below the zoom; a single digit gives
+only the identity). The views are the timelines of the
+powers σ⁰, σ¹, … back to the identity, with lines following each subcycle
+(drawn automatically up to 1024 subcycles), the permutation matrix of σ,
+and the matrices of all its powers. The selection (blue) and, with
+*Follow*, the sky moment (orange) are traced through the powers, and
+clicking a subcycle selects it.
+
+The six panels (Subcycle, Date, Sky, Measures, Color space, Permutations) can be open at the same
 time, to compare a chart with a measure plot and the inspector. The
-*Panels* menu shows or hides each one (`Alt+1` to `Alt+5`) and arranges the
+*Panels* menu shows or hides each one (`Alt+1` to `Alt+6`) and arranges the
 open ones as tabs, side by side, stacked, in a 2 × 2 grid, or side by side
 below the navigator; panels can also be dragged anywhere, docked or
 floating. The arrangement is remembered between sessions (*Panels → Reset
