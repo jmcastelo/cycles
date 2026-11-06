@@ -353,6 +353,18 @@ and the matrices of all its powers. The selection (blue) and, with
 *Follow*, the sky moment (orange) are traced through the powers, and
 clicking a subcycle selects it.
 
+*Group…* opens the group explorer: every element of S_m acting where σ acts,
+in a table that sorts by any column and filters by cycle type and parity.
+Besides the cycle type, order, parity, fixed subcycles and orbits of ⟨σ⟩,
+it gives, as means over the subcycles, how many σ moves, how far in time
+(in % of the span), how well it keeps the time order (the correlation
+between the order of the subcycles and that of their images), and how much
+it changes the color (in the current coloring), dharma and purity. The
+columns are filled in progressively (S_8 at depth 8 takes about a minute
+and a half; *Stop* interrupts it), and a line checks Burnside's lemma: the
+mean number of fixed subcycles is the number of compositions. Clicking a
+row loads that element into the panel.
+
 The six panels (Subcycle, Date, Sky, Measures, Color space, Permutations) can be open at the same
 time, to compare a chart with a measure plot and the inspector. The
 *Panels* menu shows or hides each one (`Alt+1` to `Alt+6`) and arranges the

@@ -74,6 +74,7 @@ class PermutationsPanel(QWidget):
         self._axes = []
         self._highlights = []
         self._random: dict[int, tuple] = {}
+        self.explorer = None              # the group explorer window, once opened
         self._rng = np.random.default_rng()
 
         layout = QVBoxLayout(self)
@@ -124,6 +125,12 @@ class PermutationsPanel(QWidget):
         row.addWidget(self.element, 1)
         row.addWidget(self.new_random)
         row.addWidget(self.lines)
+        group_button = QToolButton()
+        group_button.setText('Group…')
+        group_button.setToolTip('Every element of the group, with how each one moves the subcycles, in a sortable '
+                                'table')
+        group_button.clicked.connect(self.show_group)
+        row.addWidget(group_button)
         layout.addLayout(row)
         self.summary = QLabel()
         self.summary.setWordWrap(True)
@@ -197,6 +204,23 @@ class PermutationsPanel(QWidget):
         self.element.setModified(False)
         self._schedule()
 
+    def load_permutation(self, sigma: tuple) -> None:
+        """Show ``sigma`` (as Custom), e.g. chosen in the group explorer."""
+        self.preset.blockSignals(True)
+        self.preset.setCurrentText('Custom')
+        self.preset.blockSignals(False)
+        self.new_random.setVisible(False)
+        self.element.setText(' '.join(map(str, sigma)))
+        self._schedule()
+
+    def show_group(self) -> None:
+        from cycles.gui.groupexplorer import GroupExplorer
+        if self.explorer is None:
+            self.explorer = GroupExplorer(self, self.state, self.window())
+        self.explorer.show()
+        self.explorer.raise_()
+        self.explorer.activateWindow()
+
     def _another_random(self) -> None:
         self._random.clear()
         self._schedule()
@@ -206,6 +230,8 @@ class PermutationsPanel(QWidget):
     def _schedule(self, *_) -> None:
         self._dirty = True
         self._publish()
+        if self.explorer is not None:
+            self.explorer.refresh()        # the depth or the scope may have changed with the same σ
         if self.isVisible():
             self.render_timer.start()
 
