@@ -162,6 +162,7 @@ optional extras add the heavier dependencies:
 | `sound` | PyWavelets, sounddevice  | scalograms and sound playback      |
 | `gui`   | PySide6                  | the graphical explorer             |
 | `all`   | all of the above         |                                    |
+| `test`  | pytest                   | the tests                          |
 
 For example, `pip install -e .` installs the core only and
 `pip install -e ".[astro]"` adds the ephemeris.
@@ -190,9 +191,27 @@ cycles/
                   partition, permutation, generic, equinoctial_precession)
   gui/            graphical explorer (PySide6)
 sandbox/          study scripts, one per topic
+tests/            pytest tests of the computations and of the graphical explorer
 ```
 
 All functions are documented with docstrings, e.g. `help(compute_level)`.
+
+## Tests
+
+```bash
+pip install -e ".[gui,test]"
+pytest                    # everything (about 40 s)
+pytest -m "not gui"       # only the computations (under a second)
+```
+
+The computation tests check the division (durations, starts, address
+conversions), the rule of equal durations (compositions that differ by a
+multiple of (1, 0, -2, 1)), the permutations of digit positions (against
+`symmetry-math` and the study, durations kept, Burnside's lemma), the
+parameter ranges that keep the colors unique, and the cycle model presets.
+The GUI tests run offscreen with their own settings (yours are not touched);
+those of the sky chart need the ephemeris tables and are skipped without
+them.
 
 ## Running the studies
 

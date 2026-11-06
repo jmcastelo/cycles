@@ -36,9 +36,19 @@ gui = [
     "PySide6>=6.6",
 ]
 all = ["cycles[astro,sound,gui]"]
+# Tests (pytest tests/); the GUI tests run offscreen and need the gui extra
+test = ["pytest>=8"]
 
 [project.gui-scripts]
 cycles-gui = "cycles.gui.app:main"
 
 [tool.setuptools.packages.find]
 include = ["cycles*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "gui: tests of the graphical interface (offscreen; need PySide6)",
+    "ephemeris: need the ephemeris tables (skipped without them)",
+]
