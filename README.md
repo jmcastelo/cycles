@@ -107,10 +107,14 @@ the product of the shares along its address: Kali › Kali is
 period (25,772 years).
 
 Because the precession rate varies, the two criteria (4:3:2:1 in years and
-in angle) cannot both hold exactly: a yuga's share of the time is its share
-of the arc times the cycle's mean rate over the yuga's own mean rate. With
-2.5 turns, dividing angle, the yugas take 0.4039, 0.2915, 0.2040 and 0.1006
-of the time; inside them the deviation shrinks with depth.
+in angle) cannot both hold exactly. Dividing the arc, the boundaries are the
+exact moments when the vernal point has covered each share of it (found by
+inverting the precession model, so the rate counts at every instant, not
+through averages); as a result, a yuga's share of the time is its share of
+the arc times the cycle's mean rate over the yuga's own (mean rate = arc ÷
+time, an exact identity, not an approximation). With 2.5 turns, dividing
+angle, the yugas take 0.4039, 0.2915, 0.2040 and 0.1006 of the time; inside
+them the deviation shrinks with depth.
 
 Built-in presets:
 
