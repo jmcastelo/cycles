@@ -1,3 +1,5 @@
+"""General-purpose plots of numeric sequences."""
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -12,24 +14,45 @@ def plot_y_vs_x(
     xlabel: str = '',
     ylabel: str = '',
     save_fig: bool=False,
-    fig_data: tuple[str, str, str, int, bool]|None=None
+    fig_data: tuple[str, str, str, int, bool]|None=None,
+    ax=None,
+    show: bool=True,
+    colors=None,
+    size: float=4.0,
 ):
-    fig, ax = plt.subplots()
+    """
+    Line and scatter plot of ``y`` against ``x``.
 
-    fig.suptitle(title)
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    ax : existing Axes to draw on (then the title goes on the Axes and nothing
+        is shown); ``show`` as usual otherwise.
+    colors, size : colors (e.g. an (N, 3) array) and area (scalar, or one per point) of the points; with
+        colors, the line is drawn in light gray.
 
-    ax.plot(x, y, lw=0.5)
-    ax.scatter(x, y, s=4.0)
+    Returns the scatter.
+    """
+    own_figure = ax is None
+    if own_figure:
+        fig, ax = plt.subplots()
+        fig.suptitle(title)
+    else:
+        fig = ax.figure
+        ax.set_title(title)
+
+    ax.plot(x, y, lw=0.5, **({} if colors is None else {'color': '0.75', 'zorder': 1}))
+    scatter = ax.scatter(x, y, s=size, c=colors, zorder=2)
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_xlim(*xlim)
 
-    if fig_data is not None:
-        format_plot(fig, fig_data, save_fig)
-
-    plt.tight_layout()
-    plt.show()
+    if own_figure:
+        if fig_data is not None:
+            format_plot(fig, fig_data, save_fig)
+        plt.tight_layout()
+        if show:
+            plt.show()
+    return scatter
 
 
 def plot_multi_y_vs_x(
@@ -44,6 +67,11 @@ def plot_multi_y_vs_x(
     save_fig: bool=False,
     fig_data: tuple[str, str, str, int, bool]|None=None
 ):
+    """
+    Several series against the same ``x``, each with its label and color.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     fig, ax = plt.subplots()
 
     fig.suptitle(title)
@@ -74,6 +102,11 @@ def grid_of_plots(
     save_fig: bool = False,
     fig_data: tuple[str, str, str, int, bool] | None = None
 ):
+    """
+    Grid of line plots, one per pair ``(x[k], y[k])``, titled with ``labels[k]``.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     nrows = int(np.sqrt(len(x)))
     ncols = int(len(x) / nrows)
 
@@ -117,6 +150,12 @@ def return_plot(
     save_fig: bool=False,
     fig_data: tuple[str, str, str, int, bool]|None=None
 ):
+    """
+    Return maps (log-log): ``points[n + delay]`` against ``points[n]`` for
+    delays 1 to ``max_delay``, one panel per delay, colored by ``colors``.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     nrows = int(np.sqrt(max_delay))
     ncols = int(max_delay / nrows)
 
@@ -166,6 +205,11 @@ def plot_auto_correlations(
     save_fig: bool = False,
     fig_data: tuple[str, str, str, int, bool] | None = None
 ):
+    """
+    Grid of autocorrelation plots (non-negative lags), one per series in ``x``.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     nrows = int(np.sqrt(len(x)))
     ncols = int(len(x) / nrows)
 

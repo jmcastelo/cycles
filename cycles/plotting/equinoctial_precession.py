@@ -55,7 +55,7 @@ Astronomical year numbering (1 BC = year 0, 3102 BC = -3101), fractional years
 allowed (Julian years from J2000.0, i.e. Julian epochs). For calendar dates
 use the companion module ``astro_dates``:
 
-    from astro_dates import date_to_year, parse_date
+    from cycles.functions.astro_dates import date_to_year, parse_date
     plot_equinoctial_precession(date_to_year(*parse_date("3102 BC-02-18")))
 
 Dependencies
@@ -80,13 +80,17 @@ from __future__ import annotations
 
 import functools
 import math
+from pathlib import Path
 from typing import Callable, Dict, Optional, Sequence, Tuple
 
 import numpy as np
 
+from cycles.functions.timescale import TimeMap
+
 __all__ = ["lahiri_ayanamsa", "long_term_ayanamsa", "year_from_ayanamsa",
+           "precession_time_map",
            "ecliptic_coordinates_of_date", "plot_equinoctial_precession",
-           "plot_zodiac_with_planets", "plot_zodiac_planets_grid",
+           "planet_positions", "planet_positions_many", "plot_zodiac_with_planets", "plot_zodiac_planets_grid",
            "plot_ayanamsa_comparison"]
 
 # ----------------------------------------------------------------------------
@@ -180,6 +184,10 @@ _LABEL_JUNE = "Solsticio\nde junio"
 _LABEL_AUTUMNAL = "Punto otoñal"
 _LABEL_DECEMBER = "Solsticio\nde diciembre"
 _LABEL_SPICA = "Spica (Chitrā)"
+# glyphs of the four points (the signs they open in the tropical zodiac), drawn near the centre
+_AXIS_GLYPHS = ((0, "♈"), (90, "♋"), (180, "♎"), (270, "♑"))
+_LEGEND_EQUINOXES = "equinoxes"
+_LEGEND_SOLSTICES = "solstices"
 _TITLE_HEAD = "Precesión de los equinoccios"
 _TITLE_TEMPLATE = _TITLE_HEAD + " · año {year}"
 _EPOCH_PARTS = ("year", "date", "julian_day")      # canonical order of the epoch display
@@ -458,6 +466,61 @@ def year_from_ayanamsa(
                 break
     return float(result) if np.ndim(result) == 0 else result
 
+def precession_time_map(
+    start_year: float,
+    turns: float,
+    model: str = "long_term",
+    j2000_ayanamsa_deg: float = LAHIRI_AYANAMSA_J2000_DEG,
+    rate_arcsec_per_year: float = PRECESSION_RATE_ARCSEC_PER_YEAR,
+) -> TimeMap:
+    """
+    Time map that divides precession angle instead of time.
+
+    Normalized time ``u`` (0 to 1) is sent to the year at which the ayanamsa
+    has advanced ``u * turns`` turns since ``start_year``. Equal fractions of
+    the cycle are therefore equal arcs of precession, and the boundaries of
+    every subcycle, at any depth, are precession boundaries. With a model in
+    which the precession rate varies (``long_term``), equal arcs are not equal
+    spans of years.
+
+    Parameters
+    ----------
+    start_year : float
+        Year of normalized time 0 (Julian epoch, astronomical numbering).
+    turns : float
+        Precession arc of the whole cycle, in turns (positive).
+    model, j2000_ayanamsa_deg, rate_arcsec_per_year
+        As in ``year_from_ayanamsa``.
+
+    Returns
+    -------
+    TimeMap
+        See ``cycles.functions.timescale``.
+    """
+    if turns <= 0:
+        raise ValueError("turns must be positive")
+    if model == "long_term":
+        def ayanamsa(year):
+            return long_term_ayanamsa(year, j2000_ayanamsa_deg)
+    elif model == "linear":
+        def ayanamsa(year):
+            return lahiri_ayanamsa(year, j2000_ayanamsa_deg, rate_arcsec_per_year)
+    else:
+        raise ValueError(f"Unknown model {model!r}; use 'long_term' or 'linear'.")
+    a0 = ayanamsa(start_year)
+
+    def to_physical(u):
+        return year_from_ayanamsa(np.asarray(u, dtype=float) * turns, unit="turns",
+                                  reference_year=start_year, model=model,
+                                  j2000_ayanamsa_deg=j2000_ayanamsa_deg,
+                                  rate_arcsec_per_year=rate_arcsec_per_year)
+
+    def to_normalized(year):
+        return (np.asarray(ayanamsa(year), dtype=float) - a0) / (360.0 * turns)
+
+    return TimeMap.from_functions(to_physical, to_normalized)
+
+
 def ecliptic_coordinates_of_date(
     vectors,
     year,
@@ -638,6 +701,8 @@ def plot_equinoctial_precession(
     calendar: str = "auto",
     epoch_position: str = "title",
     center_symbol: bool = False,
+    axis_labels: str = "inner",
+    axis_glyph_radius: Optional[float] = None,
 ):
     """
     Draw the equinoctial and solstitial axes against the sidereal zodiac.
@@ -704,6 +769,17 @@ def plot_equinoctial_precession(
     epoch_position : {"title", "center"}
         Where the epoch items go: under the title (default) or in a box in the
         centre of the diagram (the title then has no epoch line).
+    axis_labels : {"inner", "outer"}
+        How the ends of the equinoctial and solstitial axes are marked. "inner"
+        (default): the axes stop at the ring of the signs and the four points
+        carry their glyphs (♈ vernal, ♋ June, ♎ autumnal, ♑ December, the signs
+        they open in the tropical zodiac) near the centre, explained by a small
+        legend in a corner; nothing outside the circle turns with the axes, so
+        the size of the diagram does not depend on the year. "outer": the axes
+        reach beyond the ring, with their names at the ends.
+    axis_glyph_radius : float, optional
+        Radius of the glyphs of the four points (with "inner"); by default near
+        the centre, or clear of the epoch box when it is in the centre.
 
     Returns
     -------
@@ -724,6 +800,8 @@ def plot_equinoctial_precession(
     _check_calendar_name(calendar)
     _check_epoch_position(epoch_position)
     _check_sign_labels(sign_labels)
+    if axis_labels not in ("inner", "outer"):
+        raise ValueError("axis_labels must be 'inner' or 'outer'")
     center_in_box = (epoch_position == "center" and bool(epoch_parts) and center_symbol
                      and center in ("sun", "earth"))
     custom_model = ayanamsa_function is not None
@@ -820,18 +898,48 @@ def plot_equinoctial_precession(
                 color=_RED, linewidth=1.3, alpha=0.85, zorder=2)
 
     # --- Equinoctial and solstitial axes -------------------------------------
-    axis_length = 1.13 + extra
+    inner_axes = axis_labels == "inner"
+    axis_length = inner_radius if inner_axes else 1.13 + extra
     for tropical_angle, color in ((0, _RED), (90, _GREEN)):
         theta = rad(tropical_angle - ayanamsa)
         for end_theta in (theta, theta + math.pi):
             ax.plot([end_theta, end_theta], [0, axis_length], color=color,
                     linewidth=2.4, zorder=4, solid_capstyle="round")
 
-    axis_labels = [(0, _LABEL_VERNAL, _RED),
-                   (90, _LABEL_JUNE, _GREEN),
-                   (180, _LABEL_AUTUMNAL, _RED),
-                   (270, _LABEL_DECEMBER, _GREEN)]
-    for tropical_angle, text, color in (axis_labels if annotations else ()):
+    glyph_handles = []
+    if inner_axes:
+        # the glyphs of the four points near the centre (clear of an epoch box there)
+        glyph_radius = axis_glyph_radius or (0.33 if epoch_position == "center" and epoch_parts else 0.21)
+        disc_area = (_DISC_AREA if annotations else _DISC_AREA_COMPACT) * 0.6
+        glyph_size = _GLYPH_FILL * math.sqrt(4.0 * disc_area / math.pi)
+        for tropical_angle, glyph in _AXIS_GLYPHS:
+            color = _RED if tropical_angle % 180 == 0 else _GREEN
+            theta = rad(tropical_angle - ayanamsa)
+            ax.scatter([theta], [glyph_radius], s=disc_area, c="white", edgecolors=color,
+                       linewidths=1.4, zorder=6)
+            ax.scatter([theta], [glyph_radius], s=glyph_size ** 2,
+                       marker=_centered_glyph(glyph, _PLANET_FONT), c=color,
+                       edgecolors=color, linewidths=0.25, zorder=7)
+        if annotations:
+            from matplotlib.legend_handler import HandlerTuple
+
+            def glyph_marker(glyph, color):
+                return Line2D([], [], linestyle="none", marker=_centered_glyph(glyph, _PLANET_FONT),
+                              markersize=9, color=color, markeredgewidth=0.2)
+            glyph_handles = [(glyph_marker("♈", _RED), glyph_marker("♎", _RED)),
+                             (glyph_marker("♋", _GREEN), glyph_marker("♑", _GREEN))]
+            key = ax.legend(glyph_handles, [_LEGEND_EQUINOXES, _LEGEND_SOLSTICES],
+                            handler_map={tuple: HandlerTuple(ndivide=None, pad=0.6)},
+                            loc="lower left", bbox_to_anchor=(0.0, 0.0), frameon=False,
+                            fontsize=7.5, handlelength=2.6, handletextpad=0.5,
+                            borderaxespad=0.0, labelspacing=0.5)
+            ax.add_artist(key)          # kept when the main legend is drawn
+
+    outer_labels = [(0, _LABEL_VERNAL, _RED),
+                    (90, _LABEL_JUNE, _GREEN),
+                    (180, _LABEL_AUTUMNAL, _RED),
+                    (270, _LABEL_DECEMBER, _GREEN)]
+    for tropical_angle, text, color in (outer_labels if annotations and not inner_axes else ()):
         theta = rad(tropical_angle - ayanamsa)
         ux, uy = -math.sin(theta), math.cos(theta)  # visual direction of the tip
         ha = "left" if ux > 0.35 else ("right" if ux < -0.35 else "center")
@@ -935,6 +1043,7 @@ def plot_equinoctial_precession(
                       bbox_to_anchor=(1.02, 1.0), frameon=False, fontsize=8)
 
     if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
     if show:
         plt.show()
@@ -1224,6 +1333,78 @@ def _stagger_levels(longitudes, radii, min_separation_deg: float):
     return chosen
 
 
+def planet_positions(
+    year: float,
+    ephemeris,
+    bodies: Sequence[str] = ("sun", "mercury", "venus", "mars", "jupiter", "saturn"),
+    model: str = "long_term",
+    j2000_ayanamsa_deg: float = LAHIRI_AYANAMSA_J2000_DEG,
+    rate_arcsec_per_year: float = PRECESSION_RATE_ARCSEC_PER_YEAR,
+) -> Dict[str, Dict[str, float]]:
+    """
+    Geocentric positions of ``bodies`` at ``year`` (TDB), as in
+    ``plot_zodiac_with_planets`` but without drawing: each name maps to a dict
+    with "sidereal" and "tropical" longitudes and the ecliptic "latitude"
+    (degrees).
+    """
+    bodies = list(bodies)
+    positions: Dict[str, Dict[str, float]] = {}
+    if not bodies:
+        return positions
+    jd = 2451545.0 + (float(year) - 2000.0) * 365.25
+    direction = _direction_function(ephemeris, jd)
+    vectors = np.array([np.asarray(direction(b, jd), dtype=float) for b in bodies])
+    years = np.full(len(bodies), float(year))
+    kwargs = dict(model=model, j2000_ayanamsa_deg=j2000_ayanamsa_deg, rate_arcsec_per_year=rate_arcsec_per_year)
+    sidereal, latitude = ecliptic_coordinates_of_date(vectors, years, sidereal=True, **kwargs)
+    tropical, _ = ecliptic_coordinates_of_date(vectors, years, **kwargs)
+    for i, b in enumerate(bodies):
+        positions[b] = {"sidereal": float(sidereal[i]), "tropical": float(tropical[i]),
+                        "latitude": float(latitude[i])}
+    return positions
+
+
+def planet_positions_many(
+    years,
+    ephemeris,
+    bodies: Sequence[str] = ("sun", "mercury", "venus", "mars", "jupiter", "saturn"),
+    model: str = "long_term",
+    j2000_ayanamsa_deg: float = LAHIRI_AYANAMSA_J2000_DEG,
+    rate_arcsec_per_year: float = PRECESSION_RATE_ARCSEC_PER_YEAR,
+) -> Dict[str, Dict[str, np.ndarray]]:
+    """
+    ``planet_positions`` at many moments at once: ``years`` (TDB, shape (N,))
+    gives, for each body, arrays of shape (N,) under "sidereal", "tropical"
+    and "latitude". Moments outside every table of ``ephemeris`` (a table or
+    a sequence of tables) are NaN.
+    """
+    import cycles.functions.nbody_ephemeris as nbe
+    years = np.atleast_1d(np.asarray(years, dtype=float))
+    bodies = list(bodies)
+    out = {b: {key: np.full(len(years), np.nan) for key in ("sidereal", "tropical", "latitude")}
+           for b in bodies}
+    if not bodies or not len(years):
+        return out
+    jd = 2451545.0 + (years - 2000.0) * 365.25
+    pending = np.isfinite(jd)
+    kwargs = dict(model=model, j2000_ayanamsa_deg=j2000_ayanamsa_deg, rate_arcsec_per_year=rate_arcsec_per_year)
+    for table in ([ephemeris] if isinstance(ephemeris, dict) else list(ephemeris)):
+        tau = table["sign"] * (jd - table["jd0"])
+        reach = min(float(t[-1]) for t in table["times"].values())
+        inside = pending & (tau >= 0.0) & (tau <= reach)
+        if not inside.any():
+            continue
+        pending &= ~inside
+        directions = nbe.geocentric_directions(table, bodies, jd[inside])
+        for b in bodies:
+            sidereal, latitude = ecliptic_coordinates_of_date(directions[b], years[inside], sidereal=True, **kwargs)
+            tropical, _ = ecliptic_coordinates_of_date(directions[b], years[inside], **kwargs)
+            out[b]["sidereal"][inside] = sidereal
+            out[b]["tropical"][inside] = tropical
+            out[b]["latitude"][inside] = latitude
+    return out
+
+
 def plot_zodiac_with_planets(
     year: float,
     ephemeris,
@@ -1341,22 +1522,9 @@ def plot_zodiac_with_planets(
     unknown = [b for b in bodies if b not in _PLANETS]
     if unknown:
         raise ValueError(f"unknown bodies {unknown}; use {list(_PLANETS)}")
-    jd = 2451545.0 + (year - 2000.0) * 365.25
-    direction = _direction_function(ephemeris, jd) if bodies else None
-
     # --- positions -----------------------------------------------------------
-    positions: Dict[str, Dict[str, float]] = {}
-    if bodies:
-        vectors = np.array([np.asarray(direction(b, jd), dtype=float) for b in bodies])
-        years = np.full(len(bodies), year)
-        kwargs = dict(model=model, j2000_ayanamsa_deg=j2000_ayanamsa_deg,
-                      rate_arcsec_per_year=rate_arcsec_per_year)
-        sidereal, latitude = ecliptic_coordinates_of_date(vectors, years,
-                                                          sidereal=True, **kwargs)
-        tropical, _ = ecliptic_coordinates_of_date(vectors, years, **kwargs)
-        for i, b in enumerate(bodies):
-            positions[b] = {"sidereal": float(sidereal[i]), "tropical": float(tropical[i]),
-                            "latitude": float(latitude[i])}
+    positions = planet_positions(year, ephemeris, bodies, model=model, j2000_ayanamsa_deg=j2000_ayanamsa_deg,
+                                 rate_arcsec_per_year=rate_arcsec_per_year)
     for name, longitude in (extra_points or {}).items():
         positions[name] = {"sidereal": float(longitude) % 360.0}
 
@@ -1378,7 +1546,8 @@ def plot_zodiac_with_planets(
         rate_arcsec_per_year=rate_arcsec_per_year, ax=ax, legend=False,
         show=False, center="none" if (centered and center_symbol) else "earth",
         show_arc=False, annotations=not compact, nakshatras=nakshatras,
-        sign_labels=sign_labels, epoch_display=(), center_symbol=center_symbol)
+        sign_labels=sign_labels, epoch_display=(), center_symbol=center_symbol,
+        axis_glyph_radius=0.33 if centered else None)          # clear of the epoch box
     summary_lines = ax.get_title().split("\n")[1:]    # ayanamsa and vernal point
     epoch_texts = _epoch_texts(year_given, year, time_scale, epoch_parts, calendar,
                                compact=compact)
@@ -1474,6 +1643,7 @@ def plot_zodiac_with_planets(
                      style="italic")
 
     if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
     if show:
         plt.show()
@@ -1637,6 +1807,7 @@ def plot_zodiac_planets_grid(
                  family=_TABLE_FONT, linespacing=1.45)
 
     if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
     if show:
         plt.show()
@@ -1868,6 +2039,7 @@ def plot_ayanamsa_comparison(
     fig.tight_layout(rect=(0, 0, 1, 0.965))
 
     if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
     if show:
         plt.show()

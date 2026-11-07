@@ -1,3 +1,12 @@
+"""
+Compositions (digit counts) of addresses and the classes of compositions with
+equal duration.
+
+At a fixed depth, replacing one Golden and one Iron digit by two Bronze digits
+keeps the duration (0.4 * 0.1 = 0.2 * 0.2), so the compositions
+``n + t * (1, 0, -2, 1)`` all have the same duration.
+"""
+
 import numpy as np
 
 from cycles.functions.division import compute_duration, compute_start, weights
@@ -5,6 +14,10 @@ from cycles.functions.color import lcoords_to_cmyk, cmyk_to_rgb
 
 
 def compositions(depth: int) -> np.ndarray:
+    """
+    All compositions ``(n0, n1, n2, n3)`` of ``depth`` (non-negative, summing to
+    ``depth``).
+    """
     comps = []
     for n3 in range(depth + 1):
         for n2 in range(depth - n3 + 1):
@@ -15,6 +28,10 @@ def compositions(depth: int) -> np.ndarray:
 
 
 def duration_equivalent_compositions(composition: np.ndarray) -> np.ndarray:
+    """
+    All compositions with the same duration as ``composition``: those of the form
+    ``composition + t * (1, 0, -2, 1)`` with every count non-negative.
+    """
     tmin = int(np.max([-composition[0], -composition[3]]))
     tmax = int(np.floor(composition[2] / 2))
 
@@ -25,6 +42,10 @@ def duration_equivalent_compositions(composition: np.ndarray) -> np.ndarray:
 
 
 def compositions_grouped_by_duration(depth: int) -> list[np.ndarray]:
+    """
+    All compositions of ``depth``, grouped into classes of equal duration (one
+    array of compositions per class).
+    """
     grouped_comps = []
     for n3 in range(depth + 1):
         for n2 in range(depth - n3 + 1):
@@ -37,6 +58,12 @@ def compositions_grouped_by_duration(depth: int) -> list[np.ndarray]:
 
 
 def lexmin_enumeration(composition: np.ndarray) -> np.ndarray:
+    """
+    All addresses with the given composition, in lexicographic (time) order.
+
+    Starts from the sorted address and applies the "next permutation" algorithm
+    for multisets until the last arrangement is reached.
+    """
     depth = np.sum(composition)
     lexmin = np.concatenate([np.repeat(k, composition[k]) for k in range(4) if composition[k] > 0])
     enumeration = [lexmin]
@@ -65,14 +92,23 @@ def lexmin_enumeration(composition: np.ndarray) -> np.ndarray:
     return np.array(enumeration)
 
 
-def analyse_level(depth: int, scale: float, color_basis: int = 2) -> tuple:
+def analyse_level(depth: int, scales: list[float], color_basis: int = 2) -> tuple:
+    """
+    Addresses, durations, starts and colors of every subcycle at ``depth``,
+    organised by duration class and composition.
+
+    Returns ``(lcoords, durations, starts, cmyks, rgbs)``, each a nested list
+    indexed as ``[duration class][composition]`` holding one array with a row per
+    address. Colors use weights of base ``color_basis`` and the given ``scales``
+    (see ``color.lcoords_to_cmyk``).
+    """
     gcomps = compositions_grouped_by_duration(depth)
     glcoords = [[lexmin_enumeration(comp) for comp in gc] for gc in gcomps]
     gdurations = [[np.apply_along_axis(compute_duration, 1, lcoords)  for lcoords in gl] for gl in glcoords]
     gstarts = [[np.apply_along_axis(compute_start, 1, lcoords) for lcoords in gl] for gl in glcoords]
 
     w = weights(color_basis, depth)
-    gcmyks = [[np.array([lcoords_to_cmyk(lcoord, w, scale) for lcoord in lcoords], dtype=float) for lcoords in gl] for gl in glcoords]
+    gcmyks = [[np.array([lcoords_to_cmyk(lcoord, w, scales) for lcoord in lcoords], dtype=float) for lcoords in gl] for gl in glcoords]
     grgbs = [[np.apply_along_axis(cmyk_to_rgb, 2, cmyk) for cmyk in cmyks] for cmyks in gcmyks]
 
     return glcoords, gdurations, gstarts, gcmyks, grgbs

@@ -250,6 +250,4 @@ if __name__ == "__main__":
         ax.set_xlabel("X"); ax.set_ylabel("Y"); ax.set_zlabel("Z")
 
     plt.tight_layout()
-    plt.savefig("/mnt/user-data/outputs/camera_view_demo.png", dpi=150, bbox_inches="tight")
-    print("Saved demo to camera_view_demo.png")
     plt.show()

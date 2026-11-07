@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cycles"
+# the version is cycles.__version__ (cycles/__init__.py), see [tool.setuptools.dynamic]
+dynamic = ["version"]
+description = "Mathematical analysis of cycles"
+readme = "README.md"
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
+authors = [{ name = "jmcastelo", email = "jm.castelo@uv.es" }]
+# Star-unpacking inside subscripts (permutation.py) requires Python 3.11+.
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.0",
+    "matplotlib>=3.8",
+    "papersize>=1.7",
+    "symmetry-math>=0.1",
+]
+
+[project.optional-dependencies]
+# N-body ephemeris (cycles.functions.nbody_ephemeris)
+astro = [
+    "rebound>=5.2",
+    "reboundx>=5.1",
+]
+# Sound synthesis and scalograms (cycles.functions.sound); sounddevice is
+# used by the sandbox scripts to play the generated signals.
+sound = [
+    "PyWavelets>=1.9",
+    "sounddevice>=0.5",
+]
+# Graphical interface (cycles.gui)
+gui = [
+    "PySide6>=6.6",
+]
+all = ["cycles[astro,sound,gui]"]
+# Tests (pytest tests/); the GUI tests run offscreen and need the gui extra
+test = ["pytest>=8"]
+
+[project.gui-scripts]
+cycles-gui = "cycles.gui.app:main"
+
+[tool.setuptools.packages.find]
+include = ["cycles*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "cycles.__version__" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "gui: tests of the graphical interface (offscreen; need PySide6)",
+    "ephemeris: need the ephemeris tables (skipped without them)",
+]

@@ -1,141 +1,131 @@
+"""Study of the colorings of subcycles."""
+
 import numpy as np
 
-from cycles.functions.division import compute_level
-from cycles.functions.color import lcoords_to_lrgb
-from cycles.plotting.color import *
-from cycles.plotting.generic import *
 from cycles.functions.view import top_view, camera_view_angles
+from cycles.plotting.color import (
+    plot_level_bars, plot_colors_scatter_3d, plot_rgb_lines_3d,
+    plot_cmyk_vs_index, plot_rgb_vs_time, plot_rgb_vs_index,
+    plot_hsv_vs_time, plot_hsv_vs_index, plot_hls_vs_time, plot_hls_vs_index,
+)
+from cycles.plotting.generic import plot_multi_y_vs_x
+from common import BASES, PLOTS_DIR, compute_levels, level_colors, fig_data
+from runner import study, run
 
-if __name__ == "__main__":
-    bases = [4, 2, 2]
+BASE_DIR = PLOTS_DIR / "study_of_colors"
+
+
+def setup():
     max_depth = 3
-    scales = [1 / 2, 2 / 3, 0.5]
+    levels = compute_levels(max_depth)
+    axis = (1, 1, 1)
+    return dict(
+        max_depth=max_depth,
+        levels=levels,
+        colors=[level_colors(level) for level in levels],
+        rgb_key='lrgb',             # any of common.COLOR_KEYS
+        cmyk_key='wcmy',            # any of division.CMYK_KEYS
+        variant='cmyk_normalised',  # Level RGB variant for the component graphs
+        views=[
+            top_view(axis),
+            camera_view_angles(axis, 60, 0, True),
+            camera_view_angles(axis, 60, 0.25, True),
+            camera_view_angles(axis, 0, 0.25, True),
+        ],
+    )
 
-    colors = np.array([[1, 1, 0], [0, 1, 1], [1, 0, 1], [0, 0, 0]])
 
-    levels = [compute_level(depth, bases, scales, colors) for depth in range(1, max_depth + 1)]
-    lcoords, durations, starts, cmyks, rgbs, dharmas, purities = zip(*levels)
+@study
+def level_bars(ctx, opts):
+    """Timelines of all depths, colored."""
+    plot_level_bars(
+        [level.durations for level in ctx.levels],
+        [level.starts for level in ctx.levels],
+        [colors[ctx.rgb_key] for colors in ctx.colors],
+        opts.save,
+        fig_data(BASE_DIR / f"levels/{ctx.rgb_key}/base_{BASES[1]}/levels_down_to_{ctx.max_depth}.png", 'a5', 600),
+    )
 
-    lrgbs = [np.apply_along_axis(lcoords_to_lrgb, 1, coords) for coords in lcoords]
-    dharma_colors = [np.array([np.full(3, d) for d in dharma]) for dharma in dharmas]
-    purity_colors = [np.array([np.full(3, p) for p in purity]) for purity in purities]
 
-    colors = {
-        'rgb': {
-            'cmyk': [rgb[:, 0] for rgb in rgbs],
-            'cmyk_normalised': [rgb[:, 1] for rgb in rgbs],
-            'cmyk_scaled': [rgb[:, 2] for rgb in rgbs],
-            'cmyk_kscaled': [rgb[:, 3] for rgb in rgbs],
-            'cmyk_composition': [rgb[:, 4] for rgb in rgbs],
-            'wcmy': [rgb[:, 5] for rgb in rgbs],
-            'tetrahedron': [rgb[:, 6] for rgb in rgbs],
-            'lrgb': [lrgb[:, -1] for lrgb in lrgbs],
-            'dharma': dharma_colors,
-            'purity': purity_colors
-        },
-        'cmyk': {
-            'cmyk': [cmyk[:, 0] for cmyk in cmyks],
-            'wcmy': [cmyk[:, 1] for cmyk in cmyks]
-        }
-    }
+@study(default=False)
+def unique_colors(ctx, opts):
+    """Check, for each depth and color, whether all subcycles get distinct colors."""
+    for depth, colors in enumerate(ctx.colors, 1):
+        n = len(ctx.levels[depth - 1].lcoords)
+        counts = {key: len(np.unique(np.round(rgb, 10), axis=0)) for key, rgb in colors.items()}
+        print(f"depth {depth} ({n} subcycles): " + ', '.join(
+            f"{key} {'unique' if count == n else f'{count} distinct'}" for key, count in counts.items()))
 
-    rgb_key = 'lrgb'
-    cmyk_key = 'wcmy'
 
-    base_dir = f"./plots/study_of_colors"
+@study(default=False)
+def rgb_scatter_3d(ctx, opts):
+    """Colors as points in the RGB cube, seen from several views."""
+    for depth, (colors, level) in enumerate(zip(ctx.colors, ctx.levels), 1):
+        rgb = colors[ctx.rgb_key]
+        path = BASE_DIR / f"rgb_3d/{ctx.rgb_key}/base_{BASES[1]}/rgb_3d_scatter_at_level_{depth}.png"
+        plot_colors_scatter_3d(list(rgb.T), rgb, level.durations, ctx.views, opts.save, fig_data(path, 'a3', 600, True))
 
-    plot = {
-        'level_bars': True,
-        'rgb_scatter_3d': False,
-        'rgb_lines_3d': False,
-        'cmyk_scatter_3d': False,
-        'cmyk_vs_time': False
-    }
 
-    if plot['level_bars']:
-        plot_level_bars(
-            durations,
-            starts,
-            colors['rgb'][rgb_key],
-            save_fig=True,
-            fig_data=(
-                'a5',
-                'landscape',
-                f"{base_dir}/levels/{rgb_key}/base_{bases[1]}/levels_down_to_{max_depth}.png",
-                600,
-                False
-            )
+@study(default=False)
+def rgb_lines_3d(ctx, opts):
+    """Path through the RGB cube joining consecutive subcycles."""
+    for depth, colors in enumerate(ctx.colors, 1):
+        path = BASE_DIR / f"rgb_3d/{ctx.rgb_key}/base_{BASES[1]}/rgb_3d_lines_at_level_{depth}.png"
+        plot_rgb_lines_3d(colors[ctx.rgb_key], ctx.views, opts.save, fig_data(path, 'a3', 600, True))
+
+
+@study(default=False)
+def cmyk_scatter_3d(ctx, opts):
+    """CMY components as points in 3D, colored with lrgb."""
+    for depth, (colors, level) in enumerate(zip(ctx.colors, ctx.levels), 1):
+        cmyk = level.cmyk(ctx.cmyk_key)
+        path = BASE_DIR / f"cmyk_3d/{ctx.cmyk_key}/base_{BASES[1]}/rgb_3d_scatter_at_level_{depth}.png"
+        plot_colors_scatter_3d(list(cmyk[:, :3].T), colors['lrgb'], level.durations, ctx.views,
+                               opts.save, fig_data(path, 'a3', 600, True))
+
+
+@study(default=False)
+def cmyk_vs_time(ctx, opts):
+    """Raw CMYK components against time, one figure per depth."""
+    for depth, level in enumerate(ctx.levels, 1):
+        cmyk = level.cmyk('cmyk')
+        plot_multi_y_vs_x(
+            level.starts + level.durations / 2,
+            [cmyk[:, i] for i in range(4)],
+            (None, None),
+            f"CMYK Color components vs time at depth {depth}",
+            'Time (norm. units)',
+            'Component intensity',
+            ['Cyan', 'Magenta', 'Yellow', 'Black'],
+            [(0, 1, 1), (1, 0, 1), (1, 1, 0), (0, 0, 0)],
+            opts.save,
+            fig_data(BASE_DIR / f"cmyk/base_{BASES[1]}/cmyk_vs_time_at_depth_{depth}.png"),
         )
 
-    if plot['rgb_scatter_3d'] or plot['rgb_lines_3d'] or plot['cmyk_scatter_3d']:
-        axis = (1, 1, 1)
-        views = [
-            top_view(axis),
-            camera_view_angles(axis, 60, 0,True),
-            camera_view_angles(axis, 60, 0.25, True),
-            camera_view_angles(axis, 0, 0.25, True)
-        ]
 
-    if plot['rgb_scatter_3d']:
-        for depth, (components, rgb, duration) in enumerate(zip(colors['rgb'][rgb_key], colors['rgb'][rgb_key], durations), 1):
-            plot_name = f"{base_dir}/rgb_3d/{rgb_key}/base_{bases[1]}/rgb_3d_scatter_at_level_{depth}.png"
-            color = [components[:,0], components[:,1], components[:,2]]
-            plot_colors_scatter_3d(color, rgb, duration, views, False, ('a3', 'landscape', plot_name, 600, True))
+def _component_study(name: str, plot_function, key_argument: str):
+    """Register a study that draws ``plot_function`` for every depth."""
+    space, _, axis = name.split('_')
 
-    if plot['rgb_lines_3d']:
-        for depth, (rgb, d) in enumerate(zip(colors['rgb'][rgb_key], durations), 1):
-            plot_name = f"{base_dir}/rgb_3d/{rgb_key}/base_{bases[1]}/rgb_3d_lines_at_level_{depth}.png"
-            plot_rgb_lines_3d(rgb, views, False, ('a3', 'landscape', plot_name, 600, True))
+    def component_study(ctx, opts):
+        key = ctx.variant if key_argument == 'rgb_key' else ctx.cmyk_key
+        for depth, level in enumerate(ctx.levels, 1):
+            path = BASE_DIR / f"{space}/{key}/base_{BASES[1]}/{name}_at_depth_{depth}.png"
+            plot_function(level, opts.save, fig_data(path), **{key_argument: key})
 
-    if plot['cmyk_scatter_3d']:
-        for depth, (components, rgb, duration) in enumerate(zip(colors['cmyk'][cmyk_key], colors['rgb']['lrgb'], durations), 1):
-            plot_name = f"{base_dir}/cmyk_3d/{cmyk_key}/base_{bases[1]}/rgb_3d_scatter_at_level_{depth}.png"
-            color = [components[:,0], components[:,1], components[:,2]]
-            plot_colors_scatter_3d(color, rgb, duration, views, False, ('a3', 'landscape', plot_name, 600, True))
+    component_study.__name__ = name
+    component_study.__doc__ = f"{space.upper()} components against {axis}, one figure per depth."
+    study(component_study, default=False)
 
-    if plot['cmyk_vs_time']:
-        for depth, (start, duration, color) in enumerate(zip(starts, durations, colors['cmyk']['cmyk']), 1):
-            title = f"CMYK Color components vs time at depth {depth}"
-            ylabels = ['Cyan', 'Magenta', 'Yellow', 'Black']
-            ycolors = [(0, 1, 1), (1, 0, 1), (1, 1, 0), (0, 0, 0)]
-            ylabel = 'Component intensity'
-            xlabel = 'Time (norm. units)'
-            fig_data = (
-                'a4',
-                'landscape',
-                f"{base_dir}/cmyk/base_{bases[1]}/cmyk_vs_time_at_depth_{depth}.png",
-                300,
-                False
-            )
-            time = start + duration / 2
-            cmyk = [color[:, i] for i in range(4)]
-            plot_multi_y_vs_x(time, cmyk, (None, None), title, xlabel, ylabel, ylabels, ycolors, False, fig_data)
 
-    # Plot color graphs
-    # save_fig = False
-    # for depth, level in enumerate(levels, 1):
-    #     plot_cmyk_vs_time(level, save_fig, ('a4', 'landscape', f"./plots/cmyk/base_{bases[1]}/cmyk_vs_time_level_{depth}.png", 300))
-    #     plot_rgb_vs_time(level, save_fig, ('a4', 'landscape', f"./plots/rgb/base_{bases[1]}/rgb_vs_time_level_{depth}.png", 300))
-    #     plot_hsv_vs_time(level, save_fig, ('a4', 'landscape', f"./plots/hsv/base_{bases[1]}/hsv_vs_time_level_{depth}.png", 300))
-    #     plot_hls_vs_time(level, save_fig, ('a4', 'landscape', f"./plots/hls/base_{bases[1]}/hls_vs_time_level_{depth}.png", 300))
-    #     plot_cmyk_vs_index(level, save_fig, ('a4', 'landscape', f"./plots/cmyk/base_{bases[1]}/cmyk_vs_index_level_{depth}.png", 300))
-    #     plot_rgb_vs_index(level, save_fig, ('a4', 'landscape', f"./plots/rgb/base_{bases[1]}/rgb_vs_index_level_{depth}.png", 300))
-    #     plot_hsv_vs_index(level, save_fig, ('a4', 'landscape', f"./plots/hsv/base_{bases[1]}/hsv_vs_index_level_{depth}.png", 300))
-    #     plot_hls_vs_index(level, save_fig, ('a4', 'landscape', f"./plots/hls/base_{bases[1]}/hls_vs_index_level_{depth}.png", 300))
+_component_study('cmyk_vs_index', plot_cmyk_vs_index, 'cmyk_key')
+for _name, _function in [
+    ('rgb_vs_time', plot_rgb_vs_time), ('rgb_vs_index', plot_rgb_vs_index),
+    ('hsv_vs_time', plot_hsv_vs_time), ('hsv_vs_index', plot_hsv_vs_index),
+    ('hls_vs_time', plot_hls_vs_time), ('hls_vs_index', plot_hls_vs_index),
+]:
+    _component_study(_name, _function, 'rgb_key')
 
-    # Plot duration bars
-    # aspect = (1, 1)
-    # l1, l2 = 1, 5
-    # plot_name = f"./plots/durations/durations_{l1}_to_{l2}_aspect_{aspect[0]}_{aspect[1]}.png"
-    # plot_duration_bars(levels, l1, l2, aspect, False, ('a4', 'landscape', plot_name, 600))
 
-    # TODO: Rewrite the following plots
-    # fig = plot_quality_scatter_3d(level)
-    # figname = 'quality_scatter_3d.png'
-    # plot_circle_diagram(levels, bases[0])
-
-    # fig = plot_purity_vs_dharma(level)
-    # figname = f"purity_vs_dharma_depth_{depth}.png"
-
-    # fig.set_size_inches(figsize)
-    # fig.savefig('./PNGs/' + figname, dpi=300)
+if __name__ == "__main__":
+    run(setup)

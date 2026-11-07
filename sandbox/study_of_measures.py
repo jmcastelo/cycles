@@ -1,124 +1,104 @@
-from cycles.functions.division import compute_level
-from cycles.functions.color import lcoords_to_lrgb
-from cycles.plotting.color import plot_quality_grid
-from cycles.plotting.generic import *
+"""Study of the dharma and purity measures of subcycles."""
+
+import numpy as np
+
+from cycles.functions.division import partition_level
+from cycles.plotting.measure import plot_quality_grid, plot_purity_vs_dharma, plot_quality_scatter_3d
+from cycles.plotting.generic import plot_y_vs_x
+from common import PLOTS_DIR, compute_levels, fig_data, save_figure
+from runner import study, run
+
+BASE_DIR = PLOTS_DIR / "study_of_measures"
+
+
+def setup():
+    bases = [4, 2, 1]
+    return dict(
+        bases=bases,
+        levels=compute_levels(5, bases=bases),
+        rgb_key='cmyk_kscaled',  # Level RGB variant (division.RGB_KEYS)
+    )
+
+
+def _measure_plot(ctx, opts, measure: str, axis: str, paper: str, dpi: int):
+    """Plot dharma or purity against time or index, one figure per depth."""
+    for depth, level in enumerate(ctx.levels, 1):
+        values = level.dharmas if measure == 'dharma' else level.purities
+        if axis == 'time':
+            x, xlabel = level.starts + level.durations / 2, 'Time (norm. units)'
+        else:
+            x, xlabel = np.arange(len(values)), 'Index'
+        path = BASE_DIR / f"{measure}/base_{ctx.bases[1]}/{measure}_vs_{axis}_at_depth_{depth}.png"
+        plot_y_vs_x(x, values, (None, None), f"{measure.capitalize()} vs {axis} at depth {depth}",
+                    xlabel, measure.capitalize(), opts.save, fig_data(path, paper, dpi))
+
+
+@study
+def quality_grid(ctx, opts):
+    """Purity against dharma, one panel per depth."""
+    plot_quality_grid(ctx.levels, ctx.rgb_key)
+
+
+@study(default=False)
+def quality_by_age(ctx, opts):
+    """Purity against dharma at the deepest level, one panel per top-level age."""
+    plot_quality_grid(partition_level(ctx.levels[-1], 1, ctx.bases[0]), ctx.rgb_key)
+
+
+@study(default=False)
+def quality_by_subage(ctx, opts):
+    """Purity against dharma at the deepest level, one panel per depth-2 subcycle."""
+    plot_quality_grid(partition_level(ctx.levels[-1], 2, ctx.bases[0]), ctx.rgb_key)
+
+
+@study(default=False)
+def purity_vs_dharma(ctx, opts):
+    """Purity against dharma at the deepest level, in one figure."""
+    fig = plot_purity_vs_dharma(ctx.levels[-1], ctx.rgb_key)
+    if opts.save:
+        save_figure(fig, BASE_DIR / f"{ctx.rgb_key}/purity_vs_dharma_at_depth_{len(ctx.levels)}.png")
+
+
+@study(default=False)
+def quality_scatter_3d(ctx, opts):
+    """Dharma, purity and time of the subcycles of the deepest level, in 3D."""
+    fig = plot_quality_scatter_3d(ctx.levels[-1], ctx.rgb_key)
+    if opts.save:
+        save_figure(fig, BASE_DIR / f"{ctx.rgb_key}/quality_scatter_3d_at_depth_{len(ctx.levels)}.png")
+
+
+@study(default=False)
+def dharma_purity_lines(ctx, opts):
+    """Purity against dharma as a line through the subcycles in time order, per depth."""
+    for depth, level in enumerate(ctx.levels, 1):
+        path = BASE_DIR / f"{ctx.rgb_key}/dharma_vs_purity_at_depth_{depth}.png"
+        plot_y_vs_x(level.dharmas, level.purities, (None, None), f"Purity vs Dharma at depth {depth}",
+                    'Dharma', 'Purity', opts.save, fig_data(path, 'a3', 600))
+
+
+@study(default=False)
+def dharma_vs_time(ctx, opts):
+    """Dharma against time, one figure per depth."""
+    _measure_plot(ctx, opts, 'dharma', 'time', 'a3', 600)
+
+
+@study(default=False)
+def dharma_vs_index(ctx, opts):
+    """Dharma against time-order index, one figure per depth."""
+    _measure_plot(ctx, opts, 'dharma', 'index', 'a4', 300)
+
+
+@study(default=False)
+def purity_vs_time(ctx, opts):
+    """Purity against time, one figure per depth."""
+    _measure_plot(ctx, opts, 'purity', 'time', 'a4', 300)
+
+
+@study(default=False)
+def purity_vs_index(ctx, opts):
+    """Purity against time-order index, one figure per depth."""
+    _measure_plot(ctx, opts, 'purity', 'index', 'a4', 300)
+
 
 if __name__ == "__main__":
-    bases = [4, 2, 1]
-    max_depth = 5
-    scale = 2/3
-    levels = [compute_level(depth, bases, scale) for depth in range(1, max_depth + 1)]
-    lcoords, durations, starts, cmyks, rgbs, dharmas, purities = zip(*levels)
-
-    lrgbs = [np.apply_along_axis(lcoords_to_lrgb, 1, coords) for coords in lcoords]
-    dharma_colors = [np.array([np.full(3, d) for d in dharma]) for dharma in dharmas]
-    purity_colors = [np.array([np.full(3, p) for p in purity]) for purity in purities]
-
-    colors = {
-        'rgb': {
-            'cmyk': [rgb[:, 0] for rgb in rgbs],
-            'cmyk_normalised': [rgb[:, 1] for rgb in rgbs],
-            'cmyk_scaled': [rgb[:, 2] for rgb in rgbs],
-            'cmyk_kscaled': [rgb[:, 3] for rgb in rgbs],
-            'cmyk_composition': [rgb[:, 4] for rgb in rgbs],
-            'wcmy': [rgb[:, 5] for rgb in rgbs],
-            'lrgb': [lrgb[:, -1] for lrgb in lrgbs],
-            'dharma': dharma_colors,
-            'purity': purity_colors
-        },
-        'cmyk': {
-            'cmyk': [cmyk[:, 0] for cmyk in cmyks],
-            'wcmy': [cmyk[:, 1] for cmyk in cmyks]
-        }
-    }
-
-    rgb_key = 'cmyk_kscaled'
-    cmyk_key = 'wcmy'
-
-    base_dir = f"./plots/study_of_measures"
-
-    plot = {
-        'dharma_vs_time': False,
-        'dharma_vs_index': False,
-        'purity_vs_time': False,
-        'purity_vs_index': False,
-        'dharma_vs_purity': True
-    }
-
-    if plot['dharma_vs_time']:
-        for depth, (start, duration, dharma) in enumerate(zip(starts, durations, dharmas), 1):
-            title = f"Dharma vs time at depth {depth}"
-            ylabel = 'Dharma'
-            xlabel = 'Time (norm. units)'
-            fig_data = (
-                'a3',
-                'landscape',
-                f"{base_dir}/dharma/base_{bases[1]}/dharma_vs_time_at_depth_{depth}.png",
-                600,
-                False
-            )
-            time = start + duration / 2
-            plot_y_vs_x(time, dharma, (None, None), title, xlabel, ylabel, False, fig_data)
-
-    if plot['dharma_vs_index']:
-        for depth, dharma in enumerate(dharmas, 1):
-            title = f"Dharma vs index at depth {depth}"
-            ylabel = 'Dharma'
-            xlabel = 'Index'
-            fig_data = (
-                'a4',
-                'landscape',
-                f"{base_dir}/dharma/base_{bases[1]}/dharma_vs_index_at_depth_{depth}.png",
-                300,
-                False
-            )
-            index = np.arange(0, len(dharma))
-            plot_y_vs_x(index, dharma, (None, None), title, xlabel, ylabel, False, fig_data)
-
-    if plot['purity_vs_time']:
-        for depth, (start, duration, purity) in enumerate(zip(starts, durations, purities), 1):
-            title = f"Purity vs time at depth {depth}"
-            ylabel = 'Purity'
-            xlabel = 'Time (norm. units)'
-            fig_data = (
-                'a4',
-                'landscape',
-                f"{base_dir}/purity/base_{bases[1]}/purity_vs_time_at_depth_{depth}.png",
-                300,
-                False
-            )
-            time = start + duration / 2
-            plot_y_vs_x(time, purity, (None, None), title, xlabel, ylabel, False, fig_data)
-
-    if plot['purity_vs_index']:
-        for depth, purity in enumerate(purities, 1):
-            title = f"Purity vs time at depth {depth}"
-            ylabel = 'Purity'
-            xlabel = 'Index'
-            fig_data = (
-                'a4',
-                'landscape',
-                f"{base_dir}/purity/base_{bases[1]}/purity_vs_index_at_depth_{depth}.png",
-                300,
-                False
-            )
-            index = np.arange(0, len(purity))
-            plot_y_vs_x(index, purity, (None, None), title, xlabel, ylabel, False, fig_data)
-
-    if plot['dharma_vs_purity']:
-        '''
-        for depth, (dharma, purity) in enumerate(zip(dharmas, purities), 1):
-            title = f"Dharma vs Purity at depth {depth}"
-            ylabel = 'Dharma'
-            xlabel = 'Purity'
-            fig_data = (
-                'a3',
-                'landscape',
-                f"{base_dir}/{rgb_key}/dharma_vs_purity_at_depth_{depth}.png",
-                600,
-                False
-            )
-            index = np.arange(0, len(purity))
-            plot_y_vs_x(dharma, purity, (None, None), title, xlabel, ylabel, False, fig_data)
-        '''
-        plot_quality_grid()
+    run(setup)

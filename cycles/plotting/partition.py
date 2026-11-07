@@ -1,3 +1,5 @@
+"""Ring (pie) diagrams of the partitions made by ``division.fill_partition``."""
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -11,6 +13,7 @@ def plot_sectors(
     labels: list[str] | None = None,
     labeldistance: float | None = None,
 ):
+    """Draw one ring of wedges with the given sizes and colors on ``ax``."""
     ax.pie(
         x = wedge_sizes,
         radius=radius,
@@ -30,6 +33,11 @@ def plot_partition_sectors(
     part_durations: np.ndarray,
     part_colors: np.ndarray,
 ):
+    """
+    Two rings: inside, the reference windows of length ``dt`` covering
+    ``[t1, t2)``; outside, the subcycles (and gaps) that fill them, with the
+    durations and colors of ``division.fill_partition``.
+    """
     fig, ax = plt.subplots()
 
     # Reference sectors

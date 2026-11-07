@@ -1,8 +1,10 @@
+"""Ring (pie) diagrams of subcycles."""
+
 import numpy as np
 import matplotlib.pyplot as plt
 
 from cycles.functions.conversion import lcoords_to_tcoord
-from cycles.functions.division import partition_level
+from cycles.functions.division import Level, DEFAULT_COLOR_KEY, partition_level
 
 
 def fix_pie_labels(wedges, texts, mode="radial"):
@@ -25,14 +27,22 @@ def fix_pie_labels(wedges, texts, mode="radial"):
         text.set_va("center")
 
 
-def plot_comparison_graph(subcycles: list):
+def plot_comparison_graph(subcycles: list[Level], rgb_key: str=DEFAULT_COLOR_KEY):
+    """
+    Concentric rings, one per group of subcycles (e.g. from
+    ``division.select_subcycle``), with wedges proportional to the durations.
+
+    Labels read ``start (duration): index``, with the 1-based time-order index.
+    """
     fig, ax = plt.subplots(figsize=(25, 25))
 
     num_indices = len(subcycles)
     scale = 1.6
     width = scale / num_indices
 
-    for i, (lcoords, durations, starts, colors) in enumerate(subcycles):
+    for i, subcycle in enumerate(subcycles):
+        lcoords, durations, starts = subcycle.lcoords, subcycle.durations, subcycle.starts
+        colors = subcycle.rgb(rgb_key)
         labels = [f"{starts[j]:.1f} ({durations[j]:.2f}): {lcoords_to_tcoord(lcoords[j]) + 1}" for j in range(len(lcoords))]
 
         radius = width * (i + 1.0)
@@ -54,8 +64,19 @@ def plot_comparison_graph(subcycles: list):
     plt.show()
 
 
-def plot_identical_graph(ax, level: tuple, identical: list, ref_level: tuple|None=None, one_to_many: bool=False, show_labels=True):
-    lcoords, durations, starts, rgb, cmyk = level
+def plot_identical_graph(ax, level: Level, identical: list, ref_level: Level|None=None, one_to_many: bool=False, show_labels=True, rgb_key: str=DEFAULT_COLOR_KEY):
+    """
+    Ring of the subcycles of ``level`` on ``ax``, with arcs joining subcycles of
+    equal duration.
+
+    ``identical`` is the output of ``division.find_identical`` on the durations.
+    Subcycles that share their duration with others are pulled inwards. With
+    ``one_to_many`` arrows go from the first of each group to the others;
+    otherwise each is joined to the next. ``ref_level`` adds an outer ring (e.g.
+    the previous depth) for reference.
+    """
+    lcoords, durations, starts = level.lcoords, level.durations, level.starts
+    rgb = level.rgb(rgb_key)
 
     if show_labels:
         labels = [f"{starts[j]:.1f} ({durations[j]:.2f}): {lcoords_to_tcoord(lcoords[j]) + 1}" for j in range(len(lcoords))]
@@ -71,7 +92,8 @@ def plot_identical_graph(ax, level: tuple, identical: list, ref_level: tuple|Non
     labeldistance = 1.0 - 0.5 * width / radius
 
     if ref_level is not None:
-        ref_lcoords, ref_durations, ref_starts, ref_rgb, ref_cmyk = ref_level
+        ref_lcoords, ref_durations, ref_starts = ref_level.lcoords, ref_level.durations, ref_level.starts
+        ref_rgb = ref_level.rgb(rgb_key)
         ref_labels = [f"{ref_starts[j]:.1f} ({ref_durations[j]:.2f}): {lcoords_to_tcoord(ref_lcoords[j]) + 1}" for j in range(len(ref_lcoords))]
 
         ref_radius = radius + width
@@ -150,7 +172,12 @@ def plot_identical_graph(ax, level: tuple, identical: list, ref_level: tuple|Non
     # plt.show()
 
 
-def plot_circle_diagram(levels: list[tuple], base: int):
+def plot_circle_diagram(levels: list[Level], base: int, rgb_key: str=DEFAULT_COLOR_KEY):
+    """
+    Nested circle diagram: each subcycle is a circle whose circumference equals
+    its duration, placed around the circle of its parent at the angle given by
+    its start. ``levels`` must be consecutive depths starting at 1.
+    """
     fig, ax = plt.subplots()
 
     circle = plt.Circle(
@@ -170,13 +197,13 @@ def plot_circle_diagram(levels: list[tuple], base: int):
         new_xy = []
         new_start = []
         new_radius = []
-        for i, (lcoords, durations, starts, rgbs, cmyks) in enumerate(partition):
+        for i, part in enumerate(partition):
             j = int(np.modf(i)[1])
             base_xy = xy[j]
             base_start = s[j]
             base_radius = r[j]
 
-            for duration, start, rgb in zip(durations, starts, rgbs):
+            for duration, start, rgb in zip(part.durations, part.starts, part.rgb(rgb_key)):
                 radius = duration / (2.0 * np.pi)
                 angle = 2.0 * np.pi * (start - base_start)
                 x = base_xy[0] + (base_radius + radius) * np.cos(angle)

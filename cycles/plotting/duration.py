@@ -1,3 +1,11 @@
+"""
+Plots of subcycle durations: which subcycles share a duration, where they are
+in time, and how many there are.
+
+``idd`` arguments are the output of ``division.find_identical`` on the
+durations: a list of ``(duration, indices)``.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
@@ -5,6 +13,7 @@ from matplotlib import colormaps
 from matplotlib.ticker import MaxNLocator
 
 from cycles.functions.conversion import lcoords_to_tcoord
+from cycles.functions.division import Level, DEFAULT_COLOR_KEY
 from cycles.plotting.helpers import format_plot
 from cycles.functions.duration import count_digits, same_digit_counts
 
@@ -18,6 +27,11 @@ def plot_bars(
     save_fig: bool=False,
     fig_data: tuple[str, str, str, int, bool]|None=None
 ):
+    """
+    Bar chart of ``values`` in order, with one color per bar.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     indices = [n+1 for n in range(len(values))]
 
     fig, ax = plt.subplots()
@@ -54,6 +68,12 @@ def plot_stacked_bars(
     save_fig: bool=False,
     fig_data: tuple[str, str, str, int, bool]|None=None
 ):
+    """
+    One stacked column per entry of ``xxx``, built from the matching array of
+    ``values``; each block is colored by its value and labelled with it.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     fig, ax = plt.subplots()
 
     fig.suptitle(title)
@@ -99,6 +119,13 @@ def plot_stacked_counts(
     save_fig: bool=False,
     fig_data: tuple[str, str, str, int, bool]|None=None
 ):
+    """
+    For each distinct duration, a column of cells, one per subcycle with that
+    duration, labelled with its address. Cells whose composition differs from
+    the first one of the column are hatched.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     fig, ax = plt.subplots()
 
     fig.suptitle(title)
@@ -144,13 +171,20 @@ def plot_stacked_counts(
 
 def plot_stacked_spaced_bars(
     idd: list[tuple],
-    level: tuple,
+    level: Level,
     title: str = '',
     xlabel: str = '',
     ylabel: str = '',
     save_fig: bool=False,
-    fig_data: tuple[str, str, str, int, bool]|None=None
+    fig_data: tuple[str, str, str, int, bool]|None=None,
+    rgb_key: str=DEFAULT_COLOR_KEY
 ):
+    """
+    Top: one row per distinct duration, with bars where the subcycles of that
+    duration lie in time. Bottom: the timeline of the whole level.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     fig, axs = plt.subplots(
         nrows=2,
         ncols=1,
@@ -160,7 +194,8 @@ def plot_stacked_spaced_bars(
         gridspec_kw=dict(hspace=0, wspace=0)
     )
 
-    _, durations, starts, rgbs = level
+    durations, starts = level.durations, level.starts
+    rgbs = level.rgb(rgb_key)
     for i, (dur, idx) in enumerate(idd):
         axs[0].barh(
             y=i+1,
@@ -210,6 +245,16 @@ def plot_durations_trigraph(
     save_fig: bool=False,
     fig_data: tuple[str, str, str, int, bool]|None=None
 ):
+    """
+    Four-panel summary of the durations of one level.
+
+    Top left: one row per distinct duration with its subcycles at their place in
+    time. Bottom left: the timeline. Top right: count of subcycles per duration,
+    each cell labelled with the composition of its address. Bottom right: number
+    of distinct durations.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     fig, axs = plt.subplots(
         nrows=2,
         ncols=2,
@@ -336,6 +381,10 @@ def plot_equality_test(
     fig_data: tuple[str, str, str, int]|None=None
 ):
 
+    """
+    Color map of a pairwise quantity ``z`` between the subcycles, drawn over the
+    time intervals of the subcycles on both axes (value 0 shown in pink).
+    """
     fig, ax = plt.subplots()
 
     n = np.insert(starts + durations, 0, 0)
@@ -358,17 +407,26 @@ def plot_equality_test(
 
 
 def plot_duration_bars(
-    levels: list[tuple],
+    levels: list[Level],
     l1: int,
     l2: int,
     aspect: tuple[int, int]=(408, 577),
     save_fig: bool=False,
-    fig_data: tuple[str, str, str, int, bool]|None=None
+    fig_data: tuple[str, str, str, int, bool]|None=None,
+    rgb_key: str=DEFAULT_COLOR_KEY
 ):
+    """
+    Subcycles of depths ``l1`` to ``l2`` as rectangles: placed at their start,
+    with width and height equal to their duration. ``aspect`` is the axes aspect
+    ratio ``(width, height)``; ``(0, 0)`` leaves it automatic.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     fig, ax = plt.subplots()
 
-    for level in levels[l1-1:l2+1]:
-        _, durations, starts, rgb, _ = level
+    for level in levels[l1-1:l2]:
+        durations, starts = level.durations, level.starts
+        rgb = level.rgb(rgb_key)
         ax.barh(
             y=0,
             width=durations,
@@ -402,6 +460,11 @@ def plot_multilevel_duration_equivalences(
     ordered_keys: np.ndarray,
     color_key: str,
 ):
+    """
+    On ``ax``: one row per duration (in ``ordered_keys`` order), with the
+    subcycles of that duration from all depths at their place in time.
+    ``subcycles`` comes from ``division.compute_levels_by_duration``.
+    """
     for i, key in enumerate(ordered_keys):
         for sc in subcycles[key]:
             ax.barh(
@@ -429,6 +492,7 @@ def plot_multilevel_timeline(
     subcycles: dict,
     color_key: str
 ):
+    """On ``ax``: timelines of all depths in ``subcycles``, one row per depth."""
     for scg in subcycles.values():
         for sc in scg:
             ax.barh(
@@ -460,6 +524,10 @@ def plot_multilevel_duration_count(
     ordered_keys: np.ndarray,
     color_key: str,
 ):
+    """
+    On ``ax``: for each duration, a row of cells, one per subcycle with that
+    duration, labelled with its composition.
+    """
     for i, key in enumerate(ordered_keys):
         for j, sc in enumerate(subcycles[key]):
             bar = ax.barh(
@@ -500,6 +568,14 @@ def plot_multilevel_trigraph(
     save_fig: bool = False,
     fig_data: tuple[str, str, str, int, bool] | None = None
 ):
+    """
+    Three-panel summary of subcycles of several depths grouped by duration (from
+    ``division.compute_levels_by_duration``): durations at their place in time,
+    timelines per depth, and counts per duration. Durations are ordered from the
+    longest to the shortest.
+
+    save_fig, fig_data : see ``cycles.plotting.helpers.format_plot``.
+    """
     fig, axs = plt.subplots(
         nrows=2,
         ncols=2,

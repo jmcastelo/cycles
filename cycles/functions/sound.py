@@ -1,10 +1,12 @@
 import numpy as np
 import pywt
+from pathlib import Path
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 from cycles.functions.conversion import lcoords_to_fractional, tcoord_to_lcoords
-from cycles.functions.measure import dharma_measure
+from cycles.functions.measure import dharma_from_cmyk
+from cycles.functions.division import Level, DEFAULT_COLOR_KEY
 
 # Sound cycles
 
@@ -24,7 +26,7 @@ def cmyk_to_tone(cmyk: np.ndarray, lcoords: np.ndarray, f0: float=440.0, duratio
 def cmyk_to_fractal_tone(cmyk: np.ndarray, lcoords: np.ndarray, f0: float=110.0, duration: float=2.0, srate: int=44100) -> np.ndarray:
     t = np.linspace(0, duration, int(srate * duration), endpoint=False)
     s = np.zeros_like(t)
-    f = f0 * 2**(4 * dharma_measure(cmyk) - 1)
+    f = f0 * 2**(4 * dharma_from_cmyk(cmyk) - 1)
     nb = lcoords_to_fractional(lcoords, 4)
     for n in range(1, 33):
         digits = np.base_repr(n, base=4)
@@ -35,14 +37,14 @@ def cmyk_to_fractal_tone(cmyk: np.ndarray, lcoords: np.ndarray, f0: float=110.0,
     s /= np.max(np.abs(s) + 1e-9)
     return s
 
-def multilevel_fractal_wavelet_synthesis(levels: list[tuple], total_duration: float, f0: float=110.0, srate: int=44100) -> np.ndarray:
+def multilevel_fractal_wavelet_synthesis(levels: list[Level], total_duration: float, f0: float=110.0, srate: int=44100, cmyk_key: str=DEFAULT_COLOR_KEY) -> np.ndarray:
     beta = 0.5
     t = np.linspace(0, total_duration, int(srate * total_duration), endpoint=False)
     s = np.zeros_like(t)
-    for depth, (lcoords, durations, starts, rgbs, cmyks) in enumerate(levels, start=1):
+    for depth, level in enumerate(levels, start=1):
         psi = np.zeros_like(t)
-        for lcoord, duration, start, cmyk in zip(lcoords, durations, starts, cmyks):
-            f = f0 * 2**(4 * dharma_measure(cmyk) - 1)
+        for duration, start, cmyk, dharma in zip(level.durations, level.starts, level.cmyk(cmyk_key), level.dharmas):
+            f = f0 * 2**(4 * dharma - 1)
             tmid = total_duration * (start + duration / 2)
             a2 = (total_duration * duration) ** 2
             for n in range(1, 17):
@@ -54,15 +56,14 @@ def multilevel_fractal_wavelet_synthesis(levels: list[tuple], total_duration: fl
     s /= np.max(np.abs(s) + 1e-9)
     return s
 
-def fractal_wavelet_synthesis_v01(level: tuple, total_duration: float, f0: float=110.0, srate: int=44100) -> np.ndarray:
+def fractal_wavelet_synthesis_v01(level: Level, total_duration: float, f0: float=110.0, srate: int=44100, cmyk_key: str=DEFAULT_COLOR_KEY) -> np.ndarray:
     t = np.linspace(0, total_duration, int(srate * total_duration), endpoint=False)
     s = np.zeros_like(t)
 
-    lcoords, durations, starts, rgbs, cmyks = level
-    depth = len(lcoords[0])
+    depth = len(level.lcoords[0])
 
-    for lcoord, duration, start, cmyk in zip(lcoords, durations, starts, cmyks):
-        f = f0 * 2**(4 * dharma_measure(cmyk) - 1)
+    for duration, start, cmyk, dharma in zip(level.durations, level.starts, level.cmyk(cmyk_key), level.dharmas):
+        f = f0 * 2**(4 * dharma - 1)
         tmid = total_duration * (start + duration / 2)
         a = total_duration * duration
         gauss = np.exp(-0.5 * ((t - tmid) / a) ** 2)
@@ -77,11 +78,12 @@ def fractal_wavelet_synthesis_v01(level: tuple, total_duration: float, f0: float
         s /= peak
     return s
 
-def fractal_wavelet_synthesis_v02(level: tuple, T: float, f0: float=55.0, A: float=1.0, beta: float=0.4, srate: int=44100) -> tuple:
+def fractal_wavelet_synthesis_v02(level: Level, T: float, f0: float=55.0, A: float=1.0, beta: float=0.4, srate: int=44100) -> tuple:
     t = np.linspace(0, T, int(srate * T), endpoint=False)
     s = np.zeros_like(t)
 
-    lcoords, durations, starts, _, cmyks = level
+    lcoords, durations, starts = level.lcoords, level.durations, level.starts
+    cmyks = level.cmyk()
     depth = len(lcoords[0])
 
     for i, (lcoord, duration, start, cmyk) in enumerate(zip(lcoords, durations, starts, cmyks)):
@@ -130,7 +132,7 @@ def compute_scalogram(signal, sr, wavelet='cmor1.5-1.0', num_scales=256, f_min=2
 
     return scalogram, cwt_freqs
 
-def plot_scalogram(scalogram, freqs, sr, signal_duration, title='Scalogram of the Fractal of Ages'):
+def plot_scalogram(scalogram, freqs, sr, signal_duration, title='Scalogram of the Fractal of Ages', save_path=None):
     """
     Plot the scalogram with time on the x-axis and
     frequency on the y-axis (log scale).
@@ -174,6 +176,8 @@ def plot_scalogram(scalogram, freqs, sr, signal_duration, title='Scalogram of th
     # ax.legend(loc='upper right', fontsize=8, framealpha=0.4)
     ax.legend().set_visible(False)
     plt.tight_layout()
-    plt.savefig('./PNGs/scalogram.png', dpi=600, bbox_inches='tight')
+    if save_path is not None:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(save_path, dpi=600, bbox_inches='tight')
     plt.show()
     return fig, ax
