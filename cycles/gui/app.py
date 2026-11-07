@@ -16,6 +16,7 @@ from cycles.gui.compositions import CompositionsPanel
 from cycles.gui.skycompare import SkyComparisonPanel
 from cycles.gui.landscape import LandscapePanel
 from cycles.gui.notes import NotesPanel
+from cycles.gui.layouts import AROUND, PanelPlacement, set_corners
 from cycles.gui.session import SessionManager
 from cycles.gui.permutations import PermutationsPanel
 from cycles.gui.datepanel import DatePanel
@@ -49,10 +50,13 @@ class MainWindow(QMainWindow):
         self.navigator = Navigator(self.state)
         layout.addWidget(self.breadcrumb)
         layout.addWidget(self.navigator, 1)
+        central.setMinimumSize(360, 240)      # panels around it never squeeze the navigator away
         self.setCentralWidget(central)
 
         self.setDockOptions(QMainWindow.DockOption.AllowNestedDocks | QMainWindow.DockOption.AllowTabbedDocks
-                            | QMainWindow.DockOption.AnimatedDocks)
+                            | QMainWindow.DockOption.AnimatedDocks
+                            | QMainWindow.DockOption.GroupedDragging)     # a group of tabs moves as a whole
+        self.corner_mode = 'columns'
         self.inspector = Inspector(self.state)
         self.inspector.setMinimumWidth(330)
         self.date_panel = DatePanel(self.state)
@@ -87,6 +91,8 @@ class MainWindow(QMainWindow):
             panel.saveRequested.connect(lambda key=key: self.save_graph(key))
         self.sky_panel.compareRequested.connect(lambda: self.show_panel('skycompare'))
 
+        set_corners(self, QSettings().value('panels/corners', 'columns'))
+        self.placement = PanelPlacement(self)
         self._build_toolbar()
         self._build_menus()
         self.navigator.hovered.connect(self._show_hovered)
@@ -121,8 +127,13 @@ class MainWindow(QMainWindow):
         """
         Arrange the open panels (all of them if none is open): ``'tabs'``,
         ``'side'`` (side by side), ``'stacked'``, ``'grid'`` (2 x 2), or
-        ``'below'`` (side by side under the navigator).
+        ``'below'`` (side by side under the navigator); or each kind of panel
+        on its side of the navigator (a key of ``layouts.AROUND``).
         """
+        if layout in AROUND:
+            from cycles.gui.layouts import arrange_around
+            arrange_around(self, layout)
+            return
         docks = [dock for dock in self.docks.values() if dock.isVisible()] or list(self.docks.values())
         # The closed panels are placed too, after the open ones and kept closed, so that they stay in the
         # layout: opening one later puts it where the arrangement continues (a removed dock widget that is
@@ -174,6 +185,8 @@ class MainWindow(QMainWindow):
             self.restoreState(state, LAYOUT_VERSION)
 
     def reset_layout(self) -> None:
+        set_corners(self, 'columns')
+        QSettings().setValue('panels/corners', 'columns')
         for dock in self.docks.values():
             dock.show()
         self.resize(1400, 760)
@@ -417,6 +430,22 @@ class MainWindow(QMainWindow):
             action.setToolTip('Arranges the open panels (all of them if none is open)')
             action.triggered.connect(lambda _=False, l=layout: self.arrange_panels(l))
             panels_menu.addAction(action)
+        around = panels_menu.addMenu('Arrange &around the navigator')
+        around.setToolTipsVisible(True)
+        for layout, (label, key, _) in AROUND.items():
+            action = QAction(label, self)
+            action.setShortcut(QKeySequence(key))
+            action.setToolTip('Each kind of panel on its side, in tabs (closed panels stay closed)')
+            action.triggered.connect(lambda _=False, l=layout: self.arrange_panels(l))
+            around.addAction(action)
+        panels_menu.addSeparator()
+        move = panels_menu.addMenu('&Move a panel')
+        move.aboutToShow.connect(lambda: self.placement.fill_move_menu(move))
+        corners = panels_menu.addMenu('&Corners')
+        corners.aboutToShow.connect(lambda: self.placement.fill_corners_menu(corners))
+        layouts = panels_menu.addMenu('&Layouts')
+        layouts.aboutToShow.connect(lambda: self.placement.fill_layouts_menu(layouts))
+        self.panels_submenus = {'around': around, 'move': move, 'corners': corners, 'layouts': layouts}
         panels_menu.addSeparator()
         reset = QAction('&Reset layout', self)
         reset.triggered.connect(self.reset_layout)
@@ -442,6 +471,13 @@ class MainWindow(QMainWindow):
         else:
             menu.addAction('No recent sessions').setEnabled(False)
         menu.setToolTipsVisible(True)
+
+    def createPopupMenu(self):
+        """Right-click on a panel's tab: where to put it; elsewhere, the panels to show or hide."""
+        name = self.placement.dock_under_tab()
+        if name is not None:
+            return self.placement.panel_menu(name)
+        return super().createPopupMenu()
 
     def show_dossier(self) -> None:
         from cycles.gui.dossier import DossierDialog

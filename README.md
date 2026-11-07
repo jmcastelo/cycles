@@ -237,6 +237,7 @@ cycles/
     compositions.py         Compositions panel: the tetrahedron of compositions
     landscape.py            Model landscape panel: the criteria mismatch over anchor × arc
     notes.py                Notes panel: the notes and bookmarks of the session
+    layouts.py              placing the panels around the navigator: moves, arrangements, corners, named layouts
     session.py              sessions: saving and opening everything shown, restoring the last one
     dossier.py              subcycle dossier: a PDF about the selection
     modeldialog.py          cycle model dialog: anchor, scale, division, precession, presets, best fit
@@ -265,6 +266,7 @@ tests/                    pytest tests (see Tests)
   test_cycle_model.py       the presets, their time maps and boundaries
   test_landscape.py         the mismatch over anchor × arc, its period, the Model landscape panel
   test_gui_panels.py        dock arrangements and reopening closed panels
+  test_gui_layouts.py       panels around the navigator: moves, arrangements, corners, named layouts
   test_gui_navigator.py     tag band, dragging the tags, Shift+click
   test_gui_highlight.py     highlights around the selection, Follow
   test_gui_export.py        saving graphs: sizes, formats, resolution
@@ -552,9 +554,20 @@ Model landscape, Notes) can be open at the same
 time, to compare a chart with a measure plot and the inspector. The
 *Panels* menu shows or hides each one (`Alt+1` to `Alt+9`, and `Alt+0`) and arranges the
 open ones as tabs, side by side, stacked, in a 2 × 2 grid, or side by side
-below the navigator; panels can also be dragged anywhere, docked or
-floating. The arrangement is kept with the session, and between runs (*Panels → Reset
-layout* restores the tabs).
+below the navigator. Panels can go on any side of the navigator: *Panels →
+Arrange around the navigator* puts each kind of panel on its side, in tabs
+(information — Subcycle, Date, Notes — on the left; the sky and the graphs on
+the right, or the sky on the right and the graphs below, or the sky on the
+left too and the graphs below), and *Panels → Move a panel*, or a right
+click on a panel's title bar or tab, puts one panel left of, right of, above
+or below the navigator (beside the panels already there), floating, or in a
+tab with another panel. Panels can also be dragged anywhere, a group of tabs
+as a whole by its title bar; the navigator always keeps some room.
+*Panels → Corners* chooses whether the side columns take the full height of
+the window or the top and bottom rows its full width. *Panels → Layouts*
+keeps named arrangements (*Save layout as…*) to switch between, whatever the
+session. The arrangement is kept with the session, and between runs
+(*Panels → Reset layout* restores the tabs).
 
 *File → Studies…* (`Ctrl+T`) opens the study launcher: every study of the
 sandbox scripts, with each script's defaults checked. It runs the checked
