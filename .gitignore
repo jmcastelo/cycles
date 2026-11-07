@@ -217,7 +217,8 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-plots
-docs
-data
-sounds
+sandbox/plots/
+sandbox/docs/
+sandbox/data/
+sandbox/sounds/
+sandbox/sessions/
