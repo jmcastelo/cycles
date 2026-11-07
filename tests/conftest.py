@@ -36,11 +36,17 @@ def spin(qapp):
 
 @pytest.fixture
 def window(qapp, spin, monkeypatch):
-    """A main window with default settings; questions (e.g. replace a file?) are answered yes."""
+    """
+    A main window with default settings; questions (e.g. replace a file?) are
+    answered yes. The model landscape does not fill in by itself (offscreen,
+    the panels of hidden tabs count as visible): its tests compute it.
+    """
     from PySide6.QtCore import QSettings
     from PySide6.QtWidgets import QMessageBox
+    import cycles.gui.landscape as landscape
     QSettings().clear()
     monkeypatch.setattr(QMessageBox, 'question', lambda *args, **kwargs: QMessageBox.StandardButton.Yes)
+    monkeypatch.setattr(landscape, 'FIRST_BATCH_DELAY', 24 * 3600 * 1000)
     from cycles.gui.app import MainWindow
     w = MainWindow()
     w.resize(1400, 850)

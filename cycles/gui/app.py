@@ -14,6 +14,7 @@ from cycles.gui.colordialog import ColorDialog
 from cycles.gui.colorspace import ColorSpacePanel
 from cycles.gui.compositions import CompositionsPanel
 from cycles.gui.skycompare import SkyComparisonPanel
+from cycles.gui.landscape import LandscapePanel
 from cycles.gui.permutations import PermutationsPanel
 from cycles.gui.datepanel import DatePanel
 from cycles.gui.export import LOGICAL_DPI, ExportDialog, GraphSource, save_figure, save_widget
@@ -27,7 +28,7 @@ from cycles.gui.state import HIGHLIGHTS, LABEL_MODES, MAX_DEPTH, NAME_SETS, Cycl
 
 
 # Version of the saved panel layout (increase when the panels change)
-LAYOUT_VERSION = 5
+LAYOUT_VERSION = 6
 
 
 class MainWindow(QMainWindow):
@@ -59,6 +60,7 @@ class MainWindow(QMainWindow):
         self.permutations_panel = PermutationsPanel(self.state)
         self.compositions_panel = CompositionsPanel(self.state)
         self.skycompare_panel = SkyComparisonPanel(self.sky_panel, self.state)
+        self.landscape_panel = LandscapePanel(self.state)
         self.docks = {
             'inspector': self._make_dock('Subcycle', 'inspector', self.inspector),
             'date': self._make_dock('Date', 'date', self.date_panel),
@@ -68,6 +70,7 @@ class MainWindow(QMainWindow):
             'permutations': self._make_dock('Permutations', 'permutations', self.permutations_panel),
             'compositions': self._make_dock('Compositions', 'compositions', self.compositions_panel),
             'skycompare': self._make_dock('Sky comparison', 'skycompare', self.skycompare_panel),
+            'landscape': self._make_dock('Model landscape', 'landscape', self.landscape_panel),
         }
         self.launcher: StudyLauncher | None = None
         self.model_dialog: CycleModelDialog | None = None
@@ -75,7 +78,8 @@ class MainWindow(QMainWindow):
         self.export_dialog: ExportDialog | None = None
         for key, panel in (('sky', self.sky_panel), ('measures', self.measures_panel),
                            ('colorspace', self.colorspace_panel), ('permutations', self.permutations_panel),
-                           ('compositions', self.compositions_panel), ('skycompare', self.skycompare_panel)):
+                           ('compositions', self.compositions_panel), ('skycompare', self.skycompare_panel),
+                           ('landscape', self.landscape_panel)):
             panel.saveRequested.connect(lambda key=key: self.save_graph(key))
         self.sky_panel.compareRequested.connect(lambda: self.show_panel('skycompare'))
 
@@ -192,6 +196,12 @@ class MainWindow(QMainWindow):
         model_button.setToolTip('Edit the cycle model: anchor, length, division, precession; save presets')
         model_button.clicked.connect(self.show_model_dialog)
         bar.addWidget(model_button)
+        landscape_button = QToolButton()
+        landscape_button.setText('Landscape')
+        landscape_button.setToolTip('Open the Model landscape panel: how well the two division criteria agree '
+                                    'for every anchor and arc,\nwith the model as a point to move')
+        landscape_button.clicked.connect(lambda: self.show_panel('landscape'))
+        bar.addWidget(landscape_button)
         self._fill_model_box()
         state.modelChanged.connect(self._fill_model_box)
         state.presetsChanged.connect(self._fill_model_box)
@@ -432,6 +442,8 @@ class MainWindow(QMainWindow):
                           lambda: f"Compositions at depth {self.compositions_panel.plot_depth()}"),
             figure_source('skycompare', 'Sky comparison', self.skycompare_panel, self.skycompare_panel.title,
                           self.skycompare_panel.fit_charts),
+            figure_source('landscape', 'Model landscape', self.landscape_panel, self.landscape_panel.title,
+                          self.landscape_panel.finish),
         ]
 
     def save_graph(self, key: str | None = None) -> None:
@@ -440,7 +452,8 @@ class MainWindow(QMainWindow):
             focus = QApplication.focusWidget()
             key = next((name for name, dock in self.docks.items()
                         if focus is not None and dock.isAncestorOf(focus) and name in
-                        ('sky', 'measures', 'colorspace', 'permutations', 'compositions', 'skycompare')),
+                        ('sky', 'measures', 'colorspace', 'permutations', 'compositions', 'skycompare',
+                                                       'landscape')),
                        'navigator')
         if self.export_dialog is None:
             self.export_dialog = ExportDialog(self.graph_sources(), key, self)

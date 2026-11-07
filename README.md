@@ -125,7 +125,12 @@ Built-in presets:
 (`mismatch_by_depth`: the largest and RMS deviation of the time shares at each
 depth) and searches for the anchor, and optionally the arc, that makes them
 agree best (`fit_anchor`). With 2.5 turns, the agreement rises and falls about
-every 20,000 years as the cycle slides along the precession rate; the
+every 20,000 years as the cycle slides along the precession rate. That period
+comes from the precession model, not from the division: the rate varies with
+the obliquity, about every 41,000 years, each yuga's share deviates one way
+while the rate rises and the other way while it falls (Treta's deviation
+changes sign about every 20,000 years), and the largest deviation, which
+ignores the sign, peaks twice per period, for any arc; the
 traditional anchor is near a worst placement (largest deviation 0.0085, against
 about 0.002 at the best ones), because Treta then covers the peak of the rate
 and Dvapara its trough. A free arc tends to the longest allowed, since a longer
@@ -188,27 +193,83 @@ For example, `pip install -e .` installs the core only and
 
 ```
 cycles/
-  functions/      computation
-    division.py         the fractal division, Level, compute_level
-    conversion.py       address <-> index <-> base-4 fraction
-    composition.py      digit counts and classes of equal duration
-    duration.py         duration relations between subcycles
-    color.py            colorings of subcycles
-    measure.py          dharma and purity
-    permutation.py      permutations of address digits
-    sound.py            sound synthesis and scalograms
-    analysis.py         autocorrelation
-    timescale.py        normalized time <-> physical time (TimeMap)
-    cycle_model.py      the yuga cycle in history: anchor, scale, division, presets
-    cycle_analysis.py   agreement of the time and angle criteria; best-fit anchor and arc
-    astro_dates.py      calendar dates <-> Julian Day <-> decimal year, UT <-> TDB
-    nbody_ephemeris.py  long-term planetary ephemeris by N-body integration
-    view.py             3D camera angles for matplotlib
-  plotting/       figures (one module per topic: color, measure, duration, sector,
-                  partition, permutation, generic, equinoctial_precession)
-  gui/            graphical explorer (PySide6)
-sandbox/          study scripts, one per topic
-tests/            pytest tests of the computations and of the graphical explorer
+  functions/              computation
+    division.py             the fractal division, Level, compute_level
+    conversion.py           address <-> index <-> base-4 fraction
+    composition.py          digit counts and classes of equal duration
+    duration.py             duration relations between subcycles
+    color.py                colorings of subcycles
+    measure.py              dharma and purity
+    permutation.py          permutations of address digits
+    sound.py                sound synthesis and scalograms
+    analysis.py             autocorrelation
+    timescale.py            normalized time <-> physical time (TimeMap)
+    cycle_model.py          the yuga cycle in history: anchor, scale, division, presets
+    cycle_analysis.py       agreement of the time and angle criteria; mismatch grid, best-fit anchor and arc
+    astro_dates.py          calendar dates <-> Julian Day <-> decimal year, UT <-> TDB
+    nbody_ephemeris.py      long-term planetary ephemeris by N-body integration (one moment or many)
+    view.py                 3D camera angles for matplotlib
+  plotting/               figures
+    helpers.py              shared figure formatting
+    generic.py              general-purpose plots of numeric sequences
+    sector.py               ring (pie) diagrams of subcycles
+    partition.py            ring diagrams of the partitions of a time span
+    color.py                colors of subcycles
+    measure.py              dharma and purity
+    duration.py             which subcycles share a duration, where and how many
+    permutation.py          permutations of the subcycles of a level
+    cycle_model.py          a cycle model against the precession: rate, deviations by depth, fit scans
+    equinoctial_precession.py  ayanamsa and long-term precession, ecliptic coordinates of date,
+                            planet positions and zodiac charts
+  gui/                    graphical explorer (PySide6); run with cycles-gui or python -m cycles.gui
+    __main__.py             entry point
+    app.py                  main window: toolbar, menus, dock panels, saving graphs
+    state.py                shared state of the views and the data behind them
+    navigator.py            overview strip and rows of subdivisions, markers and tags, criteria overlay
+    inspector.py            Subcycle panel: everything about the selection, measures by level
+    datepanel.py            Date panel: mark a date and list the subcycles that contain it
+    sky.py                  Sky panel: the zodiac with the planets at a moment
+    skycompare.py           Sky comparison panel: the skies of a set of subcycles against the selection's
+    measures.py             Measures panel: dharma and purity in 2D or 3D
+    colorspace.py           Color space panel: the colors of a level in RGB or CMY
+    permutations.py         Permutations panel: σ acting on the digit positions
+    groupexplorer.py        group explorer: every element of S_m in a sortable table
+    compositions.py         Compositions panel: the tetrahedron of compositions
+    landscape.py            Model landscape panel: the criteria mismatch over anchor × arc
+    modeldialog.py          cycle model dialog: anchor, scale, division, precession, presets, best fit
+    colordialog.py          color parameters dialog
+    export.py               save dialog: paper sizes, resolution, formats
+    studies.py              launcher of the sandbox studies
+sandbox/                  study scripts, one per topic
+  common.py                 paths, default parameters and helpers shared by the studies
+  runner.py                 command-line runner (see Running the studies)
+  study_of_division.py      the division itself: consistency checks and ring diagrams
+  study_of_fill_partitions.py  the partition of a time span into subcycles
+  study_of_durations.py     which subcycles share a duration, where and how many
+  study_of_compositions.py  compositions and the subcycles that share a duration
+  study_of_colors.py        colorings of subcycles
+  study_of_measures.py      dharma and purity
+  study_of_permutations.py  permutations of the digit positions
+  study_of_precession.py    the yugas against the precession, with the sky at their boundaries
+  study_of_sound.py         sounds synthesised from subcycles
+  data/, plots/, docs/      ephemeris tables, saved figures, reference papers (not in the repository)
+tests/                    pytest tests (see Tests)
+  conftest.py               shared fixtures: offscreen main window, temporary settings, ephemeris
+  test_division.py          durations, starts and address conversions
+  test_durations_compositions.py  shared durations: compositions and the (1, 0, -2, 1) rule
+  test_permutation.py       permutations of the digit positions
+  test_color.py             color parameter ranges that keep each level's colors unique
+  test_cycle_model.py       the presets, their time maps and boundaries
+  test_landscape.py         the mismatch over anchor × arc, its period, the Model landscape panel
+  test_gui_panels.py        dock arrangements and reopening closed panels
+  test_gui_navigator.py     tag band, dragging the tags, Shift+click
+  test_gui_highlight.py     highlights around the selection, Follow
+  test_gui_export.py        saving graphs: sizes, formats, resolution
+  test_gui_permutations.py  Permutations panel and group explorer
+  test_gui_compositions.py  Compositions panel and measures by level
+  test_gui_sky_colors.py    sky chart and color parameters dialog
+  test_gui_criteria_skycompare.py  criteria overlay and Sky comparison panel
+pyproject.toml            package metadata, dependencies, the cycles-gui command, pytest settings
 ```
 
 All functions are documented with docstrings, e.g. `help(compute_level)`.
@@ -454,9 +515,26 @@ outer-planets option, computes the positions of all the subcycles at once
 (a whole level of 65,536 takes under a second; beyond 100,000 they are
 sampled evenly), and draws only while it is in view.
 
-The eight panels (Subcycle, Date, Sky, Measures, Color space, Permutations, Compositions, Sky comparison) can be open at the same
+The *Model landscape* tab (also the *Landscape* button of the toolbar) maps
+how far the two criteria disagree for every anchor (the year of the model's
+anchor point) and arc in turns: the largest or the RMS deviation of the time
+shares from 4:3:2:1 at depth 1 to 3, on a logarithmic color scale (yellow:
+closest), grey where the cycle leaves the range of the long-term precession
+model. It fills in an arc at a time from the model's own, so the window
+stays usable. The current model is the blue circle: drag it, or double-click
+anywhere, to place the cycle there, and every panel follows (Escape cancels
+a drag; the model keeps its name, shown as modified in the toolbar). The
+presets with the same anchor point are triangles (named in the line above
+the map when the pointer is over them) and the best point of the range a
+star. Under the map, the precession rate along the same years, with the span
+of the current cycle shaded, shows where the landscape's period comes from
+(see *The cycle model*). With a constant rate there is no landscape: both
+criteria always coincide.
+
+The nine panels (Subcycle, Date, Sky, Measures, Color space, Permutations, Compositions, Sky comparison,
+Model landscape) can be open at the same
 time, to compare a chart with a measure plot and the inspector. The
-*Panels* menu shows or hides each one (`Alt+1` to `Alt+8`) and arranges the
+*Panels* menu shows or hides each one (`Alt+1` to `Alt+9`) and arranges the
 open ones as tabs, side by side, stacked, in a 2 × 2 grid, or side by side
 below the navigator; panels can also be dragged anywhere, docked or
 floating. The arrangement is remembered between sessions (*Panels → Reset
