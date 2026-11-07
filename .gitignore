@@ -222,3 +222,11 @@ sandbox/docs/
 sandbox/data/
 sandbox/sounds/
 sandbox/sessions/
+
+# Spanish docs: the LaTeX document and its PDF are generated from the Markdown (docs/es/tex/md_a_tex.py)
+docs/es/tex/cycles_documentacion.tex
+docs/es/tex/cycles_documentacion.pdf
+docs/es/tex/*.aux
+docs/es/tex/*.log
+docs/es/tex/*.toc
+docs/es/tex/*.out

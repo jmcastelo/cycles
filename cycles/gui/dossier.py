@@ -145,8 +145,8 @@ def summary_html(window, address: tuple) -> str:
     session = getattr(window, 'session', None)
     from cycles.gui.session import code_version
     code = code_version()
-    commit = (code['commit'][:12] + (' with uncommitted changes' if code['modified'] else '')
-              if code['commit'] else 'unknown')
+    commit = f"version {code['version']}" + (f", commit {code['commit'][:12]}" if code['commit'] else '') + \
+        (' with uncommitted changes' if code['modified'] else '')
     parts.append(f"<p class='note'>Session: {esc(session.name() if session else '—')}"
                  f"{' (unsaved changes)' if session and session.modified else ''}. Colors: {esc(state.color_key)}. "
                  f"Code: {esc(commit)}. Made {datetime.now():%d %b %Y %H:%M}.</p>")
@@ -323,8 +323,9 @@ def write_dossier(window, address: tuple, options: DossierOptions) -> int:
     state = window.state
     names = ' › '.join(state.names[d] for d in address)
     session = getattr(window, 'session', None)
+    from cycles import __version__
     footer = f"Dossier of {initials(state, address)}" + (f" · {session.name()}" if session else '') \
-        + f" · {datetime.now():%d %b %Y}"
+        + f" · {datetime.now():%d %b %Y} · Cycles {__version__}"
     out = DossierWriter(options, names, footer)
     sections = set(options.sections)
     try:

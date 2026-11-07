@@ -456,6 +456,9 @@ class MainWindow(QMainWindow):
         about = QAction('&Navigation', self)
         about.triggered.connect(self.show_help)
         help_menu.addAction(about)
+        version = QAction('&About', self)
+        version.triggered.connect(self.show_about)
+        help_menu.addAction(version)
 
     def _fill_recent_menu(self) -> None:
         menu = self.recent_menu
@@ -585,6 +588,20 @@ class MainWindow(QMainWindow):
             '  Backspace / Esc  zoom out\n\n'
             f'Subcycles are computed down to depth {MAX_DEPTH}; the deepest levels take a few '
             'seconds the first time.'))
+
+
+    def show_about(self) -> None:
+        from cycles import __version__
+        from cycles.gui.session import code_version
+        code = code_version()
+        commit = (f"<br>Code: commit {code['commit'][:12]}" + (' (with uncommitted changes)' if code['modified'] else '')
+                  if code['commit'] else '')
+        QMessageBox.about(self, 'About the Cycles explorer', (
+            f"<b>Cycles explorer {__version__}</b><br>"
+            "Mathematical analysis of cycles divided fractally into four ages (4:3:2:1), placed in history "
+            f"through the precession of the equinoxes.{commit}<br><br>"
+            "Versions follow MAJOR.MINOR.PATCH; what each one added is in CHANGELOG.md, and the documentation "
+            "(docs/es) states the version it describes."))
 
 
 def main(argv: list[str] | None = None) -> int:

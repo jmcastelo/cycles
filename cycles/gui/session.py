@@ -59,7 +59,8 @@ def autosave_path() -> Path:
 
 
 def code_version() -> dict:
-    """The git commit of the code, and whether it had uncommitted changes (None outside a repository)."""
+    """The version of the program, its git commit and whether it had uncommitted changes (None outside a repository)."""
+    from cycles import __version__
     root = Path(__file__).resolve().parents[2]
     try:
         commit = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=root, capture_output=True, text=True,
@@ -67,8 +68,8 @@ def code_version() -> dict:
         dirty = subprocess.run(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=root,
                                capture_output=True, text=True, timeout=3).stdout.strip()
     except (OSError, subprocess.SubprocessError):
-        return {'commit': None, 'modified': None}
-    return {'commit': commit or None, 'modified': bool(dirty) if commit else None}
+        return {'version': __version__, 'commit': None, 'modified': None}
+    return {'version': __version__, 'commit': commit or None, 'modified': bool(dirty) if commit else None}
 
 
 def now() -> str:
@@ -341,7 +342,8 @@ class SessionManager(QObject):
         return name[:-len(SUFFIX)] if name.endswith(SUFFIX) else self.path.stem
 
     def update_title(self) -> None:
-        self.window.setWindowTitle(f"{self.name()}[*] — Cycles explorer")
+        from cycles import __version__
+        self.window.setWindowTitle(f"{self.name()}[*] — Cycles explorer {__version__}")
         self.window.setWindowModified(self.modified)
 
     # -- applying

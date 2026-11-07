@@ -4,7 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cycles"
-version = "0.1.0"
+# the version is cycles.__version__ (cycles/__init__.py), see [tool.setuptools.dynamic]
+dynamic = ["version"]
 description = "Mathematical analysis of cycles"
 readme = "README.md"
 license = "GPL-3.0-only"
@@ -44,6 +45,9 @@ cycles-gui = "cycles.gui.app:main"
 
 [tool.setuptools.packages.find]
 include = ["cycles*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "cycles.__version__" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

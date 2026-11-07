@@ -197,6 +197,7 @@ For example, `pip install -e .` installs the core only and
 
 ```
 cycles/
+  __init__.py             the package; __version__, the single source of the version
   functions/              computation
     division.py             the fractal division, Level, compute_level
     conversion.py           address <-> index <-> base-4 fraction
@@ -261,6 +262,10 @@ sandbox/                  study scripts, one per topic
   study_of_precession.py    the yugas against the precession, with the sky at their boundaries
   study_of_sound.py         sounds synthesised from subcycles
   data/, plots/, docs/      ephemeris tables, saved figures, reference papers (not in the repository)
+docs/es/                  documentation in Spanish: the project, the astronomy, the code and the explorer
+  markdown/                 the chapters (00 index and glossary to 14 results and open questions) and figuras/
+  tex/md_a_tex.py           builds one LaTeX document (LuaLaTeX) from the chapters, if their version matches
+  generar_figuras/          scripts that regenerate the figures and the screenshots of the explorer
 tests/                    pytest tests (see Tests)
   conftest.py               shared fixtures: offscreen main window, temporary settings, ephemeris
   test_division.py          durations, starts and address conversions
@@ -281,10 +286,26 @@ tests/                    pytest tests (see Tests)
   test_gui_session.py       sessions, restoring the last one, bookmarks, the launcher's session
   test_gui_dossier.py       the dossier: summary, paper, sections, dialog
   test_session_studies.py   studies run with a session (--session)
+  test_version.py           the version: pyproject, changelog, docs and explorer in step
 pyproject.toml            package metadata, dependencies, the cycles-gui command, pytest settings
+CHANGELOG.md              what each version added (see Versions)
 ```
 
 All functions are documented with docstrings, e.g. `help(compute_level)`.
+
+## Versions
+
+The version follows MAJOR.MINOR.PATCH (while below 1.0, a new feature raises
+MINOR and a fix raises PATCH) and has a single source, `cycles.__version__` in
+`cycles/__init__.py`, which `pyproject.toml` reads. The explorer shows it in
+its title bar and in *Help → About*, and sessions and dossiers record it with
+the git commit. [CHANGELOG.md](CHANGELOG.md) describes each version. The
+Spanish documentation (`docs/es`) states the version it describes and must
+match: `tests/test_version.py` checks it, and the docs' LaTeX converter refuses
+to build otherwise. To release a version, describe
+it in the changelog, raise `__version__`, update the docs, and tag the commit
+`vX.Y.Z` (with an editable install, `pip install -e . --no-deps` refreshes the
+installed metadata).
 
 ## Tests
 
