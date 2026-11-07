@@ -271,6 +271,8 @@ class CycleState(QObject):
         self.spacing: str = 'time'      # 'time' (widths by duration) or 'index' (equal widths)
         self.names: tuple = YUGA_NAMES
         self.highlight: str = 'none'    # a key of HIGHLIGHTS
+        self.compare_criteria: bool = False   # the navigator shows where the other division criterion puts boundaries
+        self._criteria: dict = {}       # (model, depth) -> boundaries by criterion
         self.permutation: tuple | None = None   # (σ, first permuted position) of the Permutations panel
         self.borders: bool = False
         self.labels: str = 'none'       # 'names', 'dots' (4, 3, 2, 1 for the four ages), 'both' or 'none'
@@ -345,6 +347,39 @@ class CycleState(QObject):
         if mode not in HIGHLIGHTS:
             raise ValueError(f"unknown highlight {mode!r}")
         self._set('highlight', mode)
+
+    def set_compare_criteria(self, on: bool) -> None:
+        self._set('compare_criteria', bool(on))
+
+    def criteria_boundaries(self, depth: int) -> dict | None:
+        """
+        Where the two criteria for dividing the cycle put the starts of the
+        subcycles of ``depth`` (and the end), as years and as normalized time
+        of the current model (the navigator's coordinate): ``'angle'``, 4:3:2:1
+        of the precession arc, and ``'time'``, 4:3:2:1 of the years. One of them
+        is the model's own division (for the hybrid one, neither below the ages).
+        None without a cycle model.
+        """
+        model, time_map = self.model, self.time_map
+        if model is None or time_map is None:
+            return None
+        key = (model, depth)
+        if key not in self._criteria:
+            from cycles.functions.cycle_analysis import boundary_fractions
+            fractions = boundary_fractions(depth)
+            if (model, 'angle') not in self._criteria:
+                # the arc of this model's own span, divided 4:3:2:1
+                from cycles.plotting.equinoctial_precession import precession_time_map
+                solution = model.solve()
+                self._criteria[(model, 'angle')] = precession_time_map(solution['start'], solution['turns'],
+                                                                       **model._precession_options())
+            years = {
+                'angle': np.asarray(self._criteria[(model, 'angle')].to_physical(fractions), dtype=float),
+                'time': time_map.start + fractions * (time_map.end - time_map.start),
+            }
+            self._criteria[key] = {name: dict(years=y, normalized=np.asarray(time_map.to_normalized(y), dtype=float))
+                                   for name, y in years.items()}
+        return self._criteria[key]
 
     def set_permutation(self, sigma: tuple | None, first: int = 0) -> None:
         value = None if sigma is None else (tuple(sigma), int(first))

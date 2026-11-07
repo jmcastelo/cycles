@@ -288,7 +288,13 @@ duration, with the same composition (the orderings of its ages, a class
 inside those of equal duration), or its orbit under the powers of the σ of
 the *Permutations* tab (with its image under σ outlined in dashed purple);
 the others are dimmed in the navigator and the highlighted ones ringed in
-the plots. *Parameters…*, next
+the plots. *Criteria* compares the two criteria for dividing the cycle,
+4:3:2:1 of the precession arc and 4:3:2:1 of the years, over the span of
+the cycle model: where the one that is not the model's division puts the
+boundaries is drawn in each row (dashed, with the gap to the cell's own
+boundary shaded; in rows whose cells are at least a few pixels wide, so zoom
+in for the deeper levels), and the tooltip of a subcycle gives the date it
+would start by it and the difference in years. *Parameters…*, next
 to the coloring, sets the bases and scales of the colorings and measures
 (the color weight base, which also weights dharma; the purity weight base;
 the cmyk_scaled and cmyk_kscaled scales; the tetrahedron step and its four
@@ -337,7 +343,16 @@ moment* does the reverse. With *Follow* on, every plot highlights in orange
 its subcycle that contains the moment: each row of the navigator at its own
 depth, and the point of the measures and color space plots, when they show
 it; the selection (in blue) is left as it is. The tab also lists the
-subcycles that contain the moment. The tab needs the ephemeris tables (see below): it looks
+subcycles that contain the moment. *Class…* opens the *Sky class* tab:
+small charts at the starts (or middles, or ends) of the subcycles with the
+selection's composition, its duration or its ⟨σ⟩ orbit, or of the
+selection's parts (evenly spread over the class when it is larger than the
+number of charts; inside the zoom or everywhere), and, for each body, the
+mean of its sidereal longitudes over the whole class and their
+concentration R (1 if all equal, about √(π/4n) for n random ones, shown
+beside it; bold when more than three times that). Clicking a chart selects
+its subcycle and moves the sky moment there; it uses the Sky tab's ephemeris
+and its outer-planets option, and draws only while it is in view. The Sky tab needs the ephemeris tables (see below): it looks
 in `$CYCLES_EPHEMERIS`, then in the folder last chosen with *Ephemeris…*,
 then in `sandbox/data/tabla70k70k`.
 
@@ -402,9 +417,9 @@ point. The selection's composition is ringed in blue and its class drawn in
 black, the moment's composition in orange; clicking a composition selects
 its first subcycle and highlights all of them (*Same composition*).
 
-The seven panels (Subcycle, Date, Sky, Measures, Color space, Permutations, Compositions) can be open at the same
+The eight panels (Subcycle, Date, Sky, Measures, Color space, Permutations, Compositions, Sky class) can be open at the same
 time, to compare a chart with a measure plot and the inspector. The
-*Panels* menu shows or hides each one (`Alt+1` to `Alt+7`) and arranges the
+*Panels* menu shows or hides each one (`Alt+1` to `Alt+8`) and arranges the
 open ones as tabs, side by side, stacked, in a 2 × 2 grid, or side by side
 below the navigator; panels can also be dragged anywhere, docked or
 floating. The arrangement is remembered between sessions (*Panels → Reset

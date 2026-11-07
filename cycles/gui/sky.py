@@ -70,6 +70,8 @@ class SkyPanel(QWidget):
     """
 
     saveRequested = Signal()     # the Save… button
+    classRequested = Signal()    # the Class… button: show the Sky class panel
+    ephemerisChanged = Signal()
 
     def __init__(self, state: CycleState, parent=None):
         super().__init__(parent)
@@ -93,8 +95,14 @@ class SkyPanel(QWidget):
         save_button.setText('Save…')
         save_button.setToolTip('Save this graph to a file (page size, resolution, format…)')
         save_button.clicked.connect(self.saveRequested)
+        class_button = QToolButton()
+        class_button.setText('Class…')
+        class_button.setToolTip('Sky charts of the subcycles that share the selection\'s composition, duration or '
+                                '⟨σ⟩ orbit,\nand how concentrated each body is across them')
+        class_button.clicked.connect(self.classRequested)
         row.addWidget(self.source, 1)
         row.addWidget(open_button)
+        row.addWidget(class_button)
         row.addWidget(save_button)
         layout.addLayout(row)
 
@@ -231,6 +239,7 @@ class SkyPanel(QWidget):
             except (OSError, ValueError, KeyError) as error:
                 self.source.setText(f"Cannot read the ephemeris in {path}: {error}")
                 self._schedule()
+                self.ephemerisChanged.emit()
                 return
         if self.tables:
             self.source.setText(f"Ephemeris: {self.ephemeris_path.name}")
@@ -238,6 +247,7 @@ class SkyPanel(QWidget):
         else:
             self.source.setText('No ephemeris found. Build one (see the README) or choose its folder.')
         self._schedule()
+        self.ephemerisChanged.emit()
 
     def choose_ephemeris(self) -> None:
         start = str(self.ephemeris_path or DEFAULT_TABLE.parent)

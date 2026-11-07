@@ -90,7 +90,7 @@ from cycles.functions.timescale import TimeMap
 __all__ = ["lahiri_ayanamsa", "long_term_ayanamsa", "year_from_ayanamsa",
            "precession_time_map",
            "ecliptic_coordinates_of_date", "plot_equinoctial_precession",
-           "plot_zodiac_with_planets", "plot_zodiac_planets_grid",
+           "planet_positions", "plot_zodiac_with_planets", "plot_zodiac_planets_grid",
            "plot_ayanamsa_comparison"]
 
 # ----------------------------------------------------------------------------
@@ -1333,6 +1333,37 @@ def _stagger_levels(longitudes, radii, min_separation_deg: float):
     return chosen
 
 
+def planet_positions(
+    year: float,
+    ephemeris,
+    bodies: Sequence[str] = ("sun", "mercury", "venus", "mars", "jupiter", "saturn"),
+    model: str = "long_term",
+    j2000_ayanamsa_deg: float = LAHIRI_AYANAMSA_J2000_DEG,
+    rate_arcsec_per_year: float = PRECESSION_RATE_ARCSEC_PER_YEAR,
+) -> Dict[str, Dict[str, float]]:
+    """
+    Geocentric positions of ``bodies`` at ``year`` (TDB), as in
+    ``plot_zodiac_with_planets`` but without drawing: each name maps to a dict
+    with "sidereal" and "tropical" longitudes and the ecliptic "latitude"
+    (degrees).
+    """
+    bodies = list(bodies)
+    positions: Dict[str, Dict[str, float]] = {}
+    if not bodies:
+        return positions
+    jd = 2451545.0 + (float(year) - 2000.0) * 365.25
+    direction = _direction_function(ephemeris, jd)
+    vectors = np.array([np.asarray(direction(b, jd), dtype=float) for b in bodies])
+    years = np.full(len(bodies), float(year))
+    kwargs = dict(model=model, j2000_ayanamsa_deg=j2000_ayanamsa_deg, rate_arcsec_per_year=rate_arcsec_per_year)
+    sidereal, latitude = ecliptic_coordinates_of_date(vectors, years, sidereal=True, **kwargs)
+    tropical, _ = ecliptic_coordinates_of_date(vectors, years, **kwargs)
+    for i, b in enumerate(bodies):
+        positions[b] = {"sidereal": float(sidereal[i]), "tropical": float(tropical[i]),
+                        "latitude": float(latitude[i])}
+    return positions
+
+
 def plot_zodiac_with_planets(
     year: float,
     ephemeris,
@@ -1450,22 +1481,9 @@ def plot_zodiac_with_planets(
     unknown = [b for b in bodies if b not in _PLANETS]
     if unknown:
         raise ValueError(f"unknown bodies {unknown}; use {list(_PLANETS)}")
-    jd = 2451545.0 + (year - 2000.0) * 365.25
-    direction = _direction_function(ephemeris, jd) if bodies else None
-
     # --- positions -----------------------------------------------------------
-    positions: Dict[str, Dict[str, float]] = {}
-    if bodies:
-        vectors = np.array([np.asarray(direction(b, jd), dtype=float) for b in bodies])
-        years = np.full(len(bodies), year)
-        kwargs = dict(model=model, j2000_ayanamsa_deg=j2000_ayanamsa_deg,
-                      rate_arcsec_per_year=rate_arcsec_per_year)
-        sidereal, latitude = ecliptic_coordinates_of_date(vectors, years,
-                                                          sidereal=True, **kwargs)
-        tropical, _ = ecliptic_coordinates_of_date(vectors, years, **kwargs)
-        for i, b in enumerate(bodies):
-            positions[b] = {"sidereal": float(sidereal[i]), "tropical": float(tropical[i]),
-                            "latitude": float(latitude[i])}
+    positions = planet_positions(year, ephemeris, bodies, model=model, j2000_ayanamsa_deg=j2000_ayanamsa_deg,
+                                 rate_arcsec_per_year=rate_arcsec_per_year)
     for name, longitude in (extra_points or {}).items():
         positions[name] = {"sidereal": float(longitude) % 360.0}
 

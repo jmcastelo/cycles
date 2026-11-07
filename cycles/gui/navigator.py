@@ -12,6 +12,7 @@ Keys: Left/Right previous/next subcycle, Up parent, Down first part,
 Enter zoom into the selection, Backspace/Escape zoom out.
 """
 
+import numpy as np
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QSizePolicy, QToolButton, QToolTip, QWidget
@@ -26,6 +27,11 @@ AXIS_HEIGHT = 24     # bottom margin, for the time axis
 OVERVIEW_HEIGHT = 22  # strip of the whole cycle, at the top
 TAG_GAP = 3          # around the band of the marker tags, between the overview and the rows
 ROW_GAP = 2          # between rows
+# the two criteria for dividing the cycle, when the navigator compares them
+CRITERIA_COLORS = {'angle': '#8c564b', 'time': '#17becf'}
+CRITERIA_NAMES = {'angle': '4:3:2:1 of the precession arc', 'time': '4:3:2:1 of the years'}
+CRITERIA_MIN_CELL = 3.0    # mean cell width (px) of the rows where they are compared (finer: zoom in)
+CRITERIA_TICK_CELL = 8.0   # ... and where the other boundaries are also drawn as dashed lines
 MAX_DOT = 5.0        # diameter of the dots (px): proportional to the cell width, within these
 MIN_DOT = 1.5
 
@@ -172,6 +178,7 @@ class Navigator(QWidget):
                 continue
             self._draw_label(painter, metrics, rect, address[-1], text_color(color))
 
+        self._draw_criteria(painter, cells)
         self._draw_overview(painter, metrics)
 
         # Selection and its ancestors
@@ -209,7 +216,97 @@ class Navigator(QWidget):
                                  Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, f"d{depth}")
         self._draw_axis(painter, cells)
         self._draw_markers(painter, cells)
+        self._draw_criteria_key(painter)
         painter.end()
+
+    # -- the other division criterion
+
+    def _draw_criteria(self, painter: QPainter, cells) -> None:
+        """
+        Where the criteria that are not the model's own division put the
+        boundaries of each row: a dashed tick, and the gap to the cell's own
+        boundary shaded.
+        """
+        state = self.state
+        self._criteria_shown = []
+        if not state.compare_criteria or state.time_map is None:
+            return
+        rows: dict[int, list] = {}
+        for rect, _, depth, index in cells:
+            rows.setdefault(depth, []).append((rect, index))
+        shown = set()
+        for depth, row in rows.items():
+            criteria = state.criteria_boundaries(depth)
+            level = state.cache.level(depth)
+            indices = np.array([index for _, index in row])
+            lefts = np.array([rect.left() for rect, _ in row])
+            widths = np.array([rect.width() for rect, _ in row])
+            top, height = row[0][0].top(), row[0][0].height()
+            mean_width = widths.mean()
+            if mean_width < CRITERIA_MIN_CELL:
+                continue                        # the gaps span several cells: noise at this scale
+            starts, durations = level.starts[indices], level.durations[indices]
+            own_u = np.append(starts, starts[-1] + durations[-1])
+            own_x = np.append(lefts, lefts[-1] + widths[-1])
+            boundaries = np.arange(indices[0], indices[-1] + 2)
+            for name, data in criteria.items():
+                u = data['normalized'][boundaries]
+                if np.abs(u - own_u).max() < 1e-9:
+                    continue                    # the model's own division
+                k = np.clip(np.searchsorted(starts, u, side='right') - 1, 0, len(indices) - 1)
+                x = np.clip(lefts[k] + (u - starts[k]) / durations[k] * widths[k], own_x[0], own_x[-1])
+                color = QColor(CRITERIA_COLORS[name])
+                fill = QColor(color)
+                fill.setAlphaF(0.4)
+                pen = QPen(color, 1, Qt.PenStyle.DashLine)
+                ticks = mean_width >= CRITERIA_TICK_CELL
+                painter.setPen(pen)
+                for x0, x1 in zip(own_x, x):
+                    if abs(x1 - x0) >= 0.5:
+                        painter.fillRect(QRectF(min(x0, x1), top, abs(x1 - x0), height), fill)
+                        if ticks:
+                            painter.drawLine(QPointF(x1, top), QPointF(x1, top + height))
+                shown.add(name)
+        self._criteria_shown = sorted(shown)
+
+    def _draw_criteria_key(self, painter: QPainter) -> None:
+        """Key of the criteria drawn, at the right of the tag band."""
+        shown = getattr(self, '_criteria_shown', [])
+        if not shown:
+            return
+        band = self._tag_band()
+        height = self._tag_height()
+        metrics = painter.fontMetrics()
+        texts = [f"boundaries by {CRITERIA_NAMES[name]}" for name in shown]
+        width = max(metrics.horizontalAdvance(text) for text in texts) + 16
+        key = QRectF(band.right() - width, band.top(), width, band.height())
+        if any(key.intersects(tag) for tag in self._tags.values()):
+            key.moveLeft(band.left())           # the tags are at the right: the key goes left
+        for line, (name, text) in enumerate(zip(shown, texts)):
+            y = band.top() + line * (height + 2)
+            x = key.left() + 16
+            color = QColor(CRITERIA_COLORS[name])
+            fill = QColor(color)
+            fill.setAlphaF(0.4)
+            painter.fillRect(QRectF(x - 16, y + 3, 10, height - 6), fill)
+            painter.setPen(QPen(color, 1, Qt.PenStyle.DashLine))
+            painter.drawLine(QPointF(x - 6, y + 2), QPointF(x - 6, y + height - 2))
+            painter.setPen(color.darker(130))
+            painter.drawText(QPointF(x, y + metrics.ascent()), text)
+
+    def criteria_text(self, address: tuple) -> str:
+        """Where the other criteria would start ``address``, for its tooltip."""
+        state = self.state
+        criteria = state.criteria_boundaries(len(address)) if state.compare_criteria else None
+        if not criteria:
+            return ''
+        t0 = state.time_map.interval(address)[0]
+        lines = []
+        for name, data in criteria.items():
+            year = float(data['years'][tcoord(address)])
+            if abs(year - t0) > 1e-6:
+                lines.append(f"By {CRITERIA_NAMES[name]}: starts {date_text(year)} ({year - t0:+.1f} years)")
+        return '\n' + '\n'.join(lines) if lines else ''
 
     # -- labels
 
@@ -538,6 +635,7 @@ class Navigator(QWidget):
                 if time_map is not None:
                     t0, t1 = time_map.interval(address)
                     text += f"\n{time_text(t0, t1 - t0)} to {time_text(t1, t1 - t0)} ({span_text(t1 - t0)})"
+                    text += self.criteria_text(address)
                 QToolTip.showText(event.globalPos(), text, self)
             else:
                 QToolTip.hideText()
