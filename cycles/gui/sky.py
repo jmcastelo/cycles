@@ -70,7 +70,7 @@ class SkyPanel(QWidget):
     """
 
     saveRequested = Signal()     # the Save… button
-    classRequested = Signal()    # the Class… button: show the Sky class panel
+    compareRequested = Signal()  # the Compare… button: show the Sky comparison panel
     ephemerisChanged = Signal()
 
     def __init__(self, state: CycleState, parent=None):
@@ -96,10 +96,11 @@ class SkyPanel(QWidget):
         save_button.setToolTip('Save this graph to a file (page size, resolution, format…)')
         save_button.clicked.connect(self.saveRequested)
         class_button = QToolButton()
-        class_button.setText('Class…')
-        class_button.setToolTip('Sky charts of the subcycles that share the selection\'s composition, duration or '
-                                '⟨σ⟩ orbit,\nand how concentrated each body is across them')
-        class_button.clicked.connect(self.classRequested)
+        class_button.setText('Compare…')
+        class_button.setToolTip('Open the Sky comparison panel: the skies of other subcycles (all of the '
+                                'selection\'s depth,\nor its class), the closest to the selection\'s, and how '
+                                'concentrated each body is across them')
+        class_button.clicked.connect(self.compareRequested)
         row.addWidget(self.source, 1)
         row.addWidget(open_button)
         row.addWidget(class_button)

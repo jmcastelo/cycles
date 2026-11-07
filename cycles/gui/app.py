@@ -13,7 +13,7 @@ from cycles.functions.division import COLOR_KEYS
 from cycles.gui.colordialog import ColorDialog
 from cycles.gui.colorspace import ColorSpacePanel
 from cycles.gui.compositions import CompositionsPanel
-from cycles.gui.skyclass import SkyClassPanel
+from cycles.gui.skycompare import SkyComparisonPanel
 from cycles.gui.permutations import PermutationsPanel
 from cycles.gui.datepanel import DatePanel
 from cycles.gui.export import LOGICAL_DPI, ExportDialog, GraphSource, save_figure, save_widget
@@ -58,7 +58,7 @@ class MainWindow(QMainWindow):
         self.colorspace_panel = ColorSpacePanel(self.state)
         self.permutations_panel = PermutationsPanel(self.state)
         self.compositions_panel = CompositionsPanel(self.state)
-        self.skyclass_panel = SkyClassPanel(self.sky_panel, self.state)
+        self.skycompare_panel = SkyComparisonPanel(self.sky_panel, self.state)
         self.docks = {
             'inspector': self._make_dock('Subcycle', 'inspector', self.inspector),
             'date': self._make_dock('Date', 'date', self.date_panel),
@@ -67,7 +67,7 @@ class MainWindow(QMainWindow):
             'colorspace': self._make_dock('Color space', 'colorspace', self.colorspace_panel),
             'permutations': self._make_dock('Permutations', 'permutations', self.permutations_panel),
             'compositions': self._make_dock('Compositions', 'compositions', self.compositions_panel),
-            'skyclass': self._make_dock('Sky class', 'skyclass', self.skyclass_panel),
+            'skycompare': self._make_dock('Sky comparison', 'skycompare', self.skycompare_panel),
         }
         self.launcher: StudyLauncher | None = None
         self.model_dialog: CycleModelDialog | None = None
@@ -75,9 +75,9 @@ class MainWindow(QMainWindow):
         self.export_dialog: ExportDialog | None = None
         for key, panel in (('sky', self.sky_panel), ('measures', self.measures_panel),
                            ('colorspace', self.colorspace_panel), ('permutations', self.permutations_panel),
-                           ('compositions', self.compositions_panel), ('skyclass', self.skyclass_panel)):
+                           ('compositions', self.compositions_panel), ('skycompare', self.skycompare_panel)):
             panel.saveRequested.connect(lambda key=key: self.save_graph(key))
-        self.sky_panel.classRequested.connect(lambda: self.show_panel('skyclass'))
+        self.sky_panel.compareRequested.connect(lambda: self.show_panel('skycompare'))
 
         self._build_toolbar()
         self._build_menus()
@@ -430,7 +430,7 @@ class MainWindow(QMainWindow):
                           lambda: f"{self.permutations_panel.view.currentText()} · {state.color_key}"),
             figure_source('compositions', 'Compositions', self.compositions_panel,
                           lambda: f"Compositions at depth {self.compositions_panel.plot_depth()}"),
-            figure_source('skyclass', 'Sky of a class', self.skyclass_panel, self.skyclass_panel.title),
+            figure_source('skycompare', 'Sky comparison', self.skycompare_panel, self.skycompare_panel.title),
         ]
 
     def save_graph(self, key: str | None = None) -> None:
@@ -439,7 +439,7 @@ class MainWindow(QMainWindow):
             focus = QApplication.focusWidget()
             key = next((name for name, dock in self.docks.items()
                         if focus is not None and dock.isAncestorOf(focus) and name in
-                        ('sky', 'measures', 'colorspace', 'permutations', 'compositions', 'skyclass')),
+                        ('sky', 'measures', 'colorspace', 'permutations', 'compositions', 'skycompare')),
                        'navigator')
         if self.export_dialog is None:
             self.export_dialog = ExportDialog(self.graph_sources(), key, self)

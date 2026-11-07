@@ -343,16 +343,8 @@ moment* does the reverse. With *Follow* on, every plot highlights in orange
 its subcycle that contains the moment: each row of the navigator at its own
 depth, and the point of the measures and color space plots, when they show
 it; the selection (in blue) is left as it is. The tab also lists the
-subcycles that contain the moment. *Class…* opens the *Sky class* tab:
-small charts at the starts (or middles, or ends) of the subcycles with the
-selection's composition, its duration or its ⟨σ⟩ orbit, or of the
-selection's parts (evenly spread over the class when it is larger than the
-number of charts; inside the zoom or everywhere), and, for each body, the
-mean of its sidereal longitudes over the whole class and their
-concentration R (1 if all equal, about √(π/4n) for n random ones, shown
-beside it; bold when more than three times that). Clicking a chart selects
-its subcycle and moves the sky moment there; it uses the Sky tab's ephemeris
-and its outer-planets option, and draws only while it is in view. The Sky tab needs the ephemeris tables (see below): it looks
+subcycles that contain the moment. *Compare…* opens the *Sky comparison*
+tab, described below. The Sky tab needs the ephemeris tables (see below): it looks
 in `$CYCLES_EPHEMERIS`, then in the folder last chosen with *Ephemeris…*,
 then in `sandbox/data/tabla70k70k`.
 
@@ -417,7 +409,34 @@ point. The selection's composition is ringed in blue and its class drawn in
 black, the moment's composition in orange; clicking a composition selects
 its first subcycle and highlights all of them (*Same composition*).
 
-The eight panels (Subcycle, Date, Sky, Measures, Color space, Permutations, Compositions, Sky class) can be open at the same
+The *Sky comparison* tab sets the sky of the selection beside the skies of
+other subcycles, at their starts (or middles, or ends): all of the
+selection's depth, or those with its composition, its duration or its ⟨σ⟩
+orbit, or the selection's parts, inside the zoom or everywhere. It draws a
+number of small charts, evenly spread in time or, with *Most similar first*,
+the selection's own followed by the closest ones. The distance Δ between
+two skies is the mean angle between the sidereal longitudes of the compared
+bodies: the slow ones (Mars and beyond) by default, since over years and
+more the Sun, Mercury and Venus are set by the time of the year rather than
+by the cycle; or all of them. Unrelated skies are 90° apart on average.
+A strip under the charts plots the Δ of every subcycle of the set along
+the span, the charts circled and, for all of a depth, the subcycles the
+navigator highlights in red; the dashed line is the distance below which
+5 % of random moments of the span fall, and the note compares the closest
+Δ found and the median with what the same number of random moments would
+give: if the subcycles come no closer than random moments, the resemblance
+comes from the planets' own periods (Jupiter and Saturn meet about every
+20 years and return about every 60), not from the division. The table gives,
+for each body, the mean of its sidereal longitudes over the set and their
+concentration R (1 if all equal, about √(π/4n) for n random ones, shown
+beside it; bold when more than three times that). Clicking a chart or a
+point of the strip selects that subcycle (which then becomes the reference)
+and moves the sky moment there. The tab uses the Sky tab's ephemeris and
+outer-planets option, computes the positions of all the subcycles at once
+(a whole level of 65,536 takes under a second; beyond 100,000 they are
+sampled evenly), and draws only while it is in view.
+
+The eight panels (Subcycle, Date, Sky, Measures, Color space, Permutations, Compositions, Sky comparison) can be open at the same
 time, to compare a chart with a measure plot and the inspector. The
 *Panels* menu shows or hides each one (`Alt+1` to `Alt+8`) and arranges the
 open ones as tabs, side by side, stacked, in a 2 × 2 grid, or side by side

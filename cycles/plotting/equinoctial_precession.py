@@ -90,7 +90,7 @@ from cycles.functions.timescale import TimeMap
 __all__ = ["lahiri_ayanamsa", "long_term_ayanamsa", "year_from_ayanamsa",
            "precession_time_map",
            "ecliptic_coordinates_of_date", "plot_equinoctial_precession",
-           "planet_positions", "plot_zodiac_with_planets", "plot_zodiac_planets_grid",
+           "planet_positions", "planet_positions_many", "plot_zodiac_with_planets", "plot_zodiac_planets_grid",
            "plot_ayanamsa_comparison"]
 
 # ----------------------------------------------------------------------------
@@ -1362,6 +1362,47 @@ def planet_positions(
         positions[b] = {"sidereal": float(sidereal[i]), "tropical": float(tropical[i]),
                         "latitude": float(latitude[i])}
     return positions
+
+
+def planet_positions_many(
+    years,
+    ephemeris,
+    bodies: Sequence[str] = ("sun", "mercury", "venus", "mars", "jupiter", "saturn"),
+    model: str = "long_term",
+    j2000_ayanamsa_deg: float = LAHIRI_AYANAMSA_J2000_DEG,
+    rate_arcsec_per_year: float = PRECESSION_RATE_ARCSEC_PER_YEAR,
+) -> Dict[str, Dict[str, np.ndarray]]:
+    """
+    ``planet_positions`` at many moments at once: ``years`` (TDB, shape (N,))
+    gives, for each body, arrays of shape (N,) under "sidereal", "tropical"
+    and "latitude". Moments outside every table of ``ephemeris`` (a table or
+    a sequence of tables) are NaN.
+    """
+    import cycles.functions.nbody_ephemeris as nbe
+    years = np.atleast_1d(np.asarray(years, dtype=float))
+    bodies = list(bodies)
+    out = {b: {key: np.full(len(years), np.nan) for key in ("sidereal", "tropical", "latitude")}
+           for b in bodies}
+    if not bodies or not len(years):
+        return out
+    jd = 2451545.0 + (years - 2000.0) * 365.25
+    pending = np.isfinite(jd)
+    kwargs = dict(model=model, j2000_ayanamsa_deg=j2000_ayanamsa_deg, rate_arcsec_per_year=rate_arcsec_per_year)
+    for table in ([ephemeris] if isinstance(ephemeris, dict) else list(ephemeris)):
+        tau = table["sign"] * (jd - table["jd0"])
+        reach = min(float(t[-1]) for t in table["times"].values())
+        inside = pending & (tau >= 0.0) & (tau <= reach)
+        if not inside.any():
+            continue
+        pending &= ~inside
+        directions = nbe.geocentric_directions(table, bodies, jd[inside])
+        for b in bodies:
+            sidereal, latitude = ecliptic_coordinates_of_date(directions[b], years[inside], sidereal=True, **kwargs)
+            tropical, _ = ecliptic_coordinates_of_date(directions[b], years[inside], **kwargs)
+            out[b]["sidereal"][inside] = sidereal
+            out[b]["tropical"][inside] = tropical
+            out[b]["latitude"][inside] = latitude
+    return out
 
 
 def plot_zodiac_with_planets(

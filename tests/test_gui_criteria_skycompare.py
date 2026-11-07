@@ -1,4 +1,4 @@
-"""The two division criteria in the navigator, and the sky of a class of subcycles."""
+"""The two division criteria in the navigator, and the Sky comparison panel."""
 
 import numpy as np
 import pytest
@@ -57,10 +57,10 @@ def test_no_criteria_without_a_cycle_model(window, spin):
     assert state.criteria_boundaries(2) is None and window.navigator._criteria_shown == []
 
 
-# -- the sky of a class
+# -- sky comparison
 
 def test_concentration():
-    from cycles.gui.skyclass import concentration, random_concentration
+    from cycles.gui.skycompare import concentration, random_concentration
     mean, r = concentration([10, 10, 10])
     assert np.isclose(mean, 10) and np.isclose(r, 1)
     assert np.isclose(concentration([0, 90, 180, 270])[1], 0, atol=1e-12)
@@ -89,39 +89,41 @@ def class_window(window, spin, ephemeris):
     state.set_focus((3,))
     state.select((3, 1, 2, 0))
     spin()
-    window.sky_panel.classRequested.emit()          # the Class… button of the Sky panel
+    window.sky_panel.compareRequested.emit()        # the Compare… button of the Sky panel
     spin()
-    panel = window.skyclass_panel
-    assert window.docks['skyclass'].isVisible() and panel.isVisible()
+    panel = window.skycompare_panel
+    assert window.docks['skycompare'].isVisible() and panel.isVisible()
     panel.render()
     return panel
 
 
 @pytest.mark.ephemeris
 def test_the_class_panel_draws_only_when_visible(window, class_window, spin):
-    window.docks['skyclass'].close()
+    window.docks['skycompare'].close()
     spin()
     assert not class_window.isVisible()
     window.state.select((3, 1, 2, 1))
     spin()
     assert class_window._dirty and not class_window.render_timer.isActive()
-    window.sky_panel.classRequested.emit()          # Class… opens it again
+    window.sky_panel.compareRequested.emit()        # Compare… opens it again
     spin()
     assert class_window.isVisible()
     assert class_window.render_timer.isActive()
     class_window.render()
     assert not class_window._dirty
-    assert 'Kali › Treta › Dvapara › Treta' in class_window.title()
+    assert class_window.title().startswith('Sky of Kali › Treta › Dvapara › Treta')
 
 
 @pytest.mark.ephemeris
-@pytest.mark.parametrize('kind, count', [('composition', 24), ('duration', 28), ('children', 4), ('orbit', 3)])
+@pytest.mark.parametrize('kind, count', [('composition', 24), ('duration', 28), ('children', 4), ('orbit', 3),
+                                         ('all', 256)])
 def test_class_members(window, class_window, spin, kind, count):
     class_window.kind.setCurrentIndex(class_window.kind.findData(kind))
     indices, depth, _ = class_window.members()
     assert len(indices) == count
     class_window.render()
     assert len(class_window._members) == min(count, class_window.charts.value())
+    assert class_window._strip is not None
     assert class_window.table.rowCount() == 6
 
 
@@ -154,7 +156,75 @@ def test_the_class_panel_saves_with_the_other_graphs(window, class_window, spin,
     dialog = window.export_dialog
     assert dialog.isVisible()
     dialog.format.setCurrentIndex(dialog.format.findData('png'))
-    dialog.path.setText(str(tmp_path / 'skyclass.png'))
+    dialog.path.setText(str(tmp_path / 'skycompare.png'))
     dialog.save()
-    out = tmp_path / 'skyclass.png'
+    out = tmp_path / 'skycompare.png'
     assert out.exists() and out.stat().st_size > 500, dialog.status.text()
+
+
+def test_sky_distance_and_the_chance_reference():
+    from cycles.gui.skycompare import expected_closest, sky_distance
+    reference = {'mars': 10.0, 'saturn': 350.0}
+    longitudes = {'mars': np.array([10.0, 20.0, 190.0]), 'saturn': np.array([350.0, 0.0, 170.0])}
+    assert np.allclose(sky_distance(longitudes, reference, ['mars', 'saturn']), [0.0, 10.0, 180.0])
+    rng = np.random.default_rng(2)
+    random = sky_distance({'mars': rng.uniform(0, 360, 100_000)}, {'mars': 0.0}, ['mars'])
+    assert abs(random.mean() - 90) < 1                        # unrelated skies: 90° on average
+    assert abs(expected_closest(random, 9) - 18) < 1          # the smallest of 9 uniform on (0°, 180°)
+
+
+@pytest.mark.ephemeris
+def test_many_positions_at_once_match_one_by_one(ephemeris):
+    import cycles.functions.nbody_ephemeris as nbe
+    from cycles.gui.sky import ephemeris_parts
+    from cycles.plotting.equinoctial_precession import planet_positions, planet_positions_many
+    tables = [nbe.load_ephemeris(part) for part in ephemeris_parts(ephemeris)]
+    bodies = ('sun', 'mercury', 'mars', 'jupiter', 'neptune')
+    years = np.array([-3101.1, -800.5, 0.25, 1000.0, 2026.8, 1e7])     # the last outside every table
+    many = planet_positions_many(years, tables, bodies)
+    for k, year in enumerate(years[:-1]):
+        one = planet_positions(year, tables, bodies)
+        for body in bodies:
+            for key, value in one[body].items():
+                assert np.isclose(many[body][key][k], value, atol=1e-9)
+    assert all(np.isnan(many[body]['sidereal'][-1]) for body in bodies)
+
+
+@pytest.mark.ephemeris
+def test_most_similar_first(window, class_window):
+    class_window.kind.setCurrentIndex(class_window.kind.findData('all'))
+    class_window.order.setCurrentIndex(class_window.order.findData('similar'))
+    class_window.render()
+    members = class_window._members
+    assert members[0][0] == window.state.selection and members[0][2] == 0.0     # the reference first
+    distances = [d for _, _, d in members[1:]]
+    assert distances == sorted(distances)
+    _, _, all_distances, sampled, _ = class_window._strip
+    others = np.sort(all_distances[sampled != 3 * 64 + 1 * 16 + 2 * 4 + 0])
+    assert np.allclose(distances, others[:len(distances)])
+    summary = class_window.summary
+    assert summary['n'] == 255 and np.isclose(summary['closest'], others[0])
+    assert 0 < summary['chance'] < summary['random_median']
+    # only the slow bodies, or all of them
+    slow = summary['closest']
+    class_window.compared.setCurrentIndex(class_window.compared.findData('all'))
+    class_window.render()
+    assert class_window.summary['closest'] != slow
+
+
+@pytest.mark.ephemeris
+def test_clicking_the_strip_selects(window, class_window, spin):
+    from matplotlib.backend_bases import MouseEvent
+    class_window.kind.setCurrentIndex(class_window.kind.findData('all'))
+    class_window.render()
+    class_window.canvas.draw()
+    ax, years, distances, sampled, depth = class_window._strip
+    k = int(np.nanargmax(distances))                      # the farthest sky stands apart at the top
+    x, y = ax.transData.transform((years[k], distances[k]))
+    event = MouseEvent('button_release_event', class_window.canvas, x, y, button=1)
+    event.inaxes = ax
+    class_window._clicked(event)
+    spin()
+    from cycles.gui.state import address_of
+    assert window.state.selection == address_of(int(sampled[k]), depth)
+    assert window.state.sky_time == years[k]

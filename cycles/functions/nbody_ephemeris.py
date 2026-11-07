@@ -99,7 +99,7 @@ from typing import Dict, Iterable, Optional, Tuple
 import numpy as np
 
 __all__ = ["build_ephemeris", "build_many", "load_ephemeris", "body_state",
-           "body_position", "geocentric_direction", "year_to_jd", "BODIES"]
+           "body_states", "body_position", "geocentric_direction", "geocentric_directions", "year_to_jd", "BODIES"]
 
 JD_J2000 = 2451545.0
 
@@ -412,13 +412,24 @@ def load_ephemeris(directory: str) -> Dict:
 
 def body_state(eph: Dict, body: str, jd_tdb: float) -> Tuple[np.ndarray, np.ndarray]:
     """Barycentric ICRF position (AU) and velocity (AU/day) by quintic Hermite interpolation."""
+    pos, vel = body_states(eph, body, np.array([float(jd_tdb)]))
+    return pos[0], vel[0]
+
+
+def body_states(eph: Dict, body: str, jd_tdb) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    ``body_state`` at many moments at once: ``jd_tdb`` of shape (N,) gives
+    positions and velocities of shape (N, 3). Raises ValueError if any moment
+    is outside the stored span.
+    """
+    jd_tdb = np.atleast_1d(np.asarray(jd_tdb, dtype=float))
     if body == "sun" and "sun" not in eph["tables"]:
         missing = [b for b in _STORED if b not in eph["tables"]]
         if missing:
             raise ValueError(f"the Sun needs all planets stored; missing: {missing}")
-        total_p, total_v = np.zeros(3), np.zeros(3)
+        total_p, total_v = np.zeros((len(jd_tdb), 3)), np.zeros((len(jd_tdb), 3))
         for name in _STORED:
-            p, v = body_state(eph, name, jd_tdb)
+            p, v = body_states(eph, name, jd_tdb)
             total_p += _GM[name] * p
             total_v += _GM[name] * v
         return -total_p / _GM["sun"], -total_v / _GM["sun"]
@@ -427,16 +438,19 @@ def body_state(eph: Dict, body: str, jd_tdb: float) -> Tuple[np.ndarray, np.ndar
     table, tau_all = eph["tables"][body], eph["times"][body]
     sign = eph["sign"]
     tau = sign * (jd_tdb - eph["jd0"])             # days along the integration direction
-    if tau < 0 or tau > tau_all[-1]:
-        raise ValueError(f"JD {jd_tdb} is outside the stored span "
+    outside = (tau < 0) | (tau > tau_all[-1]) | ~np.isfinite(tau)
+    if outside.any():
+        jd = jd_tdb[np.argmax(outside)]
+        raise ValueError(f"JD {jd} is outside the stored span "
                          f"({eph['jd0']} to {eph['jd0'] + sign * tau_all[-1]:.1f})")
-    k = min(int(np.searchsorted(tau_all, tau, side="right")) - 1, len(table) - 2)
-    h = tau_all[k + 1] - tau_all[k]
-    s = (tau - tau_all[k]) / h
-    r0, r1 = table[k], table[k + 1]
-    p0, p1 = r0[:3], r1[:3]
-    m0, m1 = sign * r0[3:6] * h, sign * r1[3:6] * h          # dr/ds
-    c0, c1 = r0[6:9] * h * h, r1[6:9] * h * h                # d2r/ds2
+    k = np.minimum(np.searchsorted(tau_all, tau, side="right") - 1, len(table) - 2)
+    t0, t1 = np.asarray(tau_all[k]), np.asarray(tau_all[k + 1])
+    h = (t1 - t0)[:, None]
+    s = ((tau - t0) / (t1 - t0))[:, None]
+    r0, r1 = np.asarray(table[k]), np.asarray(table[k + 1])
+    p0, p1 = r0[:, :3], r1[:, :3]
+    m0, m1 = sign * r0[:, 3:6] * h, sign * r1[:, 3:6] * h    # dr/ds
+    c0, c1 = r0[:, 6:9] * h * h, r1[:, 6:9] * h * h          # d2r/ds2
     s2, s3, s4, s5 = s * s, s**3, s**4, s**5
     pos = ((1 - 10 * s3 + 15 * s4 - 6 * s5) * p0 + (s - 6 * s3 + 8 * s4 - 3 * s5) * m0
            + (0.5 * s2 - 1.5 * s3 + 1.5 * s4 - 0.5 * s5) * c0
@@ -462,6 +476,19 @@ def geocentric_direction(eph: Dict, body: str, jd_tdb: float,
     """
     d = body_position(eph, body, jd_tdb) - body_position(eph, origin, jd_tdb)
     return d / np.linalg.norm(d)
+
+
+def geocentric_directions(eph: Dict, bodies, jd_tdb, origin: str = "earthmoon") -> Dict[str, np.ndarray]:
+    """
+    ``geocentric_direction`` of several bodies at many moments: maps each body
+    to unit vectors of shape (N, 3). The origin is interpolated once.
+    """
+    here = body_states(eph, origin, jd_tdb)[0]
+    directions = {}
+    for body in bodies:
+        d = body_states(eph, body, jd_tdb)[0] - here
+        directions[body] = d / np.linalg.norm(d, axis=1, keepdims=True)
+    return directions
 
 
 # ----------------------------------------------------------------------------
