@@ -430,7 +430,8 @@ class MainWindow(QMainWindow):
                           lambda: f"{self.permutations_panel.view.currentText()} · {state.color_key}"),
             figure_source('compositions', 'Compositions', self.compositions_panel,
                           lambda: f"Compositions at depth {self.compositions_panel.plot_depth()}"),
-            figure_source('skycompare', 'Sky comparison', self.skycompare_panel, self.skycompare_panel.title),
+            figure_source('skycompare', 'Sky comparison', self.skycompare_panel, self.skycompare_panel.title,
+                          self.skycompare_panel.fit_charts),
         ]
 
     def save_graph(self, key: str | None = None) -> None:

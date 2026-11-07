@@ -413,7 +413,8 @@ The *Sky comparison* tab sets the sky of the selection beside the skies of
 other subcycles, at their starts (or middles, or ends): all of the
 selection's depth, or those with its composition, its duration or its ⟨σ⟩
 orbit, or the selection's parts, inside the zoom or everywhere. It draws a
-number of small charts, evenly spread in time or, with *Most similar first*,
+number of small charts (laid out in the rows and columns that make them
+largest for the size of the panel, or of the page when saved), evenly spread in time or, with *Most similar first*,
 the selection's own followed by the closest ones. The distance Δ between
 two skies is the mean angle between the sidereal longitudes of the compared
 bodies: the slow ones (Mars and beyond) by default, since over years and

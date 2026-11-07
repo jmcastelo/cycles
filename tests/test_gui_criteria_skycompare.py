@@ -228,3 +228,29 @@ def test_clicking_the_strip_selects(window, class_window, spin):
     from cycles.gui.state import address_of
     assert window.state.selection == address_of(int(sampled[k]), depth)
     assert window.state.sky_time == years[k]
+
+
+@pytest.mark.ephemeris
+def test_the_charts_fill_the_panel_as_it_changes_size(window, class_window, spin):
+    dock = window.docks['skycompare']
+    dock.setFloating(True)
+    layouts = {}
+    for size in ((900, 750), (500, 900), (1300, 650)):
+        dock.resize(*size)
+        spin()
+        class_window.fit_charts()
+        class_window.canvas.draw()
+        renderer = class_window.canvas.get_renderer()
+        figure = class_window.figure.bbox
+        boxes = [ax.get_tightbbox(renderer) for ax in class_window._axes]
+        for box in boxes:                                   # inside the canvas, labels included
+            assert box.x0 >= -1 and box.y0 >= -1 and box.x1 <= figure.x1 + 1 and box.y1 <= figure.y1 + 1
+        for i, a in enumerate(boxes):                       # and apart from one another
+            for b in boxes[i + 1:]:
+                assert min(a.x1, b.x1) - max(a.x0, b.x0) <= 1 or min(a.y1, b.y1) - max(a.y0, b.y0) <= 1
+        strip = class_window._strip[0].get_window_extent(renderer)
+        assert all(box.y0 > strip.y1 for box in boxes)
+        layouts[size] = dict(class_window.chart_layout)
+    assert layouts[(1300, 650)]['rows'] == 1                # wide: one row
+    assert layouts[(500, 900)]['columns'] < layouts[(900, 750)]['columns']
+    assert layouts[(900, 750)]['side'] > 60

@@ -51,6 +51,9 @@ BODY_NAMES = {'sun': 'Sun', 'mercury': 'Mercury', 'venus': 'Venus', 'mars': 'Mar
 SIGNS = ['Ari', 'Tau', 'Gem', 'Can', 'Leo', 'Vir', 'Lib', 'Sco', 'Sag', 'Cap', 'Aqu', 'Pis']
 SELECTION_COLOR = '#1f77b4'
 MARKED_COLOR = '#d62728'    # members highlighted in the navigator, on the strip
+CHART_PAD = 6.0             # pixels between neighbouring charts
+STRIP_SHARE, STRIP_MIN, STRIP_MAX = 0.2, 50.0, 150.0     # height of the strip: share of the canvas, in pixels
+STRIP_LEFT, STRIP_BELOW = 46.0, 24.0                    # its margins for the axis labels, in pixels
 
 
 def concentration(longitudes_deg) -> tuple[float, float]:
@@ -109,6 +112,7 @@ class SkyComparisonPanel(QWidget):
         self._members: list[tuple] = []         # (address, year, distance) of the charts drawn
         self._axes = []
         self._strip = None                       # (axes, years, distances, indices, depth)
+        self.chart_layout: dict = {}                 # columns, rows and side (pixels) of the charts
         self._positions_cache: dict = {}
         self._random_cache: dict = {}
         self.summary: dict = {}
@@ -167,6 +171,7 @@ class SkyComparisonPanel(QWidget):
         self.figure = Figure(figsize=(6, 6))
         self.canvas = FigureCanvasQTAgg(self.figure)
         self.canvas.mpl_connect('button_release_event', self._clicked)
+        self.canvas.mpl_connect('resize_event', self.fit_charts)
         splitter.addWidget(self.canvas)
         self.table = QTableWidget(0, 4)
         self.table.setHorizontalHeaderLabels(['Body', 'Mean sidereal longitude', 'Concentration R',
@@ -424,15 +429,11 @@ class SkyComparisonPanel(QWidget):
         state = self.state
         bodies = INNER_BODIES + (OUTER_BODIES if self.sky_panel.outer.isChecked() else ())
         strip = distances is not None
-        columns = int(np.ceil(np.sqrt(len(charts) * 1.3)))
-        rows = int(np.ceil(len(charts) / columns))
-        # room under each chart for its three-line label; the strip below, with its own margins for the axis
-        grid = self.figure.add_gridspec(rows, columns, left=0.02, right=0.98, top=0.99,
-                                        bottom=0.36 if strip else 0.08, wspace=0.05, hspace=0.75)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             for k, (address, year, distance, own) in enumerate(charts):
-                ax = self.figure.add_subplot(grid[k // columns, k % columns], projection='polar')
+                # placed by fit_charts
+                ax = self.figure.add_axes((0.0, 0.0, 0.1, 0.1), projection='polar')
                 try:
                     plot_zodiac_with_planets(year, self.sky_panel.tables, bodies=bodies, ax=ax, show=False,
                                              table=False, compact=True, time_scale='UT', epoch_display=(),
@@ -443,16 +444,82 @@ class SkyComparisonPanel(QWidget):
                 initials = ''.join(state.names[d][0] for d in address)
                 third = 'selection' if own else (f"Δ {distance:.1f}°" if np.isfinite(distance) else '')
                 ax.set_title('')
-                # under its chart (a title would sit closer to the chart above)
-                ax.text(0.5, -0.02, f"{initials}\n{date_text(year)}" + (f"\n{third}" if third else ''),
-                        transform=ax.transAxes, ha='center', va='top', fontsize=7,
-                        color=SELECTION_COLOR if own else 'black', fontweight='bold' if own else 'normal')
+                # under its chart (a title would sit closer to the chart above); fit_charts sets its offset
+                ax._class_label = ax.annotate(
+                    f"{initials}\n{date_text(year)}" + (f"\n{third}" if third else ''), xy=(0.5, 0.0),
+                    xycoords='axes fraction', xytext=(0, -2), textcoords='offset pixels', ha='center', va='top',
+                    fontsize=7, color=SELECTION_COLOR if own else 'black', fontweight='bold' if own else 'normal',
+                    annotation_clip=False)
                 ax._class_member = (address, year)
                 self._axes.append(ax)
                 self._members.append((address, year, distance))
         if strip:
-            self._draw_strip(self.figure.add_axes((0.08, 0.06, 0.74, 0.18)), charts, sampled, depth, years, distances,
-                             random_distances, is_selection)
+            self._draw_strip(self.figure.add_axes((0.08, 0.06, 0.74, 0.18)), charts, sampled, depth, years,
+                             distances, random_distances, is_selection)
+        self.fit_charts()
+
+    def fit_charts(self, *_) -> None:
+        """
+        Lay the charts out as large as the canvas allows: the strip at the
+        bottom with fixed margins for its axis and legend, and above it the
+        number of columns that gives the largest charts, each with its sign
+        symbols and its label (which keep their size in points) inside its cell.
+        """
+        axes = self._axes
+        width, height = self.figure.bbox.width, self.figure.bbox.height
+        if not axes or width < 40 or height < 40:
+            return
+        renderer = self.canvas.get_renderer()
+        top, bottom = height - CHART_PAD / 2, CHART_PAD / 2
+        if self._strip is not None:
+            strip = self._strip[0]
+            legend = strip.get_legend()
+            legend_width = legend.get_window_extent(renderer).width if legend is not None else 0.0
+            strip_height = min(STRIP_MAX, max(STRIP_MIN, STRIP_SHARE * height))
+            strip.set_position([STRIP_LEFT / width, STRIP_BELOW / height,
+                                max(20.0, width - STRIP_LEFT - legend_width - 14) / width, strip_height / height])
+            bottom = STRIP_BELOW + strip_height + 2 * CHART_PAD
+        area_width, area_height = width - CHART_PAD, top - bottom
+        if area_height < 20:
+            return
+        labels = [ax._class_label for ax in axes]
+        extents = [label.get_window_extent(renderer) for label in labels]
+        label_width = max(e.width for e in extents)
+        label_height = max(e.height for e in extents)
+        reference = next((ax for ax in axes if ax.axison), axes[0])
+        n = len(axes)
+        side = 0.5 * min(area_width, area_height)
+        for _ in range(2):
+            # how far the sign symbols reach beyond the disk (constant in points), at the current size
+            reference.set_position([0.0, 0.0, side / width, side / height])
+            reference._class_label.set_visible(False)
+            disk, tight = reference.get_window_extent(renderer), reference.get_tightbbox(renderer)
+            reference._class_label.set_visible(True)
+            left, right = max(0.0, disk.x0 - tight.x0), max(0.0, tight.x1 - disk.x1)
+            above, below = max(0.0, tight.y1 - disk.y1), max(0.0, disk.y0 - tight.y0)
+            extra_w, extra_h = left + right + CHART_PAD, above + below + label_height + 2 + CHART_PAD
+            best = None
+            for columns in range(1, n + 1):
+                rows = -(-n // columns)
+                cell_w, cell_h = area_width / columns, area_height / rows
+                size = min(cell_w - extra_w, cell_h - extra_h)
+                fits = label_width + CHART_PAD <= cell_w            # labels of neighbours do not overlap
+                key = (fits, size)
+                if best is None or key > best[0]:
+                    best = (key, columns, rows, cell_w, cell_h, size)
+            _, columns, rows, cell_w, cell_h, side = best
+            side = max(12.0, side)
+        block_w, block_h = side + left + right, above + side + below + label_height + 2
+        for k, ax in enumerate(axes):
+            row, col = divmod(k, columns)
+            in_row = min(columns, n - row * columns)
+            x_cell = CHART_PAD / 2 + (col + (columns - in_row) / 2) * cell_w      # the last row centred
+            y_top = top - row * cell_h - (cell_h - block_h) / 2
+            x0 = x_cell + (cell_w - block_w) / 2 + left
+            y0 = y_top - above - side
+            ax.set_position([x0 / width, y0 / height, side / width, side / height])
+            ax._class_label.xyann = (0, -(below + 2))
+        self.chart_layout = {'columns': columns, 'rows': rows, 'side': side}
         self.canvas.draw_idle()
 
     def _draw_strip(self, ax, charts, sampled, depth, years, distances, random_distances, is_selection) -> None:
