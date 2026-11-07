@@ -24,7 +24,7 @@ TABLES = {'': 'tabla70k70k', '_p': 'tabla70k70kp'}
 EPOCH_DISPLAY = ("year", "date", "julian_day")
 
 # Cycle model: a preset name (see cycles.functions.cycle_model; your own presets
-# are in sandbox/cycle_presets.json, written by the GUI)
+# are in sandbox/cycle_presets.json, written by the GUI), unless a session gives one (--session)
 PRESET = DEFAULT_PRESET
 
 # Subcycles for subcycle_charts: those of depth DEPTH whose address starts with PREFIX
@@ -34,7 +34,8 @@ PREFIX = [3]
 
 
 def setup():
-    model = load_presets()[PRESET]
+    import common
+    model = common.MODEL or load_presets()[PRESET]          # a session's model (runner --session) comes first
     print(f"Cycle model: {model.name}")
     # Normalized time -> year with the model's division (by default precession
     # angle: the yugas are 1, 3/4, 1/2 and 1/4 turns, and so is every subdivision)

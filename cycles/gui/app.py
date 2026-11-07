@@ -15,6 +15,8 @@ from cycles.gui.colorspace import ColorSpacePanel
 from cycles.gui.compositions import CompositionsPanel
 from cycles.gui.skycompare import SkyComparisonPanel
 from cycles.gui.landscape import LandscapePanel
+from cycles.gui.notes import NotesPanel
+from cycles.gui.session import SessionManager
 from cycles.gui.permutations import PermutationsPanel
 from cycles.gui.datepanel import DatePanel
 from cycles.gui.export import LOGICAL_DPI, ExportDialog, GraphSource, save_figure, save_widget
@@ -28,7 +30,7 @@ from cycles.gui.state import HIGHLIGHTS, LABEL_MODES, MAX_DEPTH, NAME_SETS, Cycl
 
 
 # Version of the saved panel layout (increase when the panels change)
-LAYOUT_VERSION = 6
+LAYOUT_VERSION = 7
 
 
 class MainWindow(QMainWindow):
@@ -61,6 +63,7 @@ class MainWindow(QMainWindow):
         self.compositions_panel = CompositionsPanel(self.state)
         self.skycompare_panel = SkyComparisonPanel(self.sky_panel, self.state)
         self.landscape_panel = LandscapePanel(self.state)
+        self.notes_panel = NotesPanel(self.state)
         self.docks = {
             'inspector': self._make_dock('Subcycle', 'inspector', self.inspector),
             'date': self._make_dock('Date', 'date', self.date_panel),
@@ -71,6 +74,7 @@ class MainWindow(QMainWindow):
             'compositions': self._make_dock('Compositions', 'compositions', self.compositions_panel),
             'skycompare': self._make_dock('Sky comparison', 'skycompare', self.skycompare_panel),
             'landscape': self._make_dock('Model landscape', 'landscape', self.landscape_panel),
+            'notes': self._make_dock('Notes', 'notes', self.notes_panel),
         }
         self.launcher: StudyLauncher | None = None
         self.model_dialog: CycleModelDialog | None = None
@@ -90,6 +94,9 @@ class MainWindow(QMainWindow):
         self.resize(1400, 760)
         self.arrange_panels('tabs')
         self._restore_layout()
+        self.session = SessionManager(self)
+        self._fill_recent_menu()
+        self.session.restore_last()
         self.navigator.setFocus()
 
     # -- panels
@@ -174,6 +181,7 @@ class MainWindow(QMainWindow):
         self.docks['inspector'].raise_()
 
     def closeEvent(self, event) -> None:
+        self.session.autosave()
         settings = QSettings()
         settings.setValue('window/geometry', self.saveGeometry())
         settings.setValue('window/state', self.saveState(LAYOUT_VERSION))
@@ -325,17 +333,48 @@ class MainWindow(QMainWindow):
         self.model_dialog.activateWindow()
 
     def _sync_toolbar(self) -> None:
-        """Keep the toolbar in step with changes made elsewhere (e.g. from the inspector)."""
-        self.color_box.setCurrentText(self.state.color_key)
-        self.highlight_box.setCurrentIndex(self.highlight_box.findData(self.state.highlight))
+        """Keep the toolbar in step with changes made elsewhere (the inspector, a session...)."""
+        state = self.state
+        self.color_box.setCurrentText(state.color_key)
+        self.highlight_box.setCurrentIndex(self.highlight_box.findData(state.highlight))
+        self.rows_box.setValue(state.rows)
+        self.spacing_box.setCurrentIndex(self.spacing_box.findData(state.spacing))
+        names = next((i for i in range(self.names_box.count())
+                      if tuple(self.names_box.itemData(i)) == tuple(state.names)), -1)
+        if names >= 0:
+            self.names_box.setCurrentIndex(names)
+        self.labels_box.setCurrentIndex(self.labels_box.findData(state.labels))
+        self.borders_box.setChecked(state.borders)
+        self.criteria_box.setChecked(state.compare_criteria)
+        self.sky_panel.follow.setChecked(state.follow)
 
     def _build_menus(self) -> None:
         file_menu = self.menuBar().addMenu('&File')
-        save = QAction('&Save graph…', self)
-        save.setShortcut(QKeySequence.StandardKey.Save)
+        for label, shortcut, slot in (('&New session', QKeySequence.StandardKey.New, lambda: self.session.new()),
+                                      ('&Open session…', QKeySequence.StandardKey.Open, lambda: self.session.open()),
+                                      (None, None, None),
+                                      ('&Save session', QKeySequence.StandardKey.Save, lambda: self.session.save()),
+                                      ('Save session &as…', QKeySequence.StandardKey.SaveAs,
+                                       lambda: self.session.save_as())):
+            if label is None:
+                self.recent_menu = file_menu.addMenu('Open &recent')
+                self.recent_menu.aboutToShow.connect(self._fill_recent_menu)
+                continue
+            action = QAction(label, self)
+            action.setShortcut(QKeySequence(shortcut))
+            action.triggered.connect(slot)
+            file_menu.addAction(action)
+        file_menu.addSeparator()
+        save = QAction('Save &graph…', self)
+        save.setShortcut(QKeySequence('Ctrl+E'))
         save.setToolTip('Save the navigator or a panel\'s graph to a file')
         save.triggered.connect(lambda: self.save_graph())
         file_menu.addAction(save)
+        dossier = QAction('Subcycle &dossier…', self)
+        dossier.setShortcut(QKeySequence('Ctrl+D'))
+        dossier.setToolTip('Write a PDF about the selected subcycle')
+        dossier.triggered.connect(self.show_dossier)
+        file_menu.addAction(dossier)
         file_menu.addSeparator()
         studies = QAction('S&tudies…', self)
         studies.setShortcut(QKeySequence('Ctrl+T'))
@@ -356,11 +395,16 @@ class MainWindow(QMainWindow):
         whole.setShortcut(QKeySequence('Ctrl+Home'))
         whole.triggered.connect(lambda: self.state.set_focus(()))
         view_menu.addAction(whole)
+        view_menu.addSeparator()
+        bookmark = QAction('&Bookmark the selection', self)
+        bookmark.setShortcut(QKeySequence('Ctrl+B'))
+        bookmark.triggered.connect(self.bookmark_selection)
+        view_menu.addAction(bookmark)
 
         panels_menu = self.menuBar().addMenu('&Panels')
         for k, dock in enumerate(self.docks.values(), 1):
             action = dock.toggleViewAction()
-            action.setShortcut(QKeySequence(f'Alt+{k}'))
+            action.setShortcut(QKeySequence(f'Alt+{k % 10}'))      # the tenth: Alt+0
             panels_menu.addAction(action)
         panels_menu.addSeparator()
         for label, layout, key in (('Arrange as &tabs', 'tabs', 'Ctrl+Alt+T'),
@@ -383,6 +427,38 @@ class MainWindow(QMainWindow):
         about = QAction('&Navigation', self)
         about.triggered.connect(self.show_help)
         help_menu.addAction(about)
+
+    def _fill_recent_menu(self) -> None:
+        menu = self.recent_menu
+        menu.clear()
+        recent = self.session.recent() if hasattr(self, 'session') else []
+        for path in recent:
+            action = menu.addAction(path.name)
+            action.setToolTip(str(path))
+            action.triggered.connect(lambda _=False, path=path: self.session.open(path))
+        if recent:
+            menu.addSeparator()
+            menu.addAction('Clear the list').triggered.connect(lambda: self.session.clear_recent())
+        else:
+            menu.addAction('No recent sessions').setEnabled(False)
+        menu.setToolTipsVisible(True)
+
+    def show_dossier(self) -> None:
+        from cycles.gui.dossier import DossierDialog
+        if getattr(self, 'dossier_dialog', None) is None:
+            self.dossier_dialog = DossierDialog(self)
+        self.dossier_dialog.refresh()
+        self.dossier_dialog.show()
+        self.dossier_dialog.raise_()
+        self.dossier_dialog.activateWindow()
+
+    def bookmark_selection(self) -> None:
+        """Bookmark the selection, showing the Notes panel to name it."""
+        if not self.state.selection:
+            self.statusBar().showMessage('Select a subcycle to bookmark it', 5000)
+            return
+        self.show_panel('notes')
+        self.notes_panel.add_selection()
 
     def _show_hovered(self, address) -> None:
         if address:

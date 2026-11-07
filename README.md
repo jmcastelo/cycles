@@ -223,7 +223,7 @@ cycles/
                             planet positions and zodiac charts
   gui/                    graphical explorer (PySide6); run with cycles-gui or python -m cycles.gui
     __main__.py             entry point
-    app.py                  main window: toolbar, menus, dock panels, saving graphs
+    app.py                  main window: toolbar, menus, dock panels, saving graphs and sessions
     state.py                shared state of the views and the data behind them
     navigator.py            overview strip and rows of subdivisions, markers and tags, criteria overlay
     inspector.py            Subcycle panel: everything about the selection, measures by level
@@ -236,13 +236,16 @@ cycles/
     groupexplorer.py        group explorer: every element of S_m in a sortable table
     compositions.py         Compositions panel: the tetrahedron of compositions
     landscape.py            Model landscape panel: the criteria mismatch over anchor × arc
+    notes.py                Notes panel: the notes and bookmarks of the session
+    session.py              sessions: saving and opening everything shown, restoring the last one
+    dossier.py              subcycle dossier: a PDF about the selection
     modeldialog.py          cycle model dialog: anchor, scale, division, precession, presets, best fit
     colordialog.py          color parameters dialog
     export.py               save dialog: paper sizes, resolution, formats
     studies.py              launcher of the sandbox studies
 sandbox/                  study scripts, one per topic
-  common.py                 paths, default parameters and helpers shared by the studies
-  runner.py                 command-line runner (see Running the studies)
+  common.py                 paths, default parameters and helpers shared by the studies; sessions
+  runner.py                 command-line runner (see Running the studies), --session
   study_of_division.py      the division itself: consistency checks and ring diagrams
   study_of_fill_partitions.py  the partition of a time span into subcycles
   study_of_durations.py     which subcycles share a duration, where and how many
@@ -269,6 +272,9 @@ tests/                    pytest tests (see Tests)
   test_gui_compositions.py  Compositions panel and measures by level
   test_gui_sky_colors.py    sky chart and color parameters dialog
   test_gui_criteria_skycompare.py  criteria overlay and Sky comparison panel
+  test_gui_session.py       sessions, restoring the last one, bookmarks, the launcher's session
+  test_gui_dossier.py       the dossier: summary, paper, sections, dialog
+  test_session_studies.py   studies run with a session (--session)
 pyproject.toml            package metadata, dependencies, the cycles-gui command, pytest settings
 ```
 
@@ -308,6 +314,9 @@ Options:
 - `--save` writes the figures to `sandbox/plots/` (and sounds to
   `sandbox/sounds/`).
 - `--no-show` runs without opening windows or playing sounds, for batch runs.
+- `--session FILE` uses the cycle model and the color parameters of a session
+  saved by the explorer (see below), so that the figures match what it showed;
+  the whole session is available to the studies as `opts.session`.
 
 In VS Code / Code OSS, the tasks in `.vscode/tasks.json` run the study script
 that is open: `Ctrl+Shift+B` asks for the studies and options to run (empty
@@ -382,8 +391,8 @@ how many colors are different and how many a display can show apart. Changes
 apply as they are made, so the plots recolor while you edit; *Revert* goes
 back to the values the window opened with.
 
-*File → Save graph…* (`Ctrl+S`), or the *Save…* button of the Sky, Measures,
-Color space, Permutations and Compositions panels, saves the navigator or a panel's graph as it is shown
+*File → Save graph…* (`Ctrl+E`), or the *Save…* button of the Sky, Measures,
+Color space, Permutations, Compositions, Sky comparison and Model landscape panels, saves the navigator or a panel's graph as it is shown
 (view angles, selection and moment included): on a paper format (A5 to A1,
 Letter, Legal, Tabloid; portrait or landscape), at the size on screen, or at a
 custom size in mm, cm or inches, with margins and an optional title, as PNG or
@@ -531,22 +540,61 @@ of the current cycle shaded, shows where the landscape's period comes from
 (see *The cycle model*). With a constant rate there is no landscape: both
 criteria always coincide.
 
-The nine panels (Subcycle, Date, Sky, Measures, Color space, Permutations, Compositions, Sky comparison,
-Model landscape) can be open at the same
+The *Notes* tab holds the notes of the session (free text) and its
+bookmarks: subcycles with a label and a note. *View → Bookmark the
+selection* (`Ctrl+B`), or the tab's button, adds the selection and lets you
+name it; double-click a label or a note to edit it, and a subcycle to go to
+it. Bookmarked subcycles have a green corner in the navigator and a tick on
+the overview strip, and their label and note in its tooltip.
+
+The ten panels (Subcycle, Date, Sky, Measures, Color space, Permutations, Compositions, Sky comparison,
+Model landscape, Notes) can be open at the same
 time, to compare a chart with a measure plot and the inspector. The
-*Panels* menu shows or hides each one (`Alt+1` to `Alt+9`) and arranges the
+*Panels* menu shows or hides each one (`Alt+1` to `Alt+9`, and `Alt+0`) and arranges the
 open ones as tabs, side by side, stacked, in a 2 × 2 grid, or side by side
 below the navigator; panels can also be dragged anywhere, docked or
-floating. The arrangement is remembered between sessions (*Panels → Reset
+floating. The arrangement is kept with the session, and between runs (*Panels → Reset
 layout* restores the tabs).
 
 *File → Studies…* (`Ctrl+T`) opens the study launcher: every study of the
 sandbox scripts, with each script's defaults checked. It runs the checked
 ones (or a double-clicked one) as on the command line, each script in its
 own process, with *Save figures* and *Show figures* as `--save` and
-`--no-show`, and shows their output. The list comes from
+`--no-show`, and *With the explorer's session* as `--session` (the cycle
+model and color parameters shown), and shows their output. The list comes from
 `python sandbox/runner.py --catalog`. Levels down to depth 8 are available; the deepest take a few
 seconds the first time.
+
+### Sessions
+
+A session is everything the explorer shows, kept in a file
+(`*.cycles.json`, JSON): the cycle model in full (so that later changes to
+a preset do not change it), the color parameters and display options, the
+zoom, the selection, the marked date and the sky moment, the settings of
+every panel (with the camera of the 3D views), the window layout, the
+notes and the bookmarks, and, to know what produced it, the version of the
+code (its git commit, and whether it had uncommitted changes) and the
+ephemeris folder used. *File → New session* (`Ctrl+N`, which keeps the
+layout), *Open session…* (`Ctrl+O`), *Open recent*, *Save session*
+(`Ctrl+S`) and *Save session as…* (`Ctrl+Shift+S`) handle them; the title
+bar shows the session's name, with `*` while it has unsaved changes. The
+explorer reopens the last session when it starts: it is kept automatically
+when the window closes (and every minute while there are unsaved changes),
+with its file and its unsaved changes, so nothing is asked on quitting. A
+session whose ephemeris folder is not on this computer keeps the current
+one, and parts that no longer fit are reported in the status bar.
+
+*File → Subcycle dossier…* (`Ctrl+D`) writes a PDF about the selected
+subcycle, on a chosen paper (A5 to A1, Letter, Legal, Tabloid; portrait or
+landscape) with chosen margins. It can hold a summary (everything the
+inspector shows, the measures by level, its colors, its bookmarks, and the
+cycle model, session and code it comes from), the navigator around it, the
+sky at its start, middle and end, the Measures, Color space, Compositions,
+Permutations, Sky comparison and Model landscape graphs as they are set up
+(laid out again for the page), and the notes and bookmarks of the session.
+Text and the navigator are vectors; the graphs are vectors too, or images
+at a chosen resolution (lighter for graphs with many points). The options
+are remembered.
 
 ## The ephemeris data
 

@@ -33,6 +33,7 @@ Command line::
     python study_of_x.py --list          # names, defaults and descriptions
     python study_of_x.py NAME --save     # also save the results
     python study_of_x.py NAME --no-show  # don't open windows or play sounds
+    python study_of_x.py --session FILE  # with the cycle model and colors of a session saved by the explorer
 
 ``python runner.py --catalog`` prints, as JSON, the studies of every
 ``study_of_*.py`` script in this folder (used by the GUI's study launcher).
@@ -84,6 +85,9 @@ def run(setup: Callable | None = None, argv: list[str] | None = None) -> None:
     parser.add_argument('-s', '--save', action='store_true', help='save figures and sounds to files')
     parser.add_argument('-n', '--no-show', action='store_true',
                         help="don't display figures or play sounds (batch runs)")
+    parser.add_argument('--session', metavar='FILE',
+                        help='use the cycle model and color parameters of a session saved by the explorer '
+                             '(available to the studies as opts.session)')
     # Split arguments that hold several words (e.g. "counts trigraph --save" typed
     # into the editor's task prompt, which arrives as a single argument)
     argv = [word for arg in (sys.argv[1:] if argv is None else argv) for word in shlex.split(arg)]
@@ -108,7 +112,16 @@ def run(setup: Callable | None = None, argv: list[str] | None = None) -> None:
         plt.switch_backend('Agg')
         plt.show = lambda *a, **k: plt.close('all')
 
-    opts = SimpleNamespace(save=args.save, show=not args.no_show)
+    session = None
+    if args.session:
+        import common
+        try:
+            session = json.loads(Path(args.session).read_text(encoding='utf-8'))
+            print(f"Session {Path(args.session).name}: {common.apply_session(session, sys.modules[module])}",
+                  flush=True)
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            parser.error(f"cannot use the session {args.session}: {error}")
+    opts = SimpleNamespace(save=args.save, show=not args.no_show, session=session)
     ctx = None
     if setup is not None:
         ctx = setup()

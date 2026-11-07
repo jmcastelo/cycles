@@ -74,8 +74,13 @@ class StudyLauncher(QDialog):
         self.show_figures = QCheckBox('Show figures')
         self.show_figures.setChecked(True)
         self.show_figures.setToolTip('Off: --no-show (no windows or sounds; for saving in batch)')
+        self.with_session = QCheckBox("With the explorer's session")
+        self.with_session.setToolTip('Run the studies with the cycle model and the color parameters shown in '
+                                     'the explorer\n(saved for them as a session file; --session)')
+        self.with_session.setChecked(True)
         options.addWidget(self.save)
         options.addWidget(self.show_figures)
+        options.addWidget(self.with_session)
         options.addStretch(1)
         right_layout.addLayout(options)
         buttons = QHBoxLayout()
@@ -178,7 +183,23 @@ class StudyLauncher(QDialog):
             args.append('--save')
         if not self.show_figures.isChecked():
             args.append('--no-show')
+        session = self.session_file()
+        if session is not None:
+            args += ['--session', str(session)]
         return args
+
+    def session_file(self) -> Path | None:
+        """The explorer's session, written for the studies (None if not wanted or not available)."""
+        window = self.parent()
+        if not self.with_session.isChecked() or not hasattr(window, 'session'):
+            return None
+        from cycles.gui.session import autosave_path, capture, write
+        path = autosave_path().with_name(autosave_path().name.replace('last-session', 'study-session'))
+        try:
+            write(capture(window, layout=False), path)
+        except OSError:
+            return None
+        return path
 
     def _next(self) -> None:
         if not self.queue:

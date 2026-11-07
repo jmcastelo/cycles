@@ -176,7 +176,8 @@ class ColorSpacePanel(QWidget):
 
     def _draw_base(self, depth: int, scope: tuple) -> None:
         state = self.state
-        camera = (self.ax.elev, self.ax.azim, self.ax.roll) if self.ax is not None else None
+        camera = (self.ax.elev, self.ax.azim, self.ax.roll) if self.ax is not None else \
+            self.__dict__.pop('_saved_camera', None)
         level = state.cache.level(depth)
         span = children_range(scope, depth)
         indices = np.arange(span.start, span.stop)
@@ -221,6 +222,23 @@ class ColorSpacePanel(QWidget):
         where = ' › '.join(state.names[d] for d in scope) or 'whole cycle'
         self.info.setText(f"{len(indices)} subcycles of depth {depth} ({where}), {state.color_key} in "
                           f"{'CMY inks' if cmy else 'RGB'}. Drag to rotate; click a point to select it.")
+
+    def camera(self) -> tuple | None:
+        """(elevation, azimuth, roll) of the 3D view, or None."""
+        ax = self.ax
+        if ax is None or not hasattr(ax, 'elev'):
+            return getattr(self, '_saved_camera', None)
+        return (float(ax.elev), float(ax.azim), float(ax.roll))
+
+    def restore_camera(self, camera) -> None:
+        """Turn the 3D view to ``camera`` now, or when it is next drawn."""
+        camera = tuple(float(c) for c in camera) if camera else None
+        ax = self.ax
+        if camera and ax is not None and hasattr(ax, 'elev'):
+            ax.view_init(*camera)
+            self.canvas.draw_idle()
+        else:
+            self._saved_camera = camera
 
     def _apply_view(self, *_) -> None:
         view = VIEWS.get(self.view.currentData())

@@ -204,7 +204,8 @@ class CompositionsPanel(QWidget):
     def _draw_base(self) -> None:
         data = self._data
         state = self.state
-        camera = (self.ax.elev, self.ax.azim, self.ax.roll) if self.ax is not None else None
+        camera = (self.ax.elev, self.ax.azim, self.ax.roll) if self.ax is not None else \
+            self.__dict__.pop('_saved_camera', None)
         self.figure.clear()
         ax = self.figure.add_subplot(111, projection='3d')
         self.figure.subplots_adjust(0, 0, 1, 1)
@@ -255,6 +256,23 @@ class CompositionsPanel(QWidget):
             f"{n} compositions of {data['depth']} digits in {len(data['classes'])} classes of equal duration "
             f"({int(present.sum())} present in {where}, {int(data['counts'].sum())} subcycles). Sizes: how many "
             "subcycles have each one. Drag to rotate; click a composition to highlight its subcycles.")
+
+    def camera(self) -> tuple | None:
+        """(elevation, azimuth, roll) of the 3D view, or None."""
+        ax = self.ax
+        if ax is None or not hasattr(ax, 'elev'):
+            return getattr(self, '_saved_camera', None)
+        return (float(ax.elev), float(ax.azim), float(ax.roll))
+
+    def restore_camera(self, camera) -> None:
+        """Turn the 3D view to ``camera`` now, or when it is next drawn."""
+        camera = tuple(float(c) for c in camera) if camera else None
+        ax = self.ax
+        if camera and ax is not None and hasattr(ax, 'elev'):
+            ax.view_init(*camera)
+            self.canvas.draw_idle()
+        else:
+            self._saved_camera = camera
 
     def _apply_view(self, *_) -> None:
         view = VIEWS.get(self.view.currentData())

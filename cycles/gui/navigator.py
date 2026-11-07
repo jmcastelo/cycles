@@ -14,12 +14,12 @@ Enter zoom into the selection, Backspace/Escape zoom out.
 
 import numpy as np
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QPainter, QPen
+from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QSizePolicy, QToolButton, QToolTip, QWidget
 
 from cycles.gui.state import (
-    MAX_DEPTH, MOMENT_COLOR, PERMUTATION_COLOR, CycleState, address_of, children_range, current_year, date_text, tcoord,
-    span_text, time_text,
+    BOOKMARK_COLOR, MAX_DEPTH, MOMENT_COLOR, PERMUTATION_COLOR, CycleState, address_of, children_range, current_year,
+    date_text, span_text, tcoord, time_text,
 )
 
 LABEL_WIDTH = 44     # left margin, for the depth of each row
@@ -63,6 +63,7 @@ class Navigator(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         state.focusChanged.connect(self._changed)
         state.selectionChanged.connect(self.update)
+        state.bookmarksChanged.connect(self.update)
         state.viewChanged.connect(self._changed)
         state.dateChanged.connect(self.update)
         state.skyTimeChanged.connect(self.update)
@@ -205,6 +206,8 @@ class Navigator(QWidget):
                 if moment.get(depth) == index:
                     painter.drawRect(rect.adjusted(1, 1, -1, -1))
 
+        self._draw_bookmarks(painter, cells)
+
         # Depth of each row, and the extent of the zoomed subcycle
         painter.setPen(palette.text().color())
         painter.setFont(font)
@@ -218,6 +221,39 @@ class Navigator(QWidget):
         self._draw_markers(painter, cells)
         self._draw_criteria_key(painter)
         painter.end()
+
+    # -- bookmarks
+
+    def _draw_bookmarks(self, painter: QPainter, cells) -> None:
+        """A flag in the corner of each bookmarked subcycle in view, and a tick on the overview strip."""
+        state = self.state
+        if not state.bookmarks:
+            return
+        marked = {b['address'] for b in state.bookmarks}
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        color = QColor(BOOKMARK_COLOR)
+        painter.setPen(QPen(color.darker(170), 1))
+        painter.setBrush(color)
+        for rect, address, _, _ in cells:
+            if address in marked and rect.width() >= 4:
+                size = min(12.0, rect.width(), rect.height() / 2)
+                painter.drawPolygon(QPolygonF([rect.topLeft(), rect.topLeft() + QPointF(size, 0),
+                                               rect.topLeft() + QPointF(0, size)]))
+        strip = self._overview_rect()
+        painter.setPen(QPen(color, 2))
+        for address in marked:
+            level = state.cache.level(len(address))
+            x = strip.left() + float(level.starts[tcoord(address)]) * strip.width()
+            painter.drawLine(QPointF(x, strip.top()), QPointF(x, strip.top() + strip.height() * 0.35))
+        painter.restore()
+
+    def bookmark_text(self, address: tuple) -> str:
+        lines = []
+        for bookmark in self.state.bookmarks_of(address):
+            label = bookmark['label'] or 'Bookmark'
+            lines.append(f"\n🔖 {label}" + (f": {bookmark['note']}" if bookmark['note'] else ''))
+        return ''.join(lines)
 
     # -- the other division criterion
 
@@ -636,6 +672,7 @@ class Navigator(QWidget):
                     t0, t1 = time_map.interval(address)
                     text += f"\n{time_text(t0, t1 - t0)} to {time_text(t1, t1 - t0)} ({span_text(t1 - t0)})"
                     text += self.criteria_text(address)
+                text += self.bookmark_text(address)
                 QToolTip.showText(event.globalPos(), text, self)
             else:
                 QToolTip.hideText()

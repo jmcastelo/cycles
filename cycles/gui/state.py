@@ -197,6 +197,7 @@ def permuted_address(address: tuple, sigma: tuple, first: int) -> tuple:
 
 
 PERMUTATION_COLOR = '#9467bd'   # the image of the selection under σ
+BOOKMARK_COLOR = '#2ca02c'      # bookmarked subcycles
 
 # What the views highlight around the selection
 HIGHLIGHTS = {
@@ -254,6 +255,8 @@ class CycleState(QObject):
     dateChanged = Signal(object)        # the marked date (decimal year), or None
     skyTimeChanged = Signal(object)     # the moment of the sky chart (decimal year), or None
     permutationChanged = Signal()       # the σ of the Permutations panel
+    bookmarksChanged = Signal()
+    notesChanged = Signal()             # the notes of the session
 
     def __init__(self, cache: LevelCache | None = None, presets: dict[str, CycleModel] | None = None):
         super().__init__()
@@ -276,6 +279,8 @@ class CycleState(QObject):
         self.permutation: tuple | None = None   # (σ, first permuted position) of the Permutations panel
         self.borders: bool = False
         self.labels: str = 'none'       # 'names', 'dots' (4, 3, 2, 1 for the four ages), 'both' or 'none'
+        self.bookmarks: list[dict] = []    # {'address': tuple, 'label': str, 'note': str}
+        self.notes: str = ''
 
     # -- focus and selection
 
@@ -503,6 +508,47 @@ class CycleState(QObject):
             return None
         address = self.subcycle_at(self.sky_time, depth)
         return None if address is None else tcoord(address)
+
+    # -- notes and bookmarks
+
+    def set_notes(self, text: str) -> None:
+        if text != self.notes:
+            self.notes = text
+            self.notesChanged.emit()
+
+    @staticmethod
+    def _bookmark(address, label: str = '', note: str = '') -> dict:
+        address = tuple(int(d) for d in address)
+        if not address or any(d not in (0, 1, 2, 3) for d in address):
+            raise ValueError(f"not an address: {address}")
+        return {'address': address, 'label': str(label), 'note': str(note)}
+
+    def set_bookmarks(self, bookmarks) -> None:
+        """Replace the bookmarks (dicts with an address, and optionally a label and a note)."""
+        self.bookmarks = [self._bookmark(b['address'], b.get('label', ''), b.get('note', '')) for b in bookmarks]
+        self.bookmarksChanged.emit()
+
+    def add_bookmark(self, address, label: str = '', note: str = '') -> int:
+        """Bookmark ``address``; returns its row."""
+        self.bookmarks.append(self._bookmark(address, label, note))
+        self.bookmarksChanged.emit()
+        return len(self.bookmarks) - 1
+
+    def update_bookmark(self, row: int, **fields) -> None:
+        bookmark = self.bookmarks[row]
+        changed = {key: str(value) for key, value in fields.items() if key in ('label', 'note')
+                   and str(value) != bookmark[key]}
+        if changed:
+            bookmark.update(changed)
+            self.bookmarksChanged.emit()
+
+    def remove_bookmark(self, row: int) -> None:
+        del self.bookmarks[row]
+        self.bookmarksChanged.emit()
+
+    def bookmarks_of(self, address) -> list[dict]:
+        address = tuple(address) if address is not None else None
+        return [b for b in self.bookmarks if b['address'] == address]
 
     def set_sky_time(self, year: float | None) -> None:
         if year != self.sky_time:

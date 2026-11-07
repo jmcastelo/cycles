@@ -186,7 +186,8 @@ class MeasuresPanel(QWidget):
         where = ' › '.join(state.names[d] for d in scope) or 'whole cycle'
         title = f"{self.kind.currentText()}, depth {depth} ({where})"
 
-        camera = (self.ax.elev, self.ax.azim, self.ax.roll) if self.ax is not None and self._z is not None else None
+        camera = ((self.ax.elev, self.ax.azim, self.ax.roll) if self.ax is not None and self._z is not None
+                  else self.__dict__.pop('_saved_camera', None))
         self.figure.clear()
         self._z = None
         sizes = self.point_sizes(part.durations, scatter=x_name == 'dharma' or y_name == '3d')
@@ -324,3 +325,20 @@ class MeasuresPanel(QWidget):
                           + f"\ndharma {self.state.cache.level(len(address)).dharmas[self._indices[k]]:.4f}, "
                           f"purity {self.state.cache.level(len(address)).purities[self._indices[k]]:.4f}",
                           self.canvas)
+
+    def camera(self) -> tuple | None:
+        """(elevation, azimuth, roll) of the 3D view, or None."""
+        ax = self.ax
+        if ax is None or not hasattr(ax, 'elev') or self._z is None:
+            return getattr(self, '_saved_camera', None)
+        return (float(ax.elev), float(ax.azim), float(ax.roll))
+
+    def restore_camera(self, camera) -> None:
+        """Turn the 3D view to ``camera`` now, or when it is next drawn."""
+        camera = tuple(float(c) for c in camera) if camera else None
+        ax = self.ax
+        if camera and ax is not None and hasattr(ax, 'elev') and self._z is not None:
+            ax.view_init(*camera)
+            self.canvas.draw_idle()
+        else:
+            self._saved_camera = camera
