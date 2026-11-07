@@ -89,6 +89,23 @@ model.boundaries()                          # years of the yuga boundaries
 model.replace(division='time').time_map()   # same anchor and arc, dividing time
 ```
 
+Dividing the arc, each yuga takes 4:3:2:1 of it, the same shares as in
+years: 0.4, 0.3, 0.2 and 0.1 of the total. With the presets' 2.5 turns
+(900°), Satya takes exactly one turn of the vernal point around the zodiac:
+
+| Yuga | Arc | Degrees | Share of the 2.5 turns |
+|---|---|---|---|
+| Satya | 1 turn | 360° | 1 / 2.5 = 0.4 |
+| Treta | ¾ turn | 270° | 0.75 / 2.5 = 0.3 |
+| Dvapara | ½ turn | 180° | 0.5 / 2.5 = 0.2 |
+| Kali | ¼ turn | 90° | 0.25 / 2.5 = 0.1 |
+
+The division repeats at every level, so a subcycle's arc is the total times
+the product of the shares along its address: Kali › Kali is
+2.5 × 0.1 × 0.1 = 0.025 turn (9°), Satya › Kali 2.5 × 0.4 × 0.1 = 0.1 turn
+(36°). This is why the preset at a constant rate gives Satya one precession
+period (25,772 years).
+
 Because the precession rate varies, the two criteria (4:3:2:1 in years and
 in angle) cannot both hold exactly: a yuga's share of the time is its share
 of the arc times the cycle's mean rate over the yuga's own mean rate. With
