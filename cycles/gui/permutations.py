@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
 from cycles.functions.permutation import (
     cycle_text, cycle_type, cycles, identity, order, parse_permutation, permute_digits, power, sign, tcoords_of,
 )
-from cycles.gui.state import MAX_DEPTH, MOMENT_COLOR, CycleState, address_of, children_range, tcoord
+from cycles.gui.state import MAX_DEPTH, MOMENT_COLOR, SELECTION_COLOR, CycleState, address_of, children_range, tcoord
 
 VIEWS = {
     'timeline': 'Powers timeline',
@@ -39,7 +39,6 @@ LINES = {'auto': 'Lines: auto', 'all': 'Lines: all', 'none': 'Lines: none'}
 MATRIX_IMAGE = 1024       # largest matrix drawn as an image (larger: as points)
 AUTO_LINES = 1024          # largest number of subcycles whose lines are drawn in auto
 ROW_GAP = 1.4              # between the rows of the timeline, in row heights
-SELECTION_COLOR = '#1f77b4'
 SUPERSCRIPTS = str.maketrans('0123456789', '⁰¹²³⁴⁵⁶⁷⁸⁹')
 
 
@@ -278,7 +277,8 @@ class PermutationsPanel(QWidget):
             self.element.setText(' '.join(map(str, sigma)))
         self._show_summary(sigma, first, depth)
         base = (self.view.currentData(), depth, prefix, first, sigma, state.color_key,
-                state.parameters_of(state.color_key), state.spacing, state.model, state.names,
+                state.parameters_of(state.color_key), state.context_of(state.color_key), state.spacing, state.model,
+                state.names,
                 self.lines.currentData())
         if base != self._base:
             self._data = self._compute(depth, prefix, first, sigma)
@@ -328,7 +328,7 @@ class PermutationsPanel(QWidget):
         else:
             edges = np.arange(len(indices) + 1, dtype=float) + span.start
             xlabel = 'Index'
-        colors = np.clip(np.asarray(state.cache.colors(depth, state.color_key))[indices][:, :3], 0, 1)
+        colors = np.clip(np.asarray(state.colors(depth, state.color_key))[indices][:, :3], 0, 1)
         return dict(depth=depth, prefix=prefix, first=first, sigma=sigma, order=o, indices=indices,
                     slots=slots, edges=edges, centers=(edges[:-1] + edges[1:]) / 2, colors=colors, xlabel=xlabel,
                     occupants=None)

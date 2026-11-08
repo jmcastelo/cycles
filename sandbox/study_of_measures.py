@@ -1,10 +1,18 @@
-"""Study of the dharma and purity measures of subcycles."""
+"""
+Study of the measures of subcycles: dharma and purity (with the bases of the original study, the purity weights
+equal), and every measure of ``measure.MEASURES`` with the explorer's bases: the measures over time and how much
+they repeat each other (rank correlations by depth).
+"""
 
 import numpy as np
 
 from cycles.functions.division import partition_level
 from cycles.plotting.measure import plot_quality_grid, plot_purity_vs_dharma, plot_quality_scatter_3d
 from cycles.plotting.generic import plot_y_vs_x
+import matplotlib.pyplot as plt
+
+import common
+from cycles.functions.measure import MEASURES, address_measures
 from common import PLOTS_DIR, compute_levels, fig_data, save_figure
 from runner import study, run
 
@@ -98,6 +106,150 @@ def purity_vs_time(ctx, opts):
 def purity_vs_index(ctx, opts):
     """Purity against time-order index, one figure per depth."""
     _measure_plot(ctx, opts, 'purity', 'index', 'a4', 300)
+
+
+# -- every measure (the explorer's bases, common.BASES, and the cycle model of the session or the default preset)
+
+def _model():
+    from cycles.functions.cycle_model import BUILTIN_PRESETS, DEFAULT_PRESET
+    return common.MODEL if common.MODEL is not None else BUILTIN_PRESETS[DEFAULT_PRESET]
+
+
+EPHEMERIS = common.DATA_DIR / 'tabla70k70k'
+
+
+def _tables():
+    """The ephemeris tables (for the gathering of the planets), or None if they are not on this computer."""
+    if 'tables' not in _CACHE:
+        from cycles.gui.sky import ephemeris_parts
+        import cycles.functions.nbody_ephemeris as nbe
+        parts = ephemeris_parts(EPHEMERIS) if EPHEMERIS.exists() else []
+        _CACHE['tables'] = [nbe.load_ephemeris(part) for part in parts] or None
+    return _CACHE['tables']
+
+
+_CACHE = {}
+
+
+def all_measures(level, model=None) -> dict[str, np.ndarray]:
+    """
+    Every measure of ``MEASURES`` for ``level``: with ``model``, also the angular density and, if the ephemeris is
+    here, the gathering of Sun to Saturn at the start of each subcycle.
+    """
+    values = address_measures(level.lcoords, level.durations, level.dharmas, level.purities, common.BASES)
+    if model is not None:
+        from cycles.functions.cycle_analysis import angular_density
+        values['density'] = angular_density(model, level.starts, level.durations)
+        tables = _tables()
+        if tables:
+            from cycles.functions.events import CLASSICAL, around_point, tdb_years
+            years = np.asarray(model.time_map().to_physical(level.starts), dtype=float)
+            grid = np.linspace(years.min() - 1, years.max() + 1, 2001)
+            tdb = years + np.interp(years, grid, tdb_years(grid) - grid)
+            values['gathering'] = 1 - around_point(tables, tdb, CLASSICAL)['spread'] / 360.0
+    return values
+
+
+def ranks(values: np.ndarray) -> np.ndarray:
+    """Ranks of ``values`` (from 0), ties sharing their mean rank."""
+    order = np.argsort(values, kind='stable')
+    sorted_values = values[order]
+    r = np.empty(len(values))
+    starts = np.flatnonzero(np.r_[True, np.diff(sorted_values) != 0])
+    ends = np.r_[starts[1:], len(values)]
+    for a, b in zip(starts, ends):
+        r[order[a:b]] = (a + b - 1) / 2
+    return r
+
+
+def rank_correlations(values: dict[str, np.ndarray]) -> tuple[list[str], np.ndarray]:
+    """Spearman correlations between the measures; NaN for a measure that is constant at that depth."""
+    keys = list(values)
+    varying = [k for k in keys if np.ptp(values[k]) > 1e-12]
+    inner = np.corrcoef(np.array([ranks(values[k]) for k in varying]))
+    r = np.full((len(keys), len(keys)), np.nan)
+    index = [keys.index(k) for k in varying]
+    r[np.ix_(index, index)] = inner
+    return keys, r
+
+
+def _finish(fig, opts, name: str) -> None:
+    if opts.save:
+        save_figure(fig, BASE_DIR / 'all' / name, dpi=150)
+    if opts.show:
+        plt.show()
+    plt.close(fig)
+
+
+@study
+def measures_over_time(ctx, opts, depth: int = 4):
+    """Every measure against time at depth 4 (years of the cycle model), one panel each."""
+    from cycles.functions.division import compute_level
+    model = _model()
+    level = compute_level(depth, common.BASES, common.SCALES, common.TETRAHEDRON_COLORS)
+    values = all_measures(level, model)
+    years = np.asarray(model.time_map().to_physical(level.starts + level.durations / 2), dtype=float)
+    colors = level.rgb('cmyk_normalised')
+    fig, axes = plt.subplots(3, 4, figsize=(20, 10), sharex=True)
+    for ax in axes.ravel()[len(values):]:
+        ax.axis('off')
+    for ax, (key, v) in zip(axes.ravel(), values.items()):
+        ax.plot(years, v, color='0.75', lw=0.6, zorder=1)
+        ax.scatter(years, v, c=colors, s=6, zorder=2)
+        ax.set_title(MEASURES[key]['label'], fontsize=10)
+        if key in ('trend', 'contrast', 'balance'):
+            ax.axhline(0, color='0.5', lw=0.5)
+        if key == 'density':
+            ax.axhline(1, color='0.5', lw=0.5)
+    for ax in axes[-1]:
+        ax.set_xlabel('Year')
+    fig.suptitle(f"The measures of the {4 ** depth} subcycles of depth {depth} ({model.name}, bases {common.BASES})")
+    fig.tight_layout()
+    _finish(fig, opts, f"measures_over_time_at_depth_{depth}.png")
+
+
+@study
+def measure_correlations(ctx, opts, depths=(2, 3, 4, 5, 6)):
+    """
+    Rank (Spearman) correlations between the measures at each depth: which carry information of their own and
+    which repeat dharma or purity.
+    """
+    from cycles.functions.division import compute_level
+    model = _model()
+    tables = []
+    for depth in depths:
+        level = compute_level(depth, common.BASES, common.SCALES, common.TETRAHEDRON_COLORS)
+        keys, r = rank_correlations(all_measures(level, model))
+        tables.append((depth, keys, r))
+        print(f"\nDepth {depth} ({4 ** depth} subcycles): Spearman correlations")
+        labels = [MEASURES[k]['label'][:9] for k in keys]
+        print(' ' * 10 + ''.join(f"{name:>10}" for name in labels))
+        for name, row in zip(labels, r):
+            print(f"{name:<10}" + ''.join(f"{x:>10.2f}" for x in row))
+        # how much of each measure the others explain: the largest |r| with another measure
+        r_off = np.nan_to_num(np.abs(r), nan=-1.0)
+        np.fill_diagonal(r_off, -1.0)
+        print('Largest |r| with another measure: '
+              + ', '.join(f"{MEASURES[k]['label'].lower()} {m:.2f} ({MEASURES[keys[j]]['label'].lower()})"
+                          if m >= 0 else f"{MEASURES[k]['label'].lower()} constant"
+                          for k, m, j in zip(keys, r_off.max(axis=1), r_off.argmax(axis=1))))
+    shown = [t for t in tables if t[0] in (depths[0], depths[len(depths) // 2], depths[-1])]
+    fig, axes = plt.subplots(1, len(shown), figsize=(5.2 * len(shown), 6.2), layout='constrained')
+    for k, (ax, (depth, keys, r)) in enumerate(zip(np.atleast_1d(axes), shown)):
+        image = ax.imshow(np.ma.masked_invalid(r), cmap='RdBu_r', vmin=-1, vmax=1)
+        ax.set_facecolor('0.85')                # a measure constant at that depth
+        labels = [MEASURES[key]['label'].replace('Angular density', 'Ang. density') for key in keys]
+        ax.set_xticks(range(len(keys)), labels, rotation=90, fontsize=8)
+        ax.set_yticks(range(len(keys)), labels if k == 0 else [], fontsize=8)
+        for i in range(len(keys)):
+            for j in range(len(keys)):
+                if np.isfinite(r[i, j]):
+                    ax.text(j, i, f"{r[i, j]:.1f}".replace('-', '−'), ha='center', va='center', fontsize=7,
+                            color='white' if abs(r[i, j]) > 0.6 else 'black')
+        ax.set_title(f"Depth {depth} ({4 ** depth} subcycles)", fontsize=10)
+    fig.colorbar(image, ax=axes, shrink=0.7, label='Spearman correlation')
+    fig.suptitle(f"Rank correlations between the measures ({model.name}, bases {common.BASES})")
+    _finish(fig, opts, 'measure_correlations.png')
 
 
 if __name__ == "__main__":

@@ -69,6 +69,51 @@ def precession_rate(model: CycleModel, years) -> np.ndarray:
     return (np.asarray(model.ayanamsa(years + 0.5)) - np.asarray(model.ayanamsa(years - 0.5))) * 3600
 
 
+DENSE_GRID = 20001        # points of the grids on which large sets of moments are interpolated
+DENSE_FROM = 20000        # from how many moments the time map and the ayanamsa are interpolated (the grid size)
+
+
+def dense_years(time_map, u) -> np.ndarray:
+    """
+    Years of the normalized times ``u`` in ``time_map``: exactly for a few, interpolated on a grid of
+    ``DENSE_GRID`` points for many (``DENSE_FROM`` or more). The maps by the precession angle invert the precession
+    model point by point, which is slow; they are smooth, so the interpolation is good to well under a day.
+    """
+    u = np.asarray(u, dtype=float)
+    if u.size < DENSE_FROM:
+        return np.asarray(time_map.to_physical(u), dtype=float)
+    grid = np.linspace(0.0, 1.0, DENSE_GRID)
+    return np.interp(u, grid, np.asarray(time_map.to_physical(grid), dtype=float))
+
+
+def dense_ayanamsa(model: CycleModel, years) -> np.ndarray:
+    """The model's ayanamsa at ``years``: exactly for a few, interpolated on a fine grid for many (``dense_years``)."""
+    years = np.asarray(years, dtype=float)
+    if years.size < DENSE_FROM:
+        return np.asarray(model.ayanamsa(years), dtype=float)
+    grid = np.linspace(years.min(), years.max(), DENSE_GRID)
+    return np.interp(years, grid, np.asarray(model.ayanamsa(grid), dtype=float))
+
+
+def angular_density(model: CycleModel, starts, durations, time_map=None) -> np.ndarray:
+    """
+    Angular density of subcycles (``starts`` and ``durations`` as fractions of the cycle): the share of the
+    precession arc swept while each lasts over its share of the time, i.e. its mean precession rate over the whole
+    cycle's. Above 1 the equinox moves faster than on average. ``time_map``: the model's, if already made. For many
+    subcycles the time map and the ayanamsa are interpolated (``dense_years``).
+    """
+    time_map = model.time_map() if time_map is None else time_map
+    starts, durations = np.asarray(starts, dtype=float), np.asarray(durations, dtype=float)
+    ends = np.minimum(starts + durations, 1.0)
+    years = dense_years(time_map, np.concatenate([starts, ends, [0.0, 1.0]]))
+    y0, y1, (start, end) = years[:len(starts)], years[len(starts):-2], years[-2:]
+    ayanamsa = dense_ayanamsa(model, years)
+    arc = ayanamsa[len(starts):-2] - ayanamsa[:len(starts)]
+    total = ayanamsa[-1] - ayanamsa[-2]
+    with np.errstate(divide='ignore', invalid='ignore'):
+        return (arc / total) / ((y1 - y0) / (end - start))
+
+
 MEASURES = {'max': 'Largest deviation', 'rms': 'RMS deviation'}
 
 

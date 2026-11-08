@@ -38,7 +38,7 @@ gui = [
 ]
 all = ["cycles[astro,sound,gui]"]
 # Tests (pytest tests/); the GUI tests run offscreen and need the gui extra
-test = ["pytest>=8"]
+test = ["pytest>=8", "pytest-xdist"]
 
 [project.gui-scripts]
 cycles-gui = "cycles.gui.app:main"

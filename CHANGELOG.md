@@ -8,6 +8,68 @@ current one: `tests/test_version.py` checks it, and the docs' LaTeX converter re
 When releasing a version: describe it here, raise `__version__`, update the docs (and their version line), and tag
 the commit `vX.Y.Z`.
 
+## 0.4.0 — 2026-11-09
+
+New measures and colorings, queries, and every level down to depth 9.
+
+- **More measures of the subcycles** (`measure.MEASURES`): mixture (entropy of the age shares), tension (weighted
+  spread of the virtues), trend (inner levels better or worse than the outer ones), roughness (jumps between
+  levels), contrast (the jump of dharma from the previous subcycle), balance (running sum of dharma above its mean)
+  and, with a cycle model, angular density (`cycle_analysis.angular_density`: the subcycle's mean precession rate
+  over the cycle's). The Measures panel plots any two of them and colors the points by any; the inspector (and
+  so the dossier) shows them on one line. The study `measure_correlations` finds that trend, contrast and angular
+  density carry information of their own, while mixture nearly repeats purity and roughness tension.
+- **Joining the highlighted subcycles** in the Measures and Color space panels (*Join*): the steps of the ⟨σ⟩
+  orbit of the selection in order, with arrows, or the swaps of neighbouring digits between the orderings of its
+  ages (Same composition). The swaps of one position are parallel in the plane of two measures linear in the
+  virtues, such as trend against dharma.
+- **New colorings** (grouped in the toolbar by kind, with a description of each; 26 with those of the sky below): `tetrahedron_oklab`, the chaos
+  game of the tetrahedron coloring in OKLab, a perceptual color space (the regions of the four ages look equally
+  large; the vertices are shrunk to keep every color in the sRGB gamut; screens tell fewer of its colors apart, so
+  it is an alternative, not a replacement); `duration_class`, one color per class of equal duration; the
+  measures (dharma, purity, mixture, tension, trend, roughness, contrast, balance), all alike on a sequential or
+  a diverging color map chosen in *Parameters…* (viridis, cividis, magma, plasma, inferno or gray; blue–red,
+  coolwarm, orange–purple or brown–teal), kept in sessions, and changing them only recolors; and, with a cycle
+  model, the angular density and the sign and element of the vernal point at the start of each subcycle.
+  `CycleState.colors` gives every coloring to the panels. Dharma and purity are no longer gray by default (the
+  gray map shows them as before).
+- **Three more measures** and three more colorings: *microcosm* (how closely the age shares match the whole
+  cycle's 0.4, 0.3, 0.2, 0.1) and *complexity* (Lempel–Ziv, of the order of the ages), from the address; and,
+  with a cycle model and the ephemeris of the Sky panel (now also given to the state), *gathering* (how gathered
+  Sun to Saturn are at the start of each subcycle) and the colorings of the **trigon of the great conjunctions
+  in force** at each start, sidereal and tropical (`events.trigon_periods`, `events.trigon_in_force`). The
+  correlation study finds microcosm close to dharma, complexity close to mixture, and gathering independent of
+  the address measures.
+- **Queries**: a condition on the subcycles typed in the toolbar (`trend > 0.3 and dharma < 0.5`,
+  `last == Kali and count(Satya) >= 2`, `year > 0`…) for a new highlight, *Matching the query*: at every depth the
+  navigator keeps the matches bright and the Measures and Color space panels ring them; the number of matches is
+  shown, and the query is kept in sessions. `cycles.functions.query` accepts only a small, checked part of
+  Python's expressions (measures, time, digits, ages, comparisons, arithmetic, `count`, `abs`).
+- **Faster levels**: `compute_level` computes a whole level at once with numpy (depth 8 in 0.06 s instead of
+  5 s; identical results), so the explorer goes down to **depth 9** (262,144 subcycles). For many moments the
+  time map and the ayanamsa are interpolated on a fine grid (`cycle_analysis.dense_years`, `dense_ayanamsa`; well
+  under a day), and the inspector computes the measures of the sky for the selected subcycle alone. The group
+  explorer lists up to S_8.
+- **A tidier toolbar**: one row, grouped by topic with separators (the cycle model; the coloring; the levels; the
+  highlight and the query). The drawing options set once moved to the *View* menu as checkable items: *Widths*,
+  *Names*, *Labels*, *Borders* (`Ctrl+Shift+B`) and *Compare the division criteria* (`Ctrl+Shift+C`).
+- **One color per role**, in the navigator and the plots (`state.SELECTION_COLOR`, `MOMENT_COLOR`, `DATE_COLOR`):
+  the selection blue (a thinner border, 2 px, its parents 1 px), the sky moment orange (its cursor and tag, as the
+  Follow boxes already were), the marked date red. The cursors are solid lines, and borders and cursors have a
+  light edge so that they stand out over cells of any color.
+- **The navigator's tags below the rows**: the tags of the marked date and the sky moment, the key of the criteria
+  and the label of the planetary events moved from between the overview and the rows to a band under the rows,
+  above the time axis (one line per tag shown), so the rows start right under the overview; the event ticks are
+  under the last row.
+- **Every level in the navigator**: *Levels* goes up to 9, the deepest. Rows of subcycles narrower than a couple of
+  pixels are drawn as a strip of pixels, each the width-weighted mean color of the subcycles under it (with a
+  highlight, the bright ones, so that no match is lost); clicking, the selection, Follow, bookmarks, cursors and
+  events work in them as in the others. Nine levels of the whole cycle repaint in about 30 ms.
+- **Tests in parallel**: `pytest-xdist` in the `test` extra; `pytest -n 8` runs the suite in under a minute instead
+  of nine.
+- **README**: a short introduction with installation, a quick start, the chapters of the documentation and the
+  references; everything else lives in `docs/es` (the VS Code tasks are now described in chapter 11).
+
 ## 0.3.0 — 2026-11-08
 
 Planetary events and significance tests.

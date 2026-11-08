@@ -11,6 +11,7 @@ are one matrix product.
 """
 
 import itertools
+import math
 from math import comb
 
 import numpy as np
@@ -41,6 +42,7 @@ COLUMNS = [
     ('purity', 'Δ purity', 'Mean change of purity between a subcycle and its image'),
 ]
 NUMERIC = ['order', 'fixed', 'orbits', 'moved', 'shift', 'correlation', 'color', 'dharma', 'purity']
+MAX_DIGITS = 8          # the largest group listed, S_8 (40,320 elements; S_9 would have 362,880)
 HEAVY = ['moved', 'shift', 'correlation', 'color', 'dharma', 'purity']
 BLOCK_ENTRIES = 2_000_000       # subcycles × elements per block (memory and time of one step)
 
@@ -238,8 +240,8 @@ class GroupExplorer(QDialog):
             return
         state = self.state
         context = self.context()
-        key = (context, state.color_key, state.parameters_of(state.color_key), state.parameters_of('dharma'),
-               state.parameters_of('purity'))
+        key = (context, state.color_key, state.parameters_of(state.color_key), state.measure_parameters_of('dharma'),
+               state.measure_parameters_of('purity'), state.context_of(state.color_key))
         if key != self._context:
             self._context = key
             self._rebuild(context)
@@ -256,6 +258,13 @@ class GroupExplorer(QDialog):
             return
         depth, prefix, first = context
         m = depth - first
+        if m > MAX_DIGITS:
+            self.heading.setText(f"σ acts on {m} digits: S_{m} has {math.factorial(m):,} elements, too many to list "
+                                 f"(up to S_{MAX_DIGITS}, {math.factorial(MAX_DIGITS):,}). Let σ act below the zoom, "
+                                 f"or choose a smaller depth.")
+            self.model.reset(np.zeros((0, 0), dtype=np.int64), {}, [])
+            self.note.setText('')
+            return
         perms = np.array(list(itertools.permutations(range(m))), dtype=np.int64).reshape(-1, m)
         cycle_counts = np.array([len(cycles(tuple(p))) for p in perms])
         orders = np.array([order(tuple(p)) for p in perms])
@@ -299,7 +308,7 @@ class GroupExplorer(QDialog):
             tails=np.asarray(level.lcoords[indices][:, first:], dtype=np.int64),
             inverse_weights=weights[np.argsort(perms, axis=1)],     # w[σ⁻¹(j)] for each element
             starts=starts / length,
-            colors=np.clip(np.asarray(state.cache.colors(depth, state.color_key))[indices][:, :3], 0, 1),
+            colors=np.clip(np.asarray(state.colors(depth, state.color_key))[indices][:, :3], 0, 1),
             dharmas=np.asarray(level.dharmas[indices], dtype=float),
             purities=np.asarray(level.purities[indices], dtype=float),
             block=max(1, BLOCK_ENTRIES // n), next=0, total=len(perms))

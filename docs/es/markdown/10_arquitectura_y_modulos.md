@@ -36,17 +36,18 @@ tienen docstrings (`help(compute_level)`).
 
 | Módulo | Contenido principal |
 |---|---|
-| `division.py` | proporciones y desplazamientos; `Level` y `compute_level`; `compute_duration`, `compute_start`, `find_lcoords`, `select_subcycle`, `partition_level`, `fill_partition`; colores (`level_colors`, `COLOR_KEYS`), parámetros por defecto y sus efectos (capítulos 1 y 2) |
+| `division.py` | proporciones y desplazamientos; `Level` y `compute_level` (vectorizado: un nivel de una vez), `level_lcoords`; `compute_duration`, `compute_start`, `find_lcoords`, `select_subcycle`, `partition_level`, `fill_partition`; colores (`level_colors`, `COLOR_KEYS`), parámetros por defecto y sus efectos (capítulos 1 y 2) |
 | `conversion.py` | dirección ↔ índice ↔ fracción en base *b* |
 | `composition.py` | composiciones, clases de igual duración, enumeración de una composición, `analyse_level` |
 | `duration.py` | `count_digits`, `same_duration`, `duration_quotient`, distancias entre inicios |
-| `measure.py` | `dharma_measure`, `purity_measure`, `dharma_from_cmyk` |
-| `color.py` | variantes CMYK, CMYK → RGB, `lrgb`, coloreado del tetraedro, rangos de los parámetros (`color_parameter_problems`) |
+| `measure.py` | `dharma_measure`, `purity_measure`, `dharma_from_cmyk`; las demás medidas (`mixture_measure`, `tension_measure`, `trend_measure`, `roughness_measure`, `contrast_measure`, `balance_measure`, `microcosm_measure`, `complexity_measure` con `lempel_ziv`), `address_measures` y el registro `MEASURES` |
+| `color.py` | variantes CMYK, CMYK → RGB, `lrgb`, coloreado del tetraedro en RGB y en OKLab (`srgb_to_oklab`, `oklab_to_srgb`, `oklab_tetrahedron`), colores por clase de duración, por medida (`measure_colors`, con los mapas de `SEQUENTIAL_MAPS` y `DIVERGING_MAPS`) y por el punto vernal (`vernal_colors`), rangos de los parámetros (`color_parameter_problems`) |
 | `permutation.py` | matriz de una permutación sobre un nivel; composición, potencias, ciclos, orden, signo, tipo, notación, `parse_permutation`, `permute_digits`, `tcoords_of` (capítulo 3) |
 | `timescale.py` | `TimeMap` (lineal, por fronteras de edades, por funciones), `address_label`, nombres de las edades |
 | `cycle_model.py` | `CycleModel`, presets y su fichero, `mean_rate` (capítulo 8) |
-| `cycle_analysis.py` | cuotas de tiempo, desviaciones, `mismatch_by_depth`, `mismatch_grid`, `fit_anchor`, `precession_rate` |
-| `events.py` | acontecimientos planetarios: conjunciones exactas y sus series, signos y elementos en ambos zodiacos, cambios de trígono, cuerpos alrededor de un punto (capítulo 15) |
+| `cycle_analysis.py` | cuotas de tiempo, desviaciones, `mismatch_by_depth`, `mismatch_grid`, `fit_anchor`, `precession_rate`; `angular_density`; `dense_years` y `dense_ayanamsa` (los años y el ayanāṃśa de muchos momentos, interpolados en una rejilla fina: el mapa del arco invierte la precesión punto a punto) |
+| `query.py` | consultas: una condición sobre los subciclos (`parse`, que admite solo una parte de las expresiones de Python, y `evaluate`, de una vez sobre el nivel) |
+| `events.py` | acontecimientos planetarios: conjunciones exactas y sus series, signos y elementos en ambos zodiacos, cambios de trígono, cuerpos alrededor de un punto (capítulo 15); el trígono vigente en cada momento (`trigon_periods`, `trigon_in_force`) |
 | `significance.py` | contrastes: distancia al acontecimiento más cercano, rotaciones rígidas, valores p, corrección de Holm |
 | `astro_dates.py` | calendarios, día juliano, año decimal, ΔT, UT ↔ TDB (capítulo 5) |
 | `nbody_ephemeris.py` | construir y consultar la efeméride, escalar y vectorizado (capítulo 6) |
@@ -173,8 +174,12 @@ Para publicar una versión: describirla en `CHANGELOG.md`, subir `__version__`, 
 línea de versión, regenerar el LaTeX y etiquetar el commit `vX.Y.Z`. Con una instalación editable,
 `pip install -e . --no-deps` refresca la versión de los metadatos instalados.
 
+Los capítulos describen también lo que se ha añadido desde la última versión publicada (la sección
+«Unreleased» del `CHANGELOG.md`), que tendrá número al publicarse.
+
 | Versión | Fecha | Contenido |
 |---|---|---|
+| 0.4.0 | 2026-11-09 | más medidas (mezcla, tensión, tendencia, aspereza, contraste, balance, microcosmos, complejidad, densidad angular, reunión), uniones de los resaltados, coloreados por medida, clase, punto vernal y trígono, OKLab, mapas de color a elegir, consultas, niveles vectorizados hasta la profundidad 9, menú *View*, pruebas en paralelo, una barra más ordenada, un color por papel y todos los niveles en el navegador |
 | 0.3.0 | 2026-11-08 | acontecimientos planetarios y contrastes de significación: cálculo, estudio y panel *Events*; mapa sobre todos los modelos; H1 con los planetas medios; fórmulas en LaTeX |
 | 0.2.0 | 2026-11-07 | el explorador, el modelo de ciclo, sesiones, marcadores, dosier, disposición de paneles, consultas vectorizadas, pruebas, esta documentación |
 | 0.1.0 | 2026-11-05 | la biblioteca de cálculo y los estudios del sandbox |

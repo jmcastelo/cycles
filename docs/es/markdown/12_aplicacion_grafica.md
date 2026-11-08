@@ -13,8 +13,15 @@ La interfaz está en inglés. Este capítulo describe cada parte con los nombres
 
 El área central muestra las subdivisiones del subciclo ampliado (el **zoom**), una fila por profundidad, cada
 subciclo con su color. Arriba, una franja con el **ciclo completo**, con la parte ampliada enmarcada, la fecha
-marcada y el momento del cielo; pulsar una edad en ella amplía esa edad. Entre la franja y las filas hay una
-**banda de etiquetas** con las de la fecha (*now* o la fecha, en rojo) y el momento del cielo (*sky*, en azul).
+marcada y el momento del cielo; pulsar una edad en ella amplía esa edad. Las filas empiezan justo debajo. Bajo
+las filas, sobre el eje del tiempo, hay una **banda de etiquetas** con las de la fecha (*now* o la fecha, en rojo) y
+el momento del cielo (*sky*, en naranja), cada una al pie de su línea; la banda tiene una línea por etiqueta (o
+las que necesite la clave de los criterios), y las filas ocupan el resto.
+
+Cada papel tiene un solo color, en el navegador y en todos los gráficos: la **selección** en azul (un borde de
+2 píxeles; sus padres, de 1), el **momento del cielo** en naranja (su línea, su etiqueta y, con *Follow*, los
+subciclos que lo contienen) y la **fecha marcada** en rojo. Las líneas son continuas, y bordes y líneas llevan un
+filo claro debajo, para que se vean sobre cualquier color de celda.
 
 | Acción | Efecto |
 |---|---|
@@ -28,6 +35,13 @@ marcada y el momento del cielo; pulsar una edad en ella amplía esa edad. Entre 
 | arrastrar una etiqueta | mueve la fecha o el momento del cielo (Escape cancela) |
 | ruta de arriba (*Whole cycle › Kali*) | vuelve a cualquier nivel exterior |
 
+Las filas cuyos subciclos son más estrechos que un par de píxeles (a profundidad 9 sobre todo el ciclo, unos 375
+por píxel) se dibujan como una **tira de píxeles**: cada píxel toma el color medio de los subciclos que cubre,
+ponderado por cuánto lo cubre cada uno, y con un resaltado activo, el de los subciclos resaltados que haya en él,
+para que ninguno se pierda entre los atenuados. Pulsar en esas filas selecciona el subciclo bajo el puntero, y
+la selección, *Follow*, los marcadores y las líneas se dibujan en ellas como en las demás (un subciclo muy
+estrecho, como una línea). Así se ven las nueve profundidades a la vez sin dibujar cientos de miles de celdas.
+
 Debajo de las filas, un eje con años o fechas (con un modelo de ciclo). La descripción emergente de un subciclo
 da su nombre, sus fechas y duración, con los criterios activados la fecha en que empezaría según el otro
 criterio, y sus marcadores.
@@ -36,19 +50,60 @@ criterio, y sus marcadores.
 
 ### La barra de herramientas
 
+La barra agrupa sus controles por tema, separados por líneas finas: el modelo de ciclo, el coloreado, los niveles
+y el resaltado.
+
 | Control | Qué elige |
 |---|---|
 | *Cycle* | el modelo de ciclo (un preset, uno modificado, o tiempo normalizado) |
 | *Model…* | el editor del modelo (12.13) |
 | *Landscape* | abre el panel *Model landscape* |
-| *Color* y *Parameters…* | el coloreado (los diez de `COLOR_KEYS`) y sus parámetros (12.14) |
-| *Levels* | cuántas filas se dibujan bajo el zoom (1 a 6) |
+| *Color* y *Parameters…* | el coloreado (los veintiséis de `COLOR_KEYS`, en cuatro grupos: de la dirección, de las medidas, del modelo de ciclo y del cielo, con la descripción de cada uno al pasar por encima; los del modelo, en gris sin modelo, y los del cielo, también sin la efeméride del panel *Sky*) y sus parámetros (12.14) |
+| *Levels* | cuántas filas se dibujan bajo el zoom (1 a 9, hasta la profundidad 9) |
+| *Highlight* | alrededor de la selección, los subciclos de su profundidad con la misma duración, la misma composición o su órbita bajo ⟨σ⟩ (con su imagen por σ en púrpura discontinuo); o, en todas las profundidades, los que cumplen la **consulta** (*Matching the query*, abajo); los demás se atenúan en el navegador y los resaltados se rodean en los gráficos |
+| consulta | la condición del resaltado *Matching the query*, y cuántos subciclos la cumplen |
+
+### El menú *View*
+
+Las opciones de dibujo que se fijan una vez están en el menú *View*, con una marca en la elegida:
+
+| Opción | Qué elige |
+|---|---|
 | *Widths* | anchura por duración (el eje es el tiempo) o igual para todos (el eje es el índice) |
 | *Names* | yugas (Satya…) o edades (Golden…) |
 | *Labels* | nombres (verticales en celdas altas y estrechas), puntos (4 Satya, 3 Treta, 2 Dvapara, 1 Kali), ambos o ninguno |
-| *Borders* | borde en cada celda |
-| resaltado | alrededor de la selección, los subciclos de su profundidad con la misma duración, la misma composición o su órbita bajo ⟨σ⟩ (con su imagen por σ en púrpura discontinuo); los demás se atenúan en el navegador y los resaltados se rodean en los gráficos |
-| *Criteria* | dibuja dónde pondría las fronteras el criterio que no es la división del modelo (4:3:2:1 del arco o de los años): discontinuas, con el hueco hasta la frontera propia sombreado, en las filas cuyas celdas tienen unos píxeles de ancho (capítulo 8) |
+| *Borders* (`Ctrl+Mayús+B`) | borde en cada celda |
+| *Compare the division criteria* (`Ctrl+Mayús+C`) | dibuja dónde pondría las fronteras el criterio que no es la división del modelo (4:3:2:1 del arco o de los años): discontinuas, con el hueco hasta la frontera propia sombreado, en las filas cuyas celdas tienen unos píxeles de ancho (capítulo 8) |
+
+El mismo menú tiene *Zoom out* (`Ctrl+↑`), *Whole cycle* (`Ctrl+Inicio`) y *Bookmark the selection* (`Ctrl+B`).
+
+### Resaltar con una consulta
+
+El campo de consulta de la barra admite una **condición** sobre los subciclos, como
+`trend > 0.3 and dharma < 0.5`. Con Intro se aplica y el resaltado pasa a *Matching the query*: en cada fila
+del navegador quedan vivos los subciclos que la cumplen y los demás se atenúan; en los paneles *Measures* y *Color
+space* se rodean, a la profundidad que muestren. Al lado se lee cuántos la cumplen a la profundidad de la
+selección o, sin selección, de la fila más honda. Vaciar el campo quita el resaltado.
+
+![Los subciclos del Kali con tendencia mayor que 0,3 y dharma menor que 0,5: 40 de 1 024 a profundidad 5](figuras/consulta.png)
+
+La condición es una expresión de Python restringida (`cycles.functions.query`), que se comprueba nodo a nodo antes
+de evaluarla, de una vez, sobre el nivel entero:
+
+| Qué | Nombres |
+|---|---|
+| medidas | `dharma`, `purity`, `mixture`, `tension`, `trend`, `roughness`, `contrast`, `balance`, `microcosm`, `complexity`, `density` (con modelo), `gathering` (con modelo y efeméride) |
+| tiempo | `duration`, `start` (fracciones del ciclo), `year` (del inicio) y `years` (la duración), con modelo |
+| posición | `index` (en el nivel), `depth` |
+| dígitos | `a1`, `a2`, … (la edad de cada nivel), `first`, `last`; las edades `Satya`, `Treta`, `Dvapara`, `Kali` (o `Golden`, `Silver`, `Bronze`, `Iron`), de 0 a 3 |
+| operadores | `and`, `or`, `not`; `<`, `<=`, `>`, `>=`, `==`, `!=` (también encadenados: `0.2 < trend <= 0.6`); `+ - * /`; paréntesis |
+| funciones | `count(edad)` (cuántos dígitos de esa edad), `abs(x)` |
+
+No se admite nada más: ni atributos, ni índices, ni otras llamadas, ni textos. Una condición que no se puede leer
+se muestra en rojo y no se aplica. Un dígito que no existe a esa profundidad (`a7` a profundidad 5) no lo cumple
+nadie; si falta lo que una medida necesita (un modelo, la efeméride), no se resalta nada y se dice por qué.
+Ejemplos: `last == Kali and count(Satya) >= 2`; `abs(trend) < 0.05 and tension > 0.6`; `year > 0 and
+microcosm > 0.7`. La consulta se guarda con la sesión.
 
 ## 12.2 *Subcycle*: el inspector
 
@@ -58,8 +113,10 @@ Todo lo que se sabe del subciclo seleccionado: dirección, índice, inicio, dura
 modelo, fechas de inicio y fin, duración en años, ayanāṃśa al inicio y al final, arco (y su lugar en el arco del
 ciclo) y tasa media de precesión; composición; cuántos subciclos comparten su duración y su composición (y su
 lugar en el tiempo entre estos); su imagen por la σ del panel de permutaciones y el tamaño de su órbita; dharma y
-pureza. La tabla *Measures by level* desglosa ambas medidas (capítulo 2). Al final, su color en las diez
-variantes, con RGB y CMYK; doble clic en una fila usa ese coloreado.
+pureza, y en una línea (*More measures*) las demás medidas de 2.4 (la densidad angular, solo con un modelo; la reunión, con un modelo y la efeméride). La tabla *Measures by level* desglosa ambas medidas (capítulo 2). Al final, su color en los veintiséis
+coloreados, con RGB y CMYK (los del modelo de ciclo dicen *needs a cycle model* sin él, y los del cielo, *needs a cycle model and the
+ephemeris*); doble clic en una fila usa
+ese coloreado.
 
 ## 12.3 *Date*
 
@@ -75,7 +132,7 @@ inicio, su fin y su duración; pulsar una fila lo selecciona.
 ![El panel Sky](figuras/panel_cielo.png)
 
 El zodiaco con los planetas (como en `study_of_precession`) en un **momento** del tramo ampliado, con una tabla de
-longitudes sidéreas, signos y nakṣatras. El momento es la línea azul discontinua del navegador:
+longitudes sidéreas, signos y nakṣatras. El momento es la línea naranja del navegador:
 
 - el deslizador lo mueve por el tramo; Mayús + clic en el navegador o arrastrar la etiqueta *sky* lo llevan a
   cualquier sitio;
@@ -117,13 +174,40 @@ un segundo; por encima de 100 000 se muestrea), y el panel solo dibuja mientras 
 
 ## 12.6 *Measures*
 
-![El panel Measures: pureza frente a dharma a profundidad 4 dentro del Kali](figuras/panel_medidas.png)
+![El panel Measures: tendencia frente a tensión a profundidad 4 en todo el ciclo, coloreado por el dharma](figuras/panel_medidas.png)
 
-Dharma y pureza del nivel de la selección o de una profundidad elegida (*auto* sigue a la selección), dentro del
-zoom o en todo el ciclo: una frente a otra, frente al tiempo o al índice, o en 3D (dharma, pureza y tiempo o
-índice, con una línea tenue en orden temporal, vistas predefinidas a lo largo de cada eje y arrastre para girar).
-Los puntos pueden tener tamaño según la duración. La selección se rodea en azul, los resaltados en negro; pulsar
-un punto lo selecciona.
+Dos medidas cualesquiera (capítulo 2: dharma, pureza, mezcla, tensión, tendencia, aspereza, contraste, balance y
+densidad angular; por defecto, dharma y pureza) del nivel de la selección o de una profundidad elegida (*auto*
+sigue a la selección), dentro del zoom o en todo el ciclo:
+
+- *Y against X*: una frente a otra;
+- *Y against time* o *Y against index*: la medida Y en orden temporal;
+- *X, Y and time (3D)* o *X, Y and index (3D)*: con una línea tenue en orden temporal, vistas predefinidas a lo
+  largo de cada eje y arrastre para girar.
+
+Los puntos llevan los colores de los subciclos o, con *Color by…*, el valor de una medida, con su barra de color:
+mapa divergente centrado en 0 para las medidas con signo (y en 1 para la densidad angular), secuencial para las
+demás, sobre el rango fijo de la medida, de modo que los colores se comparan entre profundidades. La densidad
+angular necesita un modelo de ciclo; sin él, el panel lo avisa. Los puntos pueden tener tamaño según la
+duración. La selección se rodea en azul, los resaltados en negro; pulsar un punto lo selecciona, y al pasar por
+encima se ven sus valores. En la figura se ve que una tendencia fuerte exige tensión y que los subciclos buenos
+tienden a descender y los malos a ascender.
+
+Con *Join* (activo por defecto), los subciclos resaltados se **unen**:
+
+- con el resaltado *⟨σ⟩ orbit*, los pasos de la órbita de la selección en orden (la selección, su imagen por σ,
+  la de σ², … y vuelta), con flechas púrpura apenas curvadas, para que se distingan un paso y su vuelta;
+- con *Same composition*, las ordenaciones de sus edades que difieren en el **intercambio de dos dígitos
+  vecinos**, con líneas grises finas (más tenues cuantas más hay).
+
+Así se ve qué hace σ con las medidas, y por qué el orden de los dígitos cambia las medidas pero no la duración:
+los intercambios de los niveles exteriores son las líneas largas, y los de una misma posición, paralelas
+(capítulo 3). Las uniones solo se dibujan cuando la profundidad del gráfico es la de la selección y, para la
+órbita, cuando σ actúa en ella.
+
+![Ordenaciones de Kali › Treta › Dvapara › Satya en tendencia frente a dharma: cada línea, un intercambio de dígitos vecinos](figuras/union_intercambios.png)
+
+![La órbita de Kali › Treta › Dvapara › Satya bajo el desplazamiento cíclico, paso a paso](figuras/union_orbita.png)
 
 ## 12.7 *Color space*
 
@@ -132,8 +216,9 @@ un punto lo selecciona.
 Los colores de un nivel como puntos en 3D, el camino que los une en orden temporal, o ambos: en el cubo RGB (con
 sus esquinas nombradas) o, para los coloreados CMYK, en coordenadas de tinta CMY. Sigue al coloreado y a sus
 parámetros, dibuja el tetraedro del coloreado `tetrahedron`, puede dar tamaño por duración y tiene vistas
-predefinidas (eje de grises vertical, a lo largo de él, las caras del cubo). Rodea la selección y los resaltados;
-pulsar un punto lo selecciona.
+predefinidas (eje de grises vertical, a lo largo de él, las caras del cubo). Rodea la selección y los resaltados
+y, con *Join*, los une como el panel *Measures* (en 3D, la dirección de cada paso de la órbita la marca un punto
+cerca de su final); pulsar un punto lo selecciona.
 
 ## 12.8 *Permutations* y el explorador de grupo
 
@@ -159,7 +244,8 @@ en el inspector), aunque el panel esté oculto.
 cualquier columna y se filtra por tipo y paridad. Además de la estructura, da medias sobre los subciclos: qué
 porcentaje mueve σ, cuánto en el tiempo (% del tramo), cómo conserva el orden temporal (correlación entre el
 orden de los subciclos y el de sus imágenes) y cuánto cambia el color, el dharma y la pureza. Las columnas se
-llenan poco a poco (S₈ a profundidad 8 tarda en torno a minuto y medio; *Stop* lo interrumpe). Una línea
+llenan poco a poco (S₈ a profundidad 8 tarda en torno a minuto y medio; *Stop* lo interrumpe); S₉, con 362 880
+elementos, ya no se lista (σ puede actuar por debajo del zoom). Una línea
 comprueba el lema de Burnside: la media de los fijos es el número de composiciones. Pulsar una fila carga ese
 elemento en el panel.
 
@@ -224,7 +310,7 @@ resume. La tabla lista los acontecimientos del tramo ampliado con su fecha (UT) 
 ángulo medio de los planetas y el arco que los contiene. Pulsar una fila lleva allí el momento del cielo y
 selecciona el subciclo de esa profundidad que lo contiene.
 
-Con *Show in navigator*, los acontecimientos aparecen en el navegador como marcas rosas justo encima de la primera
+Con *Show in navigator*, los acontecimientos aparecen en el navegador como marcas rosas justo debajo de la última
 fila (translúcidas cuando son tantas que forman una banda), con su nombre y su número en un extremo de la banda de
 etiquetas. Los catálogos se calculan una vez con la efeméride del panel *Sky* y se guardan en disco
 (`sandbox/data/events/`), compartidos con `study_of_events.py`; el resultado es una sola prueba, y el estudio
@@ -247,7 +333,11 @@ desviación de las cuotas. *Apply* lo aplica; *Save preset* y *Delete preset* ge
 *Parameters…* ajusta las bases y escalas de los coloreados y las medidas, y los cuatro colores del tetraedro,
 dentro de los rangos que mantienen distintos los colores de cada nivel (capítulo 2): los valores fuera de rango
 no se aplican y se explica por qué. A la derecha, para una profundidad, cuántos colores son distintos y cuántos
-se distinguen en una pantalla (redondeados a 256 niveles por canal). Los cambios se aplican al momento;
+se distinguen en una pantalla (redondeados a 256 niveles por canal), para los diez coloreados de la dirección (los de
+medidas y del modelo no buscan colores únicos). *Measure color maps* elige los dos mapas de color de las medidas,
+cada uno con su degradado: el secuencial (de 0 a 1: dharma, pureza, mezcla, tensión, aspereza) y el divergente
+(con signo: tendencia, contraste, balance, y la densidad angular centrada en 1). Valen para los coloreados y para
+*Color by…* del panel *Measures*, y cambiarlos solo recolorea. Los cambios se aplican al momento;
 *Revert* vuelve a los valores con que se abrió y *Defaults* a los de por defecto.
 
 ## 12.15 Guardar gráficos
@@ -349,6 +439,7 @@ modelo y los colores que se ven), y muestra su salida. *Open plots folder* abre 
 | `Ctrl+D` | dosier del subciclo |
 | `Ctrl+T` | estudios |
 | `Ctrl+B` | marcar la selección |
+| `Ctrl+Mayús+B` / `Ctrl+Mayús+C` | bordes de las celdas / comparar los criterios de división |
 | `Ctrl+↑` / `Ctrl+Inicio` | reducir el zoom / todo el ciclo |
 | `Alt+1` … `Alt+9`, `Alt+0` | mostrar u ocultar cada panel |
 | `Ctrl+Alt+T/S/V/G/B` | disposiciones: pestañas, lado a lado, apilados, rejilla, debajo |

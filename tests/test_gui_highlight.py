@@ -42,6 +42,30 @@ def test_the_toolbar_follows_the_state(window, selected, spin):
     assert selected.highlight_indices(selected.selection) is None
 
 
+def test_the_view_menu_draws_the_navigator(window, selected, spin):
+    from cycles.functions.timescale import AGE_NAMES
+    state = selected
+    window.spacing_actions['index'].trigger()
+    window.names_actions['Ages'].trigger()
+    window.labels_actions['both'].trigger()
+    window.borders_action.trigger()
+    window.criteria_action.trigger()
+    spin()
+    assert (state.spacing, state.names, state.labels, state.borders, state.compare_criteria) == \
+        ('index', AGE_NAMES, 'both', True, True)
+    # and the menu follows changes made elsewhere (a session)
+    state.set_spacing('time')
+    state.set_labels('none')
+    state.set_borders(False)
+    spin()
+    assert window.spacing_actions['time'].isChecked() and not window.spacing_actions['index'].isChecked()
+    assert window.labels_actions['none'].isChecked() and not window.borders_action.isChecked()
+    from PySide6.QtWidgets import QMenu
+    view = next(m for m in window.findChildren(QMenu) if m.title() == '&View')
+    assert {'&Widths', '&Names', '&Labels', '&Borders', 'Compare the division &criteria'} <= \
+        {a.text() for a in view.actions()}
+
+
 def test_the_measures_plot_rings_the_highlighted_class(window, selected, spin):
     window.docks['measures'].raise_()
     spin()
@@ -50,6 +74,9 @@ def test_the_measures_plot_rings_the_highlighted_class(window, selected, spin):
     spin()
     plain = len(panel._highlights)
     selected.set_highlight('composition')
+    spin()
+    assert len(panel._highlights) == plain + 2            # the rings of the class and the swaps joining them
+    panel.join.setChecked(False)
     spin()
     assert len(panel._highlights) == plain + 1
 

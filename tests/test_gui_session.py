@@ -12,16 +12,17 @@ def _change_everything(window, spin):
     """Move away from the defaults in every part a session keeps."""
     state = window.state
     state.set_model(state.model.replace(anchor_date='3000 BC-01-01', anchor_time='06:00', turns=2.25))
-    bases, scales, colors = state.color_parameters
-    state.set_color_parameters(bases[:1] + (3,) + bases[2:], scales, colors)    # as the color dialog does
+    bases, scales, colors, _ = state.color_parameters
+    state.set_color_parameters(bases[:1] + (3,) + bases[2:], scales, colors,     # as the color dialog does
+                               ('magma', 'PuOr_r'))
     window.color_box.setCurrentIndex((window.color_box.currentIndex() + 1) % window.color_box.count())
     window.rows_box.setValue(4)
-    window.spacing_box.setCurrentIndex(window.spacing_box.findData('index'))
-    window.names_box.setCurrentIndex(1)
-    window.labels_box.setCurrentIndex(window.labels_box.findData('dots'))
-    window.borders_box.setChecked(True)
+    window.spacing_actions['index'].trigger()
+    window.names_actions['Ages'].trigger()
+    window.labels_actions['dots'].trigger()
+    window.borders_action.trigger()
     window.highlight_box.setCurrentIndex(window.highlight_box.findData('composition'))
-    window.criteria_box.setChecked(True)
+    window.criteria_action.setChecked(True)
     state.set_date(-1000.5)
     state.set_sky_time(-2500.25)
     state.set_focus((3, 1))
@@ -44,6 +45,11 @@ def _change_everything(window, spin):
     spin()
 
 
+def checked(actions: dict):
+    """The key of the checked action of a choice in the View menu."""
+    return next(key for key, action in actions.items() if action.isChecked())
+
+
 def _snapshot(window):
     state = window.state
     return {
@@ -58,8 +64,9 @@ def _snapshot(window):
         'camera': window.compositions_panel.camera(), 'notes': state.notes,
         'bookmarks': [dict(b) for b in state.bookmarks],
         'measures_open': not window.docks['measures'].isHidden(),
-        'toolbar': (window.rows_box.value(), window.spacing_box.currentData(), window.labels_box.currentData(),
-                    window.borders_box.isChecked(), window.criteria_box.isChecked(), window.names_box.currentIndex()),
+        'toolbar': (window.rows_box.value(), checked(window.spacing_actions), checked(window.labels_actions),
+                    window.borders_action.isChecked(), window.criteria_action.isChecked(),
+                    checked(window.names_actions)),
     }
 
 

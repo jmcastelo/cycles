@@ -7,28 +7,60 @@ column of dots (4, 3, 2, 1 for Satya, Treta, Dvapara, Kali).
 Mouse: click selects, double-click zooms in, right-click zooms out; a click on
 the overview zooms to that yuga; Shift+click sets the moment of the sky chart.
 The tags of the marked date and of the sky moment, in a band under the
-overview, can be dragged along the rows (Escape cancels a drag).
+rows (above the time axis), can be dragged along the rows (Escape cancels a
+drag).
 Keys: Left/Right previous/next subcycle, Up parent, Down first part,
 Enter zoom into the selection, Backspace/Escape zoom out.
 """
 
+from typing import NamedTuple
+
 import numpy as np
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPolygonF
+from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QSizePolicy, QToolButton, QToolTip, QWidget
 
 from cycles.gui.state import (
-    BOOKMARK_COLOR, EVENT_COLOR, MAX_DEPTH, MOMENT_COLOR, PERMUTATION_COLOR, CycleState, address_of, children_range, current_year,
+    BOOKMARK_COLOR, DATE_COLOR, EVENT_COLOR, MAX_DEPTH, MOMENT_COLOR, SELECTION_COLOR, PERMUTATION_COLOR, CycleState, address_of, children_range, current_year,
     date_text, span_text, tcoord, time_text,
 )
 
 LABEL_WIDTH = 44     # left margin, for the depth of each row
 AXIS_HEIGHT = 24     # bottom margin, for the time axis
 OVERVIEW_HEIGHT = 22  # strip of the whole cycle, at the top
-TAG_GAP = 3          # around the band of the marker tags, between the overview and the rows
+TAG_GAP = 3          # around the band of the marker tags, between the rows and the time axis
+ROWS_TOP_GAP = 6     # between the overview and the first row
+DENSE_CELL = 2.0     # rows with more subcycles than one per this many pixels are drawn as a strip of pixels
 ROW_GAP = 2          # between rows
 # the two criteria for dividing the cycle, when the navigator compares them
 CRITERIA_COLORS = {'angle': '#8c564b', 'time': '#17becf'}
+SELECTION_WIDTH = 2.0      # border of the selected subcycle (and of those that contain the sky moment, with Follow)
+PARENT_WIDTH = 1.0         # border of its parents
+CURSOR_WIDTH = 1.5         # the lines of the marked date and the sky moment
+ZOOM_COLOR = '#404040'     # the frame of the zoomed part on the overview strip
+HALO = QColor(255, 255, 255, 210)    # the light edge under borders and cursors, to stand out over any color
+
+
+class Row(NamedTuple):
+    """Where a row of the navigator is drawn: its depth, top and height, the indices of its subcycles in their
+    level (start to stop), their left edges and widths (pixels), and whether it is dense (drawn as pixels)."""
+    depth: int
+    top: float
+    height: float
+    start: int
+    stop: int
+    lefts: np.ndarray
+    widths: np.ndarray
+    dense: bool
+
+
+def stroke(painter: QPainter, color: QColor, width: float, draw) -> None:
+    """Draw (``draw()``) a line or border in ``color`` over a light edge a pixel wider on each side."""
+    painter.setPen(QPen(HALO, width + 2))
+    draw()
+    painter.setPen(QPen(color, width))
+    draw()
+
 CRITERIA_NAMES = {'angle': '4:3:2:1 of the precession arc', 'time': '4:3:2:1 of the years'}
 CRITERIA_MIN_CELL = 3.0    # mean cell width (px) of the rows where they are compared (finer: zoom in)
 CRITERIA_TICK_CELL = 8.0   # ... and where the other boundaries are also drawn as dashed lines
@@ -102,17 +134,31 @@ class Navigator(QWidget):
     def _tag_height(self) -> float:
         return self.fontMetrics().height() + 2
 
+    def _band_lines(self) -> int:
+        """Lines of the tag band: one per marker tag shown (date, sky), as many as the key of the criteria needs."""
+        state = self.state
+        tags = int(state.date is not None) + int(state.sky_time is not None)
+        key = 0
+        if state.compare_criteria and state.model is not None:
+            key = 2 if state.model.division == 'hybrid' else 1
+        return max(1, tags, key)
+
     def _tag_band(self) -> QRectF:
-        """Band between the overview and the rows, with a line for each marker tag (date, then sky)."""
-        top = self._overview_rect().bottom() + TAG_GAP
-        return QRectF(LABEL_WIDTH, top, self.width() - LABEL_WIDTH - 8, 2 * self._tag_height() + 2)
+        """Band between the rows and the time axis, with a line for each marker tag (date, then sky)."""
+        height = self._band_lines() * (self._tag_height() + 2)
+        bottom = self.height() - AXIS_HEIGHT - TAG_GAP
+        return QRectF(LABEL_WIDTH, bottom - height, self.width() - LABEL_WIDTH - 8, height)
 
     def _layout(self) -> list[tuple[QRectF, tuple, int, int]]:
-        """Cells to draw: (rectangle, address, depth, index)."""
+        """
+        Cells to draw one by one: (rectangle, address, depth, index), for the rows whose subcycles are wide
+        enough. The geometry of every row is kept in ``self._geometry`` (``Row``); the dense rows (more subcycles
+        than about one per ``DENSE_CELL`` pixels) are drawn as a strip of pixels instead.
+        """
         state = self.state
         rows = self._rows()
-        top = self._tag_band().bottom() + TAG_GAP
-        area = QRectF(LABEL_WIDTH, top, self.width() - LABEL_WIDTH - 8, self.height() - AXIS_HEIGHT - 4 - top)
+        top = self._overview_rect().bottom() + ROWS_TOP_GAP
+        area = QRectF(LABEL_WIDTH, top, self.width() - LABEL_WIDTH - 8, self._tag_band().top() - TAG_GAP - top)
         row_height = area.height() / len(rows)
         focus = state.focus
         if focus:
@@ -122,28 +168,103 @@ class Navigator(QWidget):
         else:
             f_start, f_duration = 0.0, 1.0
 
-        cells = []
+        cells, self._geometry = [], []
         for r, depth in enumerate(rows):
             top = area.top() + r * row_height
             indices = children_range(focus, depth)
+            n = len(indices)
             if state.spacing == 'time' and depth:
                 level = state.cache.level(depth)
                 lefts = (level.starts[indices.start:indices.stop] - f_start) / f_duration
                 widths = level.durations[indices.start:indices.stop] / f_duration
             else:
-                n = len(indices)
-                lefts = [k / n for k in range(n)]
-                widths = [1 / n] * n
-            for index, left, width in zip(indices, lefts, widths):
-                rect = QRectF(area.left() + left * area.width(), top, width * area.width(), row_height - ROW_GAP)
-                cells.append((rect, address_of(index, depth), depth, index))
+                lefts = np.arange(n) / n
+                widths = np.full(n, 1 / n)
+            row = Row(depth, top, row_height - ROW_GAP, indices.start, indices.stop,
+                      area.left() + lefts * area.width(), widths * area.width(),
+                      n * DENSE_CELL > area.width())
+            self._geometry.append(row)
+            if not row.dense:
+                for k, index in enumerate(indices):
+                    rect = QRectF(row.lefts[k], top, row.widths[k], row.height)
+                    cells.append((rect, address_of(index, depth), depth, index))
         return cells
+
+    def _row(self, depth: int):
+        """The geometry (``Row``) of the row of ``depth``, or None if it is not drawn."""
+        return next((row for row in getattr(self, '_geometry', []) if row.depth == depth), None)
+
+    def rect_of(self, address: tuple) -> QRectF | None:
+        """Where the subcycle ``address`` is drawn (also in a dense row), or None if it is not in view."""
+        row = self._row(len(address))
+        if row is None:
+            return None
+        k = tcoord(address) - row.start
+        if not 0 <= k < row.stop - row.start:
+            return None
+        return QRectF(row.lefts[k], row.top, row.widths[k], row.height)
+
+    def _index_at(self, row, x: float) -> int | None:
+        """Index (in its level) of the subcycle of ``row`` at the horizontal position ``x``."""
+        rights = row.lefts + row.widths
+        if not len(rights) or x < row.lefts[0] or x > rights[-1]:
+            return None
+        return row.start + int(min(np.searchsorted(rights, x, side='right'), len(rights) - 1))
+
+    def _x_of(self, row, u: float) -> float | None:
+        """Horizontal position of the normalized time ``u`` in ``row`` (also with equal widths)."""
+        level = self.state.cache.level(row.depth)
+        starts = level.starts[row.start:row.stop]
+        durations = level.durations[row.start:row.stop]
+        k = int(np.searchsorted(starts, u, side='right')) - 1
+        if k < 0 or u > starts[-1] + durations[-1] + 1e-12:
+            return None
+        k = min(k, len(starts) - 1)
+        return float(row.lefts[k] + (u - starts[k]) / durations[k] * row.widths[k])
 
     def cell_at(self, pos: QPointF) -> tuple | None:
         for rect, address in self._cells:
             if rect.contains(pos):
                 return address
+        for row in getattr(self, '_geometry', []):
+            if row.dense and row.top <= pos.y() <= row.top + row.height:
+                index = self._index_at(row, pos.x())
+                return None if index is None else address_of(index, row.depth)
         return None
+
+    def _draw_dense_row(self, painter: QPainter, row, colors: np.ndarray, mask, dim: QColor) -> None:
+        """
+        A row of subcycles narrower than a pixel or two, as a strip of pixels: each pixel takes the mean color of
+        the subcycles under it, weighted by how much of the pixel each covers. With a highlight, a pixel with
+        any bright subcycle shows those (so that no match is lost), and the others are dimmed as the cells are.
+        """
+        ratio = self.devicePixelRatioF()
+        lefts, widths = row.lefts, row.widths
+        left, right = float(lefts[0]), float(lefts[-1] + widths[-1])
+        pixels = max(1, int(round((right - left) * ratio)))
+        edges = left + (right - left) * np.arange(pixels + 1) / pixels
+        k = np.minimum(np.searchsorted(lefts + widths, edges, side='right'), len(lefts) - 1)
+        covered = np.clip(edges - lefts[k], 0.0, widths[k])
+
+        def integral(values):                   # of values (n, c) over each pixel, as the cells cover it
+            cumulative = np.vstack([np.zeros((1, values.shape[1])), np.cumsum(values * widths[:, None], axis=0)])
+            at_edges = cumulative[k] + values[k] * covered[:, None]
+            return at_edges[1:] - at_edges[:-1]
+
+        rgb = np.clip(np.asarray(colors, dtype=float)[row.start:row.stop], 0, 1)
+        pixel = np.diff(edges)[:, None]
+        mean = integral(rgb) / pixel
+        if mask is not None:
+            bright = mask[row.start:row.stop].astype(float)[:, None]
+            weight = integral(bright)
+            base = np.array([dim.redF(), dim.greenF(), dim.blueF()])
+            dimmed = mean * (1 - dim.alphaF()) + base * dim.alphaF()
+            with np.errstate(invalid='ignore', divide='ignore'):
+                lit = integral(rgb * bright) / weight
+            mean = np.where(weight > 1e-12, lit, dimmed)
+        data = np.ascontiguousarray((np.clip(mean, 0, 1) * 255 + 0.5).astype(np.uint8)[None])
+        image = QImage(data.data, pixels, 1, pixels * 3, QImage.Format.Format_RGB888).copy()
+        painter.drawImage(QRectF(left, row.top, right - left, row.height), image)
 
     # -- painting
 
@@ -158,10 +279,18 @@ class Navigator(QWidget):
         self._cells = [(rect, address) for rect, address, _, _ in cells]
 
         selection = state.selection
-        equal = set()
-        bright = state.highlight_indices(selection)
-        if bright is not None:
-            equal = {address_of(int(i), len(selection)) for i in bright}
+        bright = {}           # depth -> mask of the subcycles kept bright (the highlight), where there is one
+
+        def bright_at(depth: int):
+            if depth not in bright:
+                indices = state.highlighted(depth)
+                if indices is None:
+                    bright[depth] = None
+                else:
+                    mask = np.zeros(4 ** depth, dtype=bool)
+                    mask[indices] = True
+                    bright[depth] = mask
+            return bright[depth]
 
         font = QFont(self.font())
         metrics = painter.fontMetrics()
@@ -170,59 +299,70 @@ class Navigator(QWidget):
         border = QPen(QColor(0, 0, 0, 45), 0)    # hairline
 
         for rect, address, depth, index in cells:
-            color = rgb_to_qcolor(state.cache.colors(depth, state.color_key)[index])
+            color = rgb_to_qcolor(state.colors(depth, state.color_key)[index])
             painter.fillRect(rect, color)
             if state.borders and rect.width() >= 3:
                 painter.setPen(border)
                 painter.drawRect(rect)
-            if equal and depth == len(selection) and address not in equal:
+            mask = bright_at(depth)
+            if mask is not None and not mask[index]:
                 painter.fillRect(rect, dim)
                 continue
             self._draw_label(painter, metrics, rect, address[-1], text_color(color))
+        for row in self._geometry:
+            if row.dense:
+                self._draw_dense_row(painter, row, state.colors(row.depth, state.color_key), bright_at(row.depth),
+                                     dim)
 
         self._draw_criteria(painter, cells)
         self._draw_overview(painter, metrics)
 
         # Selection and its ancestors
         if selection:
-            highlight = palette.highlight().color()
-            for rect, address, depth, _ in cells:
-                if address == selection[:depth]:
-                    width = 3 if address == selection else 1.5
-                    painter.setPen(QPen(highlight, width))
-                    painter.drawRect(rect.adjusted(width / 2, width / 2, -width / 2, -width / 2))
+            for depth in range(1, len(selection) + 1):
+                rect = self.rect_of(selection[:depth])
+                if rect is not None:
+                    width = SELECTION_WIDTH if depth == len(selection) else PARENT_WIDTH
+                    inner = self._border_rect(rect, width)
+                    stroke(painter, QColor(SELECTION_COLOR), width, lambda r=inner: painter.drawRect(r))
             # its image under the σ of the Permutations panel, with the orbit highlighted
             orbit = state.permutation_orbit(selection) if state.highlight == 'orbit' else None
             if orbit and len(orbit) > 1:
-                painter.setPen(QPen(QColor(PERMUTATION_COLOR), 2, Qt.PenStyle.DashLine))
-                for rect, address, depth, _ in cells:
-                    if address == orbit[1]:
-                        painter.drawRect(rect.adjusted(1, 1, -1, -1))
+                rect = self.rect_of(orbit[1])
+                if rect is not None:
+                    painter.setPen(QPen(QColor(PERMUTATION_COLOR), 2, Qt.PenStyle.DashLine))
+                    painter.drawRect(self._border_rect(rect, 2))
 
         # The subcycles that contain the sky moment (Follow)
         if state.follow and state.sky_time is not None:
-            moment = {depth: state.moment_index(depth) for depth in self._rows()}
-            painter.setPen(QPen(QColor(MOMENT_COLOR), 2))
-            for rect, _, depth, index in cells:
-                if moment.get(depth) == index:
-                    painter.drawRect(rect.adjusted(1, 1, -1, -1))
+            for depth in self._rows():
+                index = state.moment_index(depth)
+                rect = None if index is None else self.rect_of(address_of(index, depth))
+                if rect is not None:
+                    inner = self._border_rect(rect, SELECTION_WIDTH + 1)
+                    stroke(painter, QColor(MOMENT_COLOR), SELECTION_WIDTH, lambda r=inner: painter.drawRect(r))
 
         self._draw_bookmarks(painter, cells)
 
         # Depth of each row, and the extent of the zoomed subcycle
         painter.setPen(palette.text().color())
         painter.setFont(font)
-        seen = set()
-        for rect, _, depth, _ in cells:
-            if depth not in seen:
-                seen.add(depth)
-                painter.drawText(QRectF(0, rect.top(), LABEL_WIDTH - 6, rect.height()),
-                                 Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, f"d{depth}")
+        for row in self._geometry:
+            painter.drawText(QRectF(0, row.top, LABEL_WIDTH - 6, row.height),
+                             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, f"d{row.depth}")
         self._draw_axis(painter, cells)
         self._draw_markers(painter, cells)
         self._draw_events(painter, cells)           # after the tags, to keep its label clear of them
         self._draw_criteria_key(painter)
         painter.end()
+
+    @staticmethod
+    def _border_rect(rect: QRectF, width: float) -> QRectF:
+        """The rectangle to stroke a border of ``width`` inside ``rect`` (a narrow subcycle gets at least a line)."""
+        inset = width / 2 + 1
+        if rect.width() <= 2 * inset + 1:
+            return QRectF(rect.center().x() - 0.5, rect.top() + inset, 1.0, rect.height() - 2 * inset)
+        return rect.adjusted(inset, inset, -inset, -inset)
 
     # -- bookmarks
 
@@ -237,8 +377,9 @@ class Navigator(QWidget):
         color = QColor(BOOKMARK_COLOR)
         painter.setPen(QPen(color.darker(170), 1))
         painter.setBrush(color)
-        for rect, address, _, _ in cells:
-            if address in marked and rect.width() >= 4:
+        for address in marked:
+            rect = self.rect_of(address)
+            if rect is not None and rect.width() >= 4:
                 size = min(12.0, rect.width(), rect.height() / 2)
                 painter.drawPolygon(QPolygonF([rect.topLeft(), rect.topLeft() + QPointF(size, 0),
                                                rect.topLeft() + QPointF(0, size)]))
@@ -252,7 +393,7 @@ class Navigator(QWidget):
 
     def _draw_events(self, painter: QPainter, cells) -> None:
         """
-        The planetary events of the Events panel: a short tick just above the first row at each event in the
+        The planetary events of the Events panel: a short tick just under the last row at each event in the
         zoomed span (at most one per pixel; dense events read as a band), and their name and number at an end
         of the tag band that no tag covers.
         """
@@ -264,27 +405,23 @@ class Navigator(QWidget):
         u = np.asarray(state.time_map.to_normalized(years[(years >= state.time_map.start)
                                                           & (years <= state.time_map.end)]), dtype=float)
         u = u[(u >= start) & (u <= end)]
-        first_depth = min(depth for _, _, depth, _ in cells)
-        row = [(rect, index) for rect, _, depth, index in cells if depth == first_depth]
-        level = state.cache.level(first_depth)
+        row = self._geometry[-1]                # the deepest row
         band = self._tag_band()
         color = QColor(EVENT_COLOR)
         tick = QColor(color)
-        span_pixels = max(1.0, sum(rect.width() for rect, _ in row))
+        span_pixels = max(1.0, float(row.widths.sum()))
         if len(u) > span_pixels / 4:            # crowded: a translucent band that shows the density
             tick.setAlphaF(0.35)
         painter.save()
         painter.setPen(QPen(tick, 1.5))
-        drawn = set()
-        for value in u:
-            for rect, index in row:
-                c_start, c_duration = float(level.starts[index]), float(level.durations[index])
-                if c_start <= value <= c_start + c_duration:
-                    x = rect.left() + (value - c_start) / c_duration * rect.width()
-                    if round(x) not in drawn:
-                        drawn.add(round(x))
-                        painter.drawLine(QPointF(x, rect.top() - 6), QPointF(x, rect.top() + 3))
-                    break
+        bottom = row.top + row.height
+        level = state.cache.level(row.depth)
+        starts = level.starts[row.start:row.stop]
+        durations = level.durations[row.start:row.stop]
+        k = np.clip(np.searchsorted(starts, u, side='right') - 1, 0, len(starts) - 1)
+        xs = row.lefts[k] + (u - starts[k]) / durations[k] * row.widths[k]
+        for x in np.unique(np.round(xs)):
+            painter.drawLine(QPointF(x, bottom - 3), QPointF(x, bottom + TAG_GAP + 3))
         if label:
             font = QFont(painter.font())
             font.setPointSizeF(font.pointSizeF() * 0.85)
@@ -466,7 +603,7 @@ class Navigator(QWidget):
         state = self.state
         strip = self._overview_rect()
         level = state.cache.level(1)
-        colors = state.cache.colors(1, state.color_key)
+        colors = state.colors(1, state.color_key)
         for k in range(4):
             rect = QRectF(strip.left() + level.starts[k] * strip.width(), strip.top(),
                           level.durations[k] * strip.width(), strip.height())
@@ -490,15 +627,14 @@ class Navigator(QWidget):
             shade.setAlphaF(0.6)
             painter.fillRect(QRectF(strip.left(), strip.top(), x0 - strip.left(), strip.height()), shade)
             painter.fillRect(QRectF(x1, strip.top(), strip.right() - x1, strip.height()), shade)
-            painter.setPen(QPen(self.palette().highlight().color(), 2))
-            painter.drawRect(QRectF(x0 - 1, strip.top() + 1, x1 - x0 + 2, strip.height() - 2))
-        for year, color, style in ((state.date, QColor('#d62728'), Qt.PenStyle.SolidLine),
-                                   (state.sky_time, QColor('#1f77b4'), Qt.PenStyle.DashLine)):
+            frame = QRectF(x0 - 1, strip.top() + 1, x1 - x0 + 2, strip.height() - 2)
+            stroke(painter, QColor(ZOOM_COLOR), PARENT_WIDTH, lambda: painter.drawRect(frame))
+        for year, color in ((state.date, QColor(DATE_COLOR)), (state.sky_time, QColor(MOMENT_COLOR))):
             u = state.position(year)
             if u is not None:
                 x = strip.left() + u * strip.width()
-                painter.setPen(QPen(color, 2, style))
-                painter.drawLine(QPointF(x, strip.top()), QPointF(x, strip.bottom()))
+                stroke(painter, color, CURSOR_WIDTH,
+                       lambda x=x: painter.drawLine(QPointF(x, strip.top()), QPointF(x, strip.bottom())))
 
     def _overview_yuga(self, pos: QPointF) -> int | None:
         strip = self._overview_rect()
@@ -527,7 +663,7 @@ class Navigator(QWidget):
         start, end = self._focus_extent()
         time_map = state.time_map
         span = (time_map.to_physical(end) - time_map.to_physical(start)) if time_map else 0.0
-        bottom = max(rect.bottom() for rect, *_ in cells)
+        bottom = self._tag_band().bottom() + TAG_GAP
         metrics = painter.fontMetrics()
         ticks = [(rect.left(), float(level.starts[tcoord(address)])) for rect, address in children]
         ticks.append((children[-1][0].right(), end))
@@ -544,7 +680,7 @@ class Navigator(QWidget):
                 last_right = left + width
 
     def _draw_markers(self, painter: QPainter, cells) -> None:
-        """The marked date (red) and the moment of the sky chart (dashed blue)."""
+        """The marked date (red) and the moment of the sky chart (orange), solid lines with a light edge."""
         state = self.state
         self._tags = {}
         dragged = self._drag[0] if self._drag else None
@@ -552,17 +688,15 @@ class Navigator(QWidget):
         if state.date is not None:
             date_label = ('now' if abs(state.date - current_year()) < 1 / 365.25 and dragged != 'date'
                           else date_text(state.date))
-        self._draw_marker(painter, cells, 'date', state.date, QColor('#d62728'), Qt.PenStyle.SolidLine,
-                          date_label, 0)
+        self._draw_marker(painter, cells, 'date', state.date, QColor(DATE_COLOR), date_label, 0)
         if state.sky_time is not None:
-            self._draw_marker(painter, cells, 'sky', state.sky_time, QColor('#1f77b4'), Qt.PenStyle.DashLine,
-                              date_text(state.sky_time) if dragged == 'sky' else 'sky', 1)
+            self._draw_marker(painter, cells, 'sky', state.sky_time, QColor(MOMENT_COLOR),
+                              date_text(state.sky_time) if dragged == 'sky' else 'sky', int(state.date is not None))
 
-    def _draw_marker(self, painter: QPainter, cells, kind: str, year, color: QColor, style, label,
-                     line: int) -> None:
+    def _draw_marker(self, painter: QPainter, cells, kind: str, year, color: QColor, label, line: int) -> None:
         """
         Line at ``year`` through every row (also with equal widths), with its tag on line ``line``
-        of the tag band, joined to the line in the first row.
+        of the tag band under the rows, joined to the line in the last row.
         """
         state = self.state
         u = state.position(year)
@@ -571,25 +705,26 @@ class Navigator(QWidget):
         start, end = self._focus_extent()
         if not start <= u <= end:
             return
-        painter.setPen(QPen(color, 2, style))
-        top = None
-        for rect, address, depth, index in cells:
-            # the cell of each row that contains the time
-            level = state.cache.level(depth)
-            c_start, c_duration = float(level.starts[index]), float(level.durations[index])
-            if c_start <= u < c_start + c_duration or (u == 1.0 and c_start + c_duration >= 1.0 - 1e-12):
-                x = rect.left() + (u - c_start) / c_duration * rect.width()
-                painter.drawLine(QPointF(x, rect.top()), QPointF(x, rect.bottom()))
-                top = x if top is None else top
-        if top is not None and label:
+        last = None                             # (depth, x, bottom) in the deepest row
+        for row in self._geometry:
+            x = self._x_of(row, u)
+            if x is None:
+                continue
+            stroke(painter, color, CURSOR_WIDTH,
+                   lambda x=x, r=row: painter.drawLine(QPointF(x, r.top), QPointF(x, r.top + r.height)))
+            if last is None or row.depth > last[0]:
+                last = (row.depth, x, row.top + row.height)
+        if last is not None and label:
+            _, x, rows_bottom = last
             metrics = painter.fontMetrics()
             band = self._tag_band()
             height = self._tag_height()
             y = band.top() + line * (height + 2)
-            # the line goes on up through the band to the tag
-            painter.drawLine(QPointF(top, y + height / 2), QPointF(top, band.bottom() + TAG_GAP))
+            # the line goes on down from the last row to the tag
+            stroke(painter, color, CURSOR_WIDTH,
+                   lambda: painter.drawLine(QPointF(x, rows_bottom), QPointF(x, y + height / 2)))
             width = metrics.horizontalAdvance(label) + 8
-            left = top if top + width < self.width() - 8 else top - width
+            left = x if x + width < self.width() - 8 else x - width
             tag = QRectF(left, y, width, height)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
             painter.setPen(Qt.PenStyle.NoPen)
@@ -660,14 +795,17 @@ class Navigator(QWidget):
         time_map = self.state.time_map
         if time_map is None:
             return None
-        rows = [(rect, address) for rect, address in self._cells if rect.left() <= pos.x() <= rect.right()]
-        if not rows:
+        geometry = getattr(self, '_geometry', [])
+        if not geometry:
             return None
-        # the cell under the mouse, or else the one in the deepest row at that position
-        rect, address = next(((r, a) for r, a in rows if r.contains(pos)), rows[-1])
-        level = self.state.cache.level(len(address))
-        i = tcoord(address)
-        fraction = (pos.x() - rect.left()) / rect.width() if rect.width() > 0 else 0.0
+        # the row under the mouse, or else the deepest one
+        row = next((r for r in geometry if r.top <= pos.y() <= r.top + r.height), geometry[-1])
+        i = self._index_at(row, pos.x())
+        if i is None:
+            return None
+        k = i - row.start
+        level = self.state.cache.level(row.depth)
+        fraction = (pos.x() - row.lefts[k]) / row.widths[k] if row.widths[k] > 0 else 0.0
         u = float(level.starts[i] + fraction * level.durations[i])
         return time_map.to_physical(min(1.0, max(0.0, u)))
 

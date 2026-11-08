@@ -61,15 +61,17 @@ if 'shots' in WHICH:
     w.docks['inspector'].raise_(); spin(60)
     w.grab().save(f"{OUT}/ventana_principal.png")
     w.navigator.grab().save(f"{OUT}/navegador.png")
-    dock_shot('inspector', 'panel_subciclo.png', (520, 900))
+    dock_shot('inspector', 'panel_subciclo.png', (520, 960))
     dock_shot('date', 'panel_fecha.png', (620, 520))
     dock_shot('sky', 'panel_cielo.png', (700, 900))
     def compare_prep(p):
         p.kind.setCurrentIndex(p.kind.findData('all')); p.order.setCurrentIndex(p.order.findData('similar')); p.render()
     dock_shot('skycompare', 'panel_comparacion_cielos.png', (1000, 900), compare_prep)
     def measures_prep(p):
-        p.kind.setCurrentIndex(0); p.depth.setValue(4); p.render()
-    dock_shot('measures', 'panel_medidas.png', (900, 650), measures_prep)
+        p.kind.setCurrentIndex(p.kind.findData('scatter'))
+        p.x_measure.setCurrentIndex(p.x_measure.findData('tension')); p.y_measure.setCurrentIndex(p.y_measure.findData('trend'))
+        p.color_by.setCurrentIndex(p.color_by.findData('dharma')); p.inside.setChecked(False); p.depth.setValue(4); p.render()
+    dock_shot('measures', 'panel_medidas.png', (980, 680), measures_prep)
     dock_shot('colorspace', 'panel_espacio_color.png', (800, 700))
     def perm_prep(p):
         p.preset.setCurrentText('Swap the last two'); p.acts.setCurrentIndex(p.acts.findData('below')); p.depth.setValue(4); spin(); p.render()

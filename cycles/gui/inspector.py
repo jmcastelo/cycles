@@ -7,10 +7,10 @@ from PySide6.QtWidgets import (
     QAbstractItemView, QFormLayout, QHeaderView, QLabel, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
-from cycles.functions.division import CMYK_KEYS, COLOR_KEYS
+from cycles.functions.division import CMYK_KEYS, COLOR_DESCRIPTIONS, COLOR_KEYS, STATE_COLOR_KEYS
 from cycles.gui.navigator import rgb_to_qcolor
 from cycles.functions.permutation import cycle_text
-from cycles.gui.state import CycleState, date_text, measure_breakdown, span_text, subcycle_info
+from cycles.gui.state import CycleState, date_text, measure_breakdown, span_text, subcycle_info, tcoord
 
 
 def _hex(rgb) -> str:
@@ -54,6 +54,7 @@ class Inspector(QWidget):
             ('permutation', 'Under σ'),
             ('dharma', 'Dharma'),
             ('purity', 'Purity'),
+            ('measures', 'More measures'),
         ]
         for key, label in rows:
             value = QLabel()
@@ -88,6 +89,8 @@ class Inspector(QWidget):
         self.colors = QTableWidget(len(COLOR_KEYS), 3)
         self.colors.setHorizontalHeaderLabels(['', 'RGB', 'CMYK'])
         self.colors.setVerticalHeaderLabels(list(COLOR_KEYS))
+        for row, key in enumerate(COLOR_KEYS):
+            self.colors.verticalHeaderItem(row).setToolTip(COLOR_DESCRIPTIONS[key])
         self.colors.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.colors.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         header = self.colors.horizontalHeader()
@@ -127,6 +130,20 @@ class Inspector(QWidget):
             return f"fixed by σ = {cycle_text(sigma)}"
         image = ' › '.join(state.names[d] for d in orbit[1])
         return f"σ = {cycle_text(sigma)} takes it to {image}; its orbit has {len(orbit)} subcycles"
+
+    def _measures_text(self, address: tuple) -> str:
+        """The measures other than dharma and purity (measure.MEASURES), on one line."""
+        from cycles.functions.measure import MEASURES
+        state, index = self.state, tcoord(address)
+        parts = []
+        for key, m in MEASURES.items():
+            if key in ('dharma', 'purity'):
+                continue
+            value = state.subcycle_measure(address, key)
+            if value is not None:
+                signed = m['range'] is not None and m['range'][0] < 0 or key == 'balance'
+                parts.append(f"{m['label'].lower()} {value:{'+' if signed else ''}.4f}".replace('-', '−'))
+        return ' · '.join(parts)
 
     def _show_levels(self, address: tuple) -> None:
         """The per-level table of dharma and the age shares of purity, and their range over the orderings."""
@@ -215,16 +232,20 @@ class Inspector(QWidget):
         f['permutation'].setText(self._permutation_text(address))
         f['dharma'].setText(f"{info['dharma']:.6f}")
         f['purity'].setText(f"{info['purity']:.6f}")
+        f['measures'].setText(self._measures_text(address))
         self._show_levels(address)
 
         bold = QFont(self.colors.font())
         bold.setBold(True)
         for row, key in enumerate(COLOR_KEYS):
-            rgb = info['rgb'][key]
+            missing = state.missing_for(key) if key in STATE_COLOR_KEYS else ''
+            rgb = None if missing else (state.subcycle_color(address, key) if key in STATE_COLOR_KEYS
+                                        else info['rgb'][key])
             swatch = QTableWidgetItem('')
-            swatch.setBackground(rgb_to_qcolor(rgb))
+            if not missing:
+                swatch.setBackground(rgb_to_qcolor(rgb))
             self.colors.setItem(row, 0, swatch)
-            items = [QTableWidgetItem(_hex(rgb)),
+            items = [QTableWidgetItem(missing or _hex(rgb)),
                      QTableWidgetItem(' '.join(f"{c:.3f}" for c in info['cmyk'][key]) if key in CMYK_KEYS else '')]
             for col, item in enumerate(items, 1):
                 if key == state.color_key:

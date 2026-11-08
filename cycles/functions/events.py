@@ -144,16 +144,35 @@ def trigon_changes(catalog: dict, zodiac: str, settle: int = 2) -> np.ndarray:
     and a change is the first series of a lasting run whose element differs from the previous lasting run.
     With ``settle=2`` the tropical changes come every 200 years on average (fire in 1603, air in 2020).
     """
+    times, _ = trigon_periods(catalog, zodiac, settle)
+    return times[1:]
+
+
+def trigon_periods(catalog: dict, zodiac: str, settle: int = 2) -> tuple[np.ndarray, np.ndarray]:
+    """
+    The periods of the great conjunctions in each trigon, counted as in ``trigon_changes``: their starts (the
+    first lasting run, then every change) and their elements (0 fire, 1 earth, 2 air, 3 water).
+    """
     first = first_of_series(catalog)
     elements = element_of(catalog[zodiac][first])
     times = catalog['times'][first]
     starts = np.flatnonzero(np.concatenate([[True], elements[1:] != elements[:-1]]))
     lengths = np.diff(np.append(starts, len(elements)))
     lasting = starts[lengths >= settle]
-    if len(lasting) < 2:
-        return np.zeros(0)
-    changed = np.concatenate([[False], elements[lasting][1:] != elements[lasting][:-1]])
-    return times[lasting][changed]
+    if not len(lasting):
+        return np.zeros(0), np.zeros(0, dtype=int)
+    kept = np.concatenate([[True], elements[lasting][1:] != elements[lasting][:-1]])
+    return times[lasting][kept], elements[lasting][kept]
+
+
+def trigon_in_force(catalog: dict, zodiac: str, years, settle: int = 2) -> np.ndarray:
+    """
+    Element (0 fire … 3 water) of the trigon of the great conjunctions in force at ``years`` (TDB): that of the
+    last period started before (``trigon_periods``); −1 before the first one.
+    """
+    times, elements = trigon_periods(catalog, zodiac, settle)
+    k = np.searchsorted(times, np.asarray(years, dtype=float), side='right') - 1
+    return np.where(k >= 0, elements[np.clip(k, 0, None)] if len(elements) else -1, -1)
 
 
 def mean_longitudes(years, bodies=CLASSICAL, zodiac: str = 'sidereal') -> dict:

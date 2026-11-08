@@ -161,3 +161,14 @@ def test_the_surya_siddhanta_mean_motions():
     text, real = surya_siddhanta_longitudes(years, epoch), mean_longitudes(years)
     gaps = np.array([np.abs((real[b] - text[b] + 180) % 360 - 180) for b in CLASSICAL])
     assert gaps[:, 1].mean() < 5 and gaps[:, 0].mean() > 15
+
+
+def test_the_trigon_in_force():
+    from cycles.functions.events import trigon_changes, trigon_in_force, trigon_periods
+    # one conjunction per series every 20 years: fire, fire, earth (passing), fire, air, air, air
+    longitudes = np.array([0.0, 0.0, 30.0, 0.0, 60.0, 60.0, 60.0])            # Aries, Taurus, Gemini
+    catalog = {'times': np.arange(7) * 20.0, 'series': np.arange(7), 'tropical': longitudes}
+    times, elements = trigon_periods(catalog, 'tropical')
+    assert list(times) == [0.0, 80.0] and list(elements) == [0, 2]            # fire, then air (earth passed)
+    assert list(trigon_changes(catalog, 'tropical')) == [80.0]
+    assert list(trigon_in_force(catalog, 'tropical', [-5, 0, 50, 79.9, 80, 200])) == [-1, 0, 0, 0, 2, 2]

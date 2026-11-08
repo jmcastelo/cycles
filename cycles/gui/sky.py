@@ -242,6 +242,7 @@ class SkyPanel(QWidget):
                 self._schedule()
                 self.ephemerisChanged.emit()
                 return
+        self.state.set_ephemeris(self.tables, self.ephemeris_path)
         if self.tables:
             self.source.setText(f"Ephemeris: {self.ephemeris_path.name}")
             self.source.setToolTip(str(self.ephemeris_path))

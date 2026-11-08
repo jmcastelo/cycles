@@ -7,15 +7,19 @@ how many colors are different, and how many a display can show apart.
 import html
 
 import numpy as np
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QSize, Qt, QTimer
+from PySide6.QtGui import QIcon, QImage, QPixmap
 from PySide6.QtWidgets import (
-    QAbstractItemView, QApplication, QColorDialog, QDialog, QDoubleSpinBox, QFormLayout, QGroupBox, QHBoxLayout, QHeaderView,
+    QAbstractItemView, QApplication, QColorDialog, QComboBox, QDialog, QDoubleSpinBox, QFormLayout, QGroupBox, QHBoxLayout, QHeaderView,
     QLabel, QPushButton, QSpinBox, QTableWidget, QTableWidgetItem, QVBoxLayout,
 )
 
-from cycles.functions.color import MAX_TETRAHEDRON_VOLUME, color_parameter_problems, tetrahedron_volume
+from cycles.functions.color import (
+    DEFAULT_COLOR_MAPS, DIVERGING_MAPS, MAX_TETRAHEDRON_VOLUME, SEQUENTIAL_MAPS, color_parameter_problems,
+    tetrahedron_volume,
+)
 from cycles.functions.division import (
-    COLOR_KEYS, DEFAULT_BASES, DEFAULT_SCALES, TETRAHEDRON_COLORS, compute_level, level_colors,
+    LEVEL_COLOR_KEYS, DEFAULT_BASES, DEFAULT_SCALES, TETRAHEDRON_COLORS, compute_level, level_colors,
 )
 from cycles.gui.navigator import rgb_to_qcolor, text_color
 from cycles.gui.state import CycleState
@@ -24,10 +28,24 @@ from cycles.gui.state import CycleState
 SHARED_COLORS = {
     'cmyk_composition': 'one color per composition',
     'lrgb': 'the ink of the innermost age',
-    'dharma': 'gray level of dharma',
-    'purity': 'gray level of purity',
+    'duration_class': 'one color per class of equal duration',
 }
 CHECK_MAX_DEPTH = 7
+
+
+def _map_box(maps: dict) -> QComboBox:
+    """A choice of color maps, each shown with its gradient."""
+    from matplotlib import colormaps
+    box = QComboBox()
+    box.setIconSize(QSize(64, 12))
+    box.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+    box.setMinimumContentsLength(9)
+    for name, label in maps.items():
+        rgb = (colormaps[name](np.linspace(0, 1, 64))[:, :3] * 255).astype(np.uint8)
+        strip = np.ascontiguousarray(np.repeat(rgb[None], 12, axis=0))
+        image = QImage(strip.data, 64, 12, 64 * 3, QImage.Format.Format_RGB888).copy()
+        box.addItem(QIcon(QPixmap.fromImage(image)), label, name)
+    return box
 
 
 def _spin(low: float, high: float, step: float, decimals: int = 3) -> QDoubleSpinBox:
@@ -53,7 +71,7 @@ class ColorDialog(QDialog):
         super().__init__(parent)
         self.state = state
         self.setWindowTitle('Color parameters')
-        self.resize(820, 640)
+        self.resize(880, 660)
         layout = QHBoxLayout(self)
 
         form_box = QGroupBox('Parameters')
@@ -88,12 +106,24 @@ class ColorDialog(QDialog):
         form.addRow('Tetrahedron colors', vertices)
         self.volume = _note('')
         form.addRow(self.volume)
+        maps = QHBoxLayout()
+        self.sequential_map = _map_box(SEQUENTIAL_MAPS)
+        self.sequential_map.setToolTip('For the measures from 0 to 1: dharma, purity, mixture, tension, roughness')
+        self.diverging_map = _map_box(DIVERGING_MAPS)
+        self.diverging_map.setToolTip('For the signed measures, 0 in the middle: trend, contrast, balance; and the '
+                                      'angular density, 1 in the middle')
+        maps.addWidget(self.sequential_map)
+        maps.addWidget(self.diverging_map)
+        form.addRow('Measure color maps', maps)
+        form.addRow(_note('Of the colorings of the measures and the Measures panel: sequential, for the measures '
+                          'from 0 to 1; diverging, for the signed ones. Changing them only recolors.'))
         self.problems = QLabel()
         self.problems.setWordWrap(True)
         form.addRow(self.problems)
         buttons = QHBoxLayout()
         defaults = QPushButton('Defaults')
-        defaults.clicked.connect(lambda: self.load(DEFAULT_BASES, DEFAULT_SCALES, TETRAHEDRON_COLORS))
+        defaults.clicked.connect(lambda: self.load(DEFAULT_BASES, DEFAULT_SCALES, TETRAHEDRON_COLORS,
+                                                   DEFAULT_COLOR_MAPS))
         defaults.setToolTip('The default parameters')
         revert = QPushButton('Revert')
         revert.setToolTip('The parameters there were when this window was opened')
@@ -118,9 +148,9 @@ class ColorDialog(QDialog):
         row.addWidget(self.depth)
         row.addStretch(1)
         check.addLayout(row)
-        self.table = QTableWidget(len(COLOR_KEYS), 2)
+        self.table = QTableWidget(len(LEVEL_COLOR_KEYS), 2)
         self.table.setHorizontalHeaderLabels(['Different', 'Apart on screen'])
-        self.table.setVerticalHeaderLabels(list(COLOR_KEYS))
+        self.table.setVerticalHeaderLabels(list(LEVEL_COLOR_KEYS))
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -140,6 +170,8 @@ class ColorDialog(QDialog):
         self.apply_timer.timeout.connect(self.apply)
         for spin in (self.color_base, self.purity_base, self.cmyk_scale, self.black_scale, self.tetra_step):
             spin.valueChanged.connect(self._changed)
+        for box in (self.sequential_map, self.diverging_map):
+            box.currentIndexChanged.connect(self._changed)
         self.depth.valueChanged.connect(self._changed)
         self.open_from_state()
 
@@ -152,7 +184,7 @@ class ColorDialog(QDialog):
         """The spinboxes, in the order of ``_values``: bases[1], bases[2], scales[0..2]."""
         return [self.color_base, self.purity_base, self.cmyk_scale, self.black_scale, self.tetra_step]
 
-    def load(self, bases, scales, colors=TETRAHEDRON_COLORS) -> None:
+    def load(self, bases, scales, colors=TETRAHEDRON_COLORS, maps=DEFAULT_COLOR_MAPS) -> None:
         # exact values, kept for the fields left unchanged (2/3 is not 0.667)
         self._values = [bases[1], bases[2], *scales]
         self._colors = np.array(colors, dtype=float)
@@ -162,12 +194,18 @@ class ColorDialog(QDialog):
         self.cmyk_scale.setValue(scales[0])
         self.black_scale.setValue(scales[1])
         self.tetra_step.setValue(scales[2])
+        for box, name in zip((self.sequential_map, self.diverging_map), maps):
+            box.blockSignals(True)
+            box.setCurrentIndex(max(0, box.findData(name)))
+            box.blockSignals(False)
         self._changed()
 
-    def parameters(self) -> tuple[list, list, np.ndarray]:
+    def parameters(self) -> tuple[list, list, np.ndarray, tuple]:
+        """``(bases, scales, tetrahedron colors, color maps)`` as set in the dialog."""
         values = [exact if round(exact, spin.decimals()) == spin.value() else spin.value()
                   for spin, exact in zip(self._fields(), self._values)]
-        return [DEFAULT_BASES[0], values[0], values[1]], values[2:], self._colors.copy()
+        return ([DEFAULT_BASES[0], values[0], values[1]], values[2:], self._colors.copy(),
+                (self.sequential_map.currentData(), self.diverging_map.currentData()))
 
     # -- tetrahedron vertices
 
@@ -212,7 +250,7 @@ class ColorDialog(QDialog):
             self.apply_timer.start()
 
     def update_check(self) -> None:
-        bases, scales, vertices = self.parameters()
+        bases, scales, vertices, _ = self.parameters()
         depth = self.depth.value()
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
@@ -220,7 +258,7 @@ class ColorDialog(QDialog):
         finally:
             QApplication.restoreOverrideCursor()
         count = 4 ** depth
-        for row, key in enumerate(COLOR_KEYS):
+        for row, key in enumerate(LEVEL_COLOR_KEYS):
             rgb = np.clip(colors[key], 0, 1)
             different = len(np.unique(np.round(rgb, 10), axis=0))
             on_screen = len(np.unique(np.round(rgb * 255), axis=0))

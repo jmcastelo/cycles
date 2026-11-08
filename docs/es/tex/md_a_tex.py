@@ -44,11 +44,12 @@ def escape(text: str) -> str:
 
 
 def code(text: str) -> str:
-    """Código en línea, con cortes de línea permitidos tras _ . , ( / y espacios."""
+    """Código en línea, con cortes de línea permitidos tras _ . , ( / y espacios (no dentro de un número: 0.3)."""
     out = []
-    for c in text:
+    for k, c in enumerate(text):
         out.append(SPECIAL.get(c, c))
-        if c in '_.,(/=':
+        decimal = c == '.' and k + 1 < len(text) and text[k + 1].isdigit()
+        if c in '_.,(/=' and not decimal:
             out.append(r'\allowbreak{}')
     return r'\texttt{' + ''.join(out) + '}'
 

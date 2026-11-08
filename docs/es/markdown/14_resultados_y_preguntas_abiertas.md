@@ -12,6 +12,11 @@
    composiciones).
 4. **Medidas.** El orden de los dígitos no cambia la duración pero sí el dharma (los niveles exteriores pesan
    más): las 24 ordenaciones de Kali › Treta › Dvapara › Satya van de 0,4333 a 0,8167, todas con la misma pureza.
+   De las diez medidas añadidas, la tendencia, el contraste, la densidad angular y la reunión de los planetas
+   aportan información propia (correlación de rango con las demás de 0,54, 0,05, 0,38 y 0,05 como mucho, a
+   profundidad 6); la mezcla repite casi la pureza (−0,91), la aspereza la tensión (0,81), la complejidad la
+   mezcla (0,71) y el microcosmos el dharma (0,73). El dharma baja despacio y sube de golpe: el contraste
+   es casi siempre algo negativo, con saltos positivos al empezar cada Satya.
 5. **Colores.** Dentro de los rangos de los parámetros los colores de cada nivel son únicos; el coloreado del
    tetraedro llena un tetraedro de Sierpinski.
 

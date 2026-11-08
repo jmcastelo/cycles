@@ -1,8 +1,8 @@
 """
-Measures panel: dharma and purity of the subcycles of one level, linked with
-the navigator, in 2D (against each other, time or index) or in 3D (dharma,
-purity and time or index; drag to rotate). The selected subcycle is ringed;
-with "Equal durations" on, so are those with its duration. Clicking a point
+Measures panel: any two measures of the subcycles of one level (``measure.MEASURES``: dharma, purity, mixture,
+tension, trend, roughness, contrast, balance, angular density) linked with the navigator, in 2D (against each
+other, time or index) or in 3D (both and time or index; drag to rotate). The points take the subcycles' colors or
+the values of a measure. The selected subcycle is ringed; with a highlight on, so is its class. Clicking a point
 selects that subcycle.
 """
 
@@ -14,36 +14,34 @@ from PySide6.QtCore import QTimer, Signal
 from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox, QToolTip, QToolButton, QVBoxLayout, QWidget
 
-from cycles.gui.state import MAX_DEPTH, MOMENT_COLOR, CycleState, address_of, children_range, tcoord
+from cycles.functions.color import measure_colors
+from cycles.functions.measure import MEASURES
+from cycles.gui.links import draw_links
+from cycles.gui.state import MAX_DEPTH, MOMENT_COLOR, SELECTION_COLOR, CycleState, address_of, children_range, tcoord
 from cycles.plotting.generic import plot_y_vs_x
-from cycles.plotting.measure import plot_purity_and_dharma, plot_quality_scatter_3d
 
-# Plot kinds: label -> (y measure, x axis); x is 'dharma', 'index' or 'time'.
-# The 3D kinds have y = '3d' and x the third axis (dharma and purity are the other two).
+# Plot kinds: key -> label; Y against X, against time or index, or X and Y with time or index as a third axis
 KINDS = {
-    'Purity vs dharma': ('purity', 'dharma'),
-    'Dharma vs time': ('dharma', 'time'),
-    'Purity vs time': ('purity', 'time'),
-    'Dharma vs index': ('dharma', 'index'),
-    'Purity vs index': ('purity', 'index'),
-    'Dharma, purity and time (3D)': ('3d', 'time'),
-    'Dharma, purity and index (3D)': ('3d', 'index'),
+    'scatter': 'Y against X',
+    'time': 'Y against time',
+    'index': 'Y against index',
+    '3d_time': 'X, Y and time (3D)',
+    '3d_index': 'X, Y and index (3D)',
 }
-# Camera presets of the 3D plots (dharma along x, purity along y, time or index along z),
-# and the axis each one sees edge-on (its ticks are hidden)
-EDGE_ON = {'top': 'z', 'dharma': 'y', 'purity': 'x'}
+# Camera presets of the 3D plots (X along x, Y along y, time or index along z), and the axis each sees edge-on
+# (its ticks are hidden)
+EDGE_ON = {'top': 'z', 'x': 'y', 'y': 'x'}
 VIEWS_3D = {
     'oblique': ('Oblique', (22, -55, 0)),
-    'top': ('Down the time axis: purity vs dharma', (90, -90, 0)),
-    'dharma': ('From the side: dharma vs time', (0, -90, 0)),
-    'purity': ('From the side: purity vs time', (0, 0, 0)),
+    'top': ('Down the third axis: Y against X', (90, -90, 0)),
+    'x': ('From the side: X against the third axis', (0, -90, 0)),
+    'y': ('From the side: Y against the third axis', (0, 0, 0)),
 }
-PICK_RADIUS = 10    # pixels
-DRAG_THRESHOLD = 4  # pixels moved between press and release that make it a rotation, not a click
+SUBCYCLE_COLORS = 'subcycle'
 
 
 class MeasuresPanel(QWidget):
-    """Dharma and purity plots of the level of the selection (or a chosen depth)."""
+    """Plots of two measures of the level of the selection (or a chosen depth)."""
 
     saveRequested = Signal()     # the Save… button
 
@@ -58,11 +56,29 @@ class MeasuresPanel(QWidget):
         self._dirty = True
 
         layout = QVBoxLayout(self)
-        row = QHBoxLayout()
+        measures_row = QHBoxLayout()
         self.kind = QComboBox()
-        self.kind.addItems(list(KINDS))
+        for key, label in KINDS.items():
+            self.kind.addItem(label, key)
         self.kind.currentIndexChanged.connect(self._schedule)
-        row.addWidget(self.kind)
+        measures_row.addWidget(self.kind)
+        self.x_label = QLabel('X')
+        self.x_measure = self._measure_box('dharma')
+        self.y_measure = self._measure_box('purity')
+        self.color_by = QComboBox()
+        self.color_by.addItem('Subcycle colors', SUBCYCLE_COLORS)
+        for key, m in MEASURES.items():
+            self.color_by.addItem(f"Color by {m['label'].lower()}", key)
+        self.color_by.setToolTip('Fill the points with the colors of the subcycles, or by the value of a measure')
+        self.color_by.currentIndexChanged.connect(self._schedule)
+        measures_row.addWidget(self.x_label)
+        measures_row.addWidget(self.x_measure)
+        measures_row.addWidget(QLabel('Y'))
+        measures_row.addWidget(self.y_measure)
+        measures_row.addWidget(self.color_by)
+        measures_row.addStretch(1)
+        layout.addLayout(measures_row)
+        row = QHBoxLayout()
         row.addWidget(QLabel('Depth'))
         self.depth = QSpinBox()
         self.depth.setRange(0, MAX_DEPTH)
@@ -79,6 +95,11 @@ class MeasuresPanel(QWidget):
         self.sized.setToolTip('Point areas proportional to the durations of the subcycles')
         self.sized.toggled.connect(self._schedule)
         row.addWidget(self.sized)
+        self.join = QCheckBox('Join')
+        self.join.setChecked(True)
+        self.join.setToolTip('Join the highlighted subcycles: the steps of the ⟨σ⟩ orbit of the selection, with arrows, or the swaps of neighbouring digits between the orderings of its ages (Same composition)')
+        self.join.toggled.connect(self._schedule)
+        row.addWidget(self.join)
         row.addStretch(1)
         self.view_label = QLabel('View')
         self.view = QComboBox()
@@ -115,7 +136,29 @@ class MeasuresPanel(QWidget):
                        state.colorParametersChanged, state.skyTimeChanged, state.permutationChanged):
             signal.connect(self._schedule)
 
+    def _measure_box(self, key: str) -> QComboBox:
+        box = QComboBox()
+        for name, m in MEASURES.items():
+            box.addItem(m['label'], name)
+            box.setItemData(box.count() - 1, m['description'], 3)      # Qt.ToolTipRole
+        box.setCurrentIndex(box.findData(key))
+        box.currentIndexChanged.connect(self._schedule)
+        return box
+
     # -- what to plot
+
+    def graph_name(self) -> str:
+        """Short name of what is plotted (for file names)."""
+        x_key, y_key = self.measures()
+        kind = self.kind.currentData()
+        if kind in ('time', 'index'):
+            return f"{MEASURES[y_key]['label']} vs {kind}"
+        third = f" and {kind[3:]} (3D)" if kind.startswith('3d') else ''
+        return f"{MEASURES[y_key]['label']} vs {MEASURES[x_key]['label']}{third}"
+
+    def measures(self) -> tuple[str, str]:
+        """Keys of the X and Y measures."""
+        return self.x_measure.currentData(), self.y_measure.currentData()
 
     def plot_depth(self) -> int:
         state = self.state
@@ -150,14 +193,21 @@ class MeasuresPanel(QWidget):
         state = self.state
         depth = self.plot_depth()
         scope = self.scope(depth)
-        # redraw the plot only if what it shows changed: the point colors, and dharma or purity
-        y_name, x_name = KINDS[self.kind.currentText()]
-        measures = {'dharma', 'purity'} if y_name == '3d' else {y_name, x_name} & {'dharma', 'purity'}
-        self.view_label.setVisible(y_name == '3d')
-        self.view.setVisible(y_name == '3d')
-        parameters = (state.parameters_of(state.color_key), *(state.parameters_of(m) for m in sorted(measures)))
-        base = (self.kind.currentText(), depth, scope, state.color_key, state.model, state.names, parameters,
-                self.sized.isChecked())
+        # redraw the plot only if what it shows changed: the point colors and the measures
+        kind = self.kind.currentData()
+        x_key, y_key = self.measures()
+        three_d = kind.startswith('3d')
+        self.view_label.setVisible(three_d)
+        self.view.setVisible(three_d)
+        self.x_label.setVisible(kind not in ('time', 'index'))
+        self.x_measure.setVisible(kind not in ('time', 'index'))
+        coloring = self.color_by.currentData()
+        used = {y_key, coloring} | ({x_key} if kind not in ('time', 'index') else set())
+        used.discard(SUBCYCLE_COLORS)
+        parameters = (state.parameters_of(state.color_key), *(state.parameters_of(m) for m in sorted(used)))
+        contexts = tuple(state.context_of(k) for k in sorted(used | {state.color_key}))
+        base = (kind, x_key, y_key, coloring, depth, scope, state.color_key, state.model, state.names, parameters,
+                contexts, self.sized.isChecked())
         if base != self._base:
             self._draw_base(depth, scope)
             self._base = base
@@ -181,27 +231,55 @@ class MeasuresPanel(QWidget):
         level = state.cache.level(depth)
         indices = np.arange(children_range(scope, depth).start, children_range(scope, depth).stop)
         part = level.subset(indices)
-        colors = state.cache.colors(depth, state.color_key)[indices]
-        y_name, x_name = KINDS[self.kind.currentText()]
+        kind = self.kind.currentData()
+        x_key, y_key = self.measures()
         where = ' › '.join(state.names[d] for d in scope) or 'whole cycle'
-        title = f"{self.kind.currentText()}, depth {depth} ({where})"
+        x_label, y_label = MEASURES[x_key]['label'], MEASURES[y_key]['label']
+        names = {'scatter': f"{y_label} against {x_label.lower()}", 'time': f"{y_label} against time",
+                 'index': f"{y_label} against index", '3d_time': f"{x_label}, {y_label.lower()} and time",
+                 '3d_index': f"{x_label}, {y_label.lower()} and index"}
+        title = f"{names[kind]}, depth {depth} ({where})"
 
         camera = ((self.ax.elev, self.ax.azim, self.ax.roll) if self.ax is not None and self._z is not None
                   else self.__dict__.pop('_saved_camera', None))
         self.figure.clear()
         self._z = None
-        sizes = self.point_sizes(part.durations, scatter=x_name == 'dharma' or y_name == '3d')
-        if y_name == '3d':
-            ax = self.figure.add_subplot(111, projection='3d')
-            if x_name == 'index':
-                z = indices.astype(float)
+        self.ax = None
+        self._x = self._y = None
+        self._indices = indices
+        self._highlights = []
+        missing = [f"{MEASURES[k]['label']} {state.missing_for(k)}"
+                   for k in sorted({x_key, y_key, self.color_by.currentData()} - {SUBCYCLE_COLORS})
+                   if not state.can_color(k) and (k != x_key or kind not in ('time', 'index'))]
+        if missing:
+            self.info.setText('; '.join(missing) + ' (a cycle model is chosen in the toolbar, the ephemeris in the '
+                                                   'Sky panel).')
+            return
+        y = np.asarray(state.measure_values(depth, y_key), dtype=float)[indices]
+        coloring = self.color_by.currentData()
+        mappable = None
+        if coloring == SUBCYCLE_COLORS:
+            colors = state.colors(depth, state.color_key)[indices]
+        else:
+            colors, mappable = measure_colors(np.asarray(state.measure_values(depth, coloring), dtype=float)[indices],
+                                              coloring, state.cache.maps)
+        three_d = kind.startswith('3d')
+        sizes = self.point_sizes(part.durations, scatter=kind == 'scatter' or three_d)
+        if kind in ('time', 'index', '3d_time', '3d_index'):
+            if kind.endswith('index'):
+                t, t_label = indices.astype(float), 'Index'
             else:
-                z = part.starts + part.durations / 2
+                t, t_label = part.starts + part.durations / 2, 'Normalized time'
                 if state.time_map is not None:
-                    z = state.time_map.to_physical(z)
-            plot_quality_scatter_3d(part, ax=ax, show=False, axis=x_name,
-                                    values=z if x_name == 'index' or state.time_map is not None else None,
-                                    colors=colors, sizes=sizes, path=True, alpha=0.9)
+                    t, t_label = np.asarray(state.time_map.to_physical(t), dtype=float), 'Year'
+        if three_d:
+            x = np.asarray(state.measure_values(depth, x_key), dtype=float)[indices]
+            ax = self.figure.add_subplot(111, projection='3d')
+            ax.plot(x, y, t, color='0.75', lw=0.5, zorder=1)
+            ax.scatter(xs=x, ys=y, zs=t, c=colors, s=sizes, alpha=0.9, depthshade=False)
+            ax.set_xlabel(x_label)
+            ax.set_ylabel(y_label)
+            ax.set_zlabel(t_label)
             ax.set_title(title, fontsize=9)
             ax.zaxis.set_major_locator(MaxNLocator(5))
             # plain numbers: the Unicode minus may be missing from the font at some angles
@@ -214,30 +292,26 @@ class MeasuresPanel(QWidget):
                 getattr(ax, f"set_{edge_on}label")('')
             view = VIEWS_3D.get(self.view.currentData())
             ax.view_init(*(view[1] if view else camera if camera else VIEWS_3D['oblique'][1]))
-            x, y = part.dharmas, part.purities
-            self._z = np.asarray(z, dtype=float)
-        elif x_name == 'dharma':
+            self._z = np.asarray(t, dtype=float)
+        elif kind == 'scatter':
+            x = np.asarray(state.measure_values(depth, x_key), dtype=float)[indices]
             ax = self.figure.add_subplot(111)
-            plot_purity_and_dharma(ax, part, colors=colors, sizes=sizes)
+            ax.scatter(x, y, c=colors, s=sizes, alpha=0.3 if mappable is None else 0.8)
+            ax.set_xlabel(x_label)
+            ax.set_ylabel(y_label)
             ax.set_title(title, fontsize=9)
-            x, y = part.dharmas, part.purities
         else:
-            y = part.dharmas if y_name == 'dharma' else part.purities
-            if x_name == 'index':
-                x, xlabel = indices.astype(float), 'Index'
-            else:
-                x = part.starts + part.durations / 2
-                xlabel = 'Normalized time'
-                if state.time_map is not None:
-                    x, xlabel = state.time_map.to_physical(x), 'Year'
+            x = t
             ax = self.figure.add_subplot(111)
-            plot_y_vs_x(x, y, (None, None), title, xlabel, y_name.capitalize(), ax=ax, show=False,
-                        colors=colors, size=sizes)
+            plot_y_vs_x(x, y, (None, None), title, t_label, y_label, ax=ax, show=False, colors=colors, size=sizes)
             ax.title.set_fontsize(9)
             ax.xaxis.set_major_locator(MaxNLocator(5))
+        if mappable is not None:
+            bar = self.figure.colorbar(mappable, ax=ax, shrink=0.8, pad=0.08 if three_d else 0.02)
+            bar.set_label(MEASURES[coloring]['label'], fontsize=8)
+            bar.ax.tick_params(labelsize=7)
         self.ax = ax
-        self._x, self._y, self._indices = np.asarray(x, dtype=float), np.asarray(y, dtype=float), indices
-        self._highlights = []
+        self._x, self._y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
         self.info.setText(f"{len(indices)} subcycles. Click a point to select it"
                           + ('; drag to rotate.' if self._z is not None else '.'))
 
@@ -252,21 +326,27 @@ class MeasuresPanel(QWidget):
         for artist in self._highlights:
             artist.remove()
         self._highlights = []
+        if self.ax is None:
+            return
         positions = {int(i): k for k, i in enumerate(self._indices)}
         moment = positions.get(state.moment_index(depth))
         if moment is not None:
             self._highlights.append(self._ring([moment], s=200, color=MOMENT_COLOR, width=2.0))
         selection = state.selection
-        if selection is None or len(selection) != depth:
-            return
-        bright = state.highlight_indices(selection)
+        at_selection = selection is not None and len(selection) == depth
+        if at_selection and self.join.isChecked():
+            points = np.column_stack([self._x, self._y] + ([self._z] if self._z is not None else []))
+            self._highlights += draw_links(self.ax, state.highlight_links(selection), positions, points)
+        bright = state.highlighted(depth)             # the class of the selection, or the matches of the query
         if bright is not None:
             equal = [positions[int(i)] for i in bright if int(i) in positions]
             if equal:
                 self._highlights.append(self._ring(equal, s=90, color='black', width=0.8))
+        if not at_selection:
+            return
         k = positions.get(tcoord(selection))
         if k is not None:
-            self._highlights.append(self._ring([k], s=260, color='#1f77b4', width=2.5))
+            self._highlights.append(self._ring([k], s=260, color=SELECTION_COLOR, width=2.5))
 
     def _ring(self, points: list[int], s: float, color: str, width: float):
         """Hollow markers around the plotted points at positions ``points`` (2D or 3D)."""
@@ -321,9 +401,12 @@ class MeasuresPanel(QWidget):
             QToolTip.hideText()
             return
         address = self._address(k)
-        QToolTip.showText(QCursor.pos(), ' › '.join(self.state.names[d] for d in address)
-                          + f"\ndharma {self.state.cache.level(len(address)).dharmas[self._indices[k]]:.4f}, "
-                          f"purity {self.state.cache.level(len(address)).purities[self._indices[k]]:.4f}",
+        index = int(self._indices[k])
+        x_key, y_key = self.measures()
+        keys = dict.fromkeys((y_key,) if self.kind.currentData() in ('time', 'index') else (x_key, y_key))
+        values = ', '.join(f"{MEASURES[key]['label'].lower()} {self.state.measure_values(len(address), key)[index]:.4f}"
+                           for key in keys if self.state.measure_values(len(address), key) is not None)
+        QToolTip.showText(QCursor.pos(), ' › '.join(self.state.names[d] for d in address) + '\n' + values,
                           self.canvas)
 
     def camera(self) -> tuple | None:

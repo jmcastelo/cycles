@@ -16,10 +16,10 @@ import numpy as np
 from PySide6.QtCore import QObject, Signal
 
 from cycles.functions.division import (
-    CMYK_KEYS, COLOR_KEYS, DEFAULT_BASES, DEFAULT_COLOR_KEY, DEFAULT_SCALES, TETRAHEDRON_COLORS, Level, compute_level,
+    CMYK_KEYS, COLOR_KEYS, MEASURE_COLOR_KEYS, MODEL_COLOR_KEYS, SKY_COLOR_KEYS, STATE_COLOR_KEYS, DEFAULT_BASES, DEFAULT_COLOR_KEY, DEFAULT_SCALES, TETRAHEDRON_COLORS, Level, compute_level,
     level_colors,
 )
-from cycles.functions.color import color_parameter_problems
+from cycles.functions.color import DEFAULT_COLOR_MAPS, color_parameter_problems
 from cycles.functions.division import COLOR_PARAMETER_EFFECTS
 from cycles.functions.astro_dates import (
     date_time_to_julian_day, date_to_year, julian_day_to_year, parse_date, year_to_date,
@@ -29,14 +29,17 @@ from cycles.functions.duration import count_digits
 from cycles.functions.cycle_model import DEFAULT_PRESET, CycleModel, load_presets
 from cycles.functions.timescale import AGE_NAMES, YUGA_NAMES, TimeMap
 
-# Deepest level the GUI computes (4^8 = 65536 subcycles, a few seconds the first time)
-MAX_DEPTH = 8
+# Deepest level the GUI computes (4^9 = 262,144 subcycles, a quarter of a second the first time)
+MAX_DEPTH = 9
 # Name sets for the four ages
 NAME_SETS = {'Yugas': YUGA_NAMES, 'Ages': AGE_NAMES}
-# Color of the highlight of the subcycles that contain the sky moment
-MOMENT_COLOR = '#ff7f0e'
+# One color per role, in the navigator and in every plot
+SELECTION_COLOR = '#1f77b4'     # the selected subcycle (and, thinner, its parents): blue
+MOMENT_COLOR = '#ff7f0e'        # the moment of the sky chart: its cursor and tag, and the subcycles with Follow
+DATE_COLOR = '#d62728'          # the marked date: its cursor and tag
 # How subcycles are labelled in the navigator
 LABEL_MODES = {'names': 'Names', 'dots': 'Dots (4, 3, 2, 1)', 'both': 'Names and dots', 'none': 'None'}
+NO_MODEL_GRAY = 0.85     # the colorings of the cycle model without one
 MONTHS = ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
 
 
@@ -124,11 +127,14 @@ def children_range(address: tuple, depth: int) -> range:
 class LevelCache:
     """Levels and their colors, computed with the given parameters (see ``compute_level``) on first use."""
 
-    def __init__(self, bases=DEFAULT_BASES, scales=DEFAULT_SCALES, colors=TETRAHEDRON_COLORS):
+    def __init__(self, bases=DEFAULT_BASES, scales=DEFAULT_SCALES, colors=TETRAHEDRON_COLORS,
+                 maps=DEFAULT_COLOR_MAPS):
         self.bases, self.scales = list(bases), list(scales)
         self.vertices = np.asarray(colors, dtype=float)    # of the tetrahedron coloring
+        self.maps = tuple(maps)                             # color maps of the measures: (sequential, diverging)
         self._levels: dict[int, Level] = {}
         self._colors: dict[int, dict[str, np.ndarray]] = {}
+        self._measures: dict[int, dict[str, np.ndarray]] = {}
 
     def has(self, depth: int) -> bool:
         return depth in self._levels
@@ -139,10 +145,33 @@ class LevelCache:
         return self._levels[depth]
 
     def colors(self, depth: int, key: str) -> np.ndarray:
-        """RGB colors (N, 3) of the subcycles of ``depth`` for the color name ``key``."""
+        """
+        RGB colors (N, 3) of the subcycles of ``depth`` for the coloring ``key`` (those of ``LEVEL_COLOR_KEYS``
+        and ``MEASURE_COLOR_KEYS``; the cycle model's are in ``CycleState.colors``).
+        """
         if depth not in self._colors:
-            self._colors[depth] = level_colors(self.level(depth))
-        return self._colors[depth][key]
+            self._colors[depth] = level_colors(self.level(depth), self.maps)
+        colors = self._colors[depth]
+        if key not in colors and key in MEASURE_COLOR_KEYS:
+            from cycles.functions.color import measure_colors
+            colors[key] = measure_colors(self.measure(depth, key), key, self.maps)[0]
+        return colors[key]
+
+    def set_maps(self, maps) -> None:
+        """Use other color maps for the measures: only their colors are made again, not the levels."""
+        self.maps = tuple(maps)
+        for colors in self._colors.values():
+            for key in MEASURE_COLOR_KEYS:
+                colors.pop(key, None)
+
+    def measure(self, depth: int, key: str) -> np.ndarray:
+        """Values (N,) of the measure ``key`` of ``measure.ADDRESS_MEASURES`` for the subcycles of ``depth``."""
+        if depth not in self._measures:
+            from cycles.functions.measure import address_measures
+            level = self.level(depth)
+            self._measures[depth] = address_measures(level.lcoords, level.durations, level.dharmas,
+                                                     level.purities, self.bases)
+        return self._measures[depth][key]
 
 
 def equal_duration_indices(level: Level, index: int) -> np.ndarray:
@@ -206,6 +235,7 @@ HIGHLIGHTS = {
     'duration': 'Equal durations',
     'composition': 'Same composition',
     'orbit': '⟨σ⟩ orbit',
+    'query': 'Matching the query',
 }
 
 
@@ -236,7 +266,7 @@ def subcycle_info(cache: LevelCache, address: tuple) -> dict:
         dharma=float(level.dharmas[index]),
         purity=float(level.purities[index]),
         cmyk={key: level.cmyks[index, k] for k, key in enumerate(CMYK_KEYS)},
-        rgb={key: cache.colors(depth, key)[index] for key in COLOR_KEYS},
+        rgb={key: cache.colors(depth, key)[index] for key in COLOR_KEYS if key not in STATE_COLOR_KEYS},
     )
 
 
@@ -259,6 +289,7 @@ class CycleState(QObject):
     bookmarksChanged = Signal()
     notesChanged = Signal()             # the notes of the session
     eventsChanged = Signal()            # the planetary events shown in the navigator
+    busy = Signal(str)                  # a message while something slow is computed ('' when done)
 
     def __init__(self, cache: LevelCache | None = None, presets: dict[str, CycleModel] | None = None):
         super().__init__()
@@ -277,7 +308,12 @@ class CycleState(QObject):
         self.names: tuple = YUGA_NAMES
         self.highlight: str = 'none'    # a key of HIGHLIGHTS
         self.compare_criteria: bool = False   # the navigator shows where the other division criterion puts boundaries
-        self._criteria: dict = {}       # (model, depth) -> boundaries by criterion
+        self._criteria: dict = {}       # (model, depth) -> boundaries by criterion; measures and colors of the model
+        self.ephemeris = None           # (tables, folder) of the Sky panel, for the measures and colors of the sky
+        self.query: str = ''            # a condition on the subcycles (functions.query), for the highlight 'query'
+        self.query_problem: str = ''    # why the query could not be evaluated at some depth ('' if it could)
+        self._query_cache: dict = {}
+        self._sky: dict = {}            # what is computed with the ephemeris
         self.permutation: tuple | None = None   # (σ, first permuted position) of the Permutations panel
         self.borders: bool = False
         self.labels: str = 'none'       # 'names', 'dots' (4, 3, 2, 1 for the four ages), 'both' or 'none'
@@ -356,6 +392,93 @@ class CycleState(QObject):
             raise ValueError(f"unknown highlight {mode!r}")
         self._set('highlight', mode)
 
+    # -- the query
+
+    def set_query(self, text: str) -> None:
+        """
+        Use the condition ``text`` (``functions.query``; '' for none) for the highlight 'query'. ``QueryError`` if it
+        cannot be read or uses unknown names.
+        """
+        from cycles.functions.measure import MEASURES
+        from cycles.functions.query import OTHER_NAMES, QueryError, age_names, names_in, parse
+        text = ' '.join(text.split())
+        if text:
+            unknown = names_in(parse(text)) - set(MEASURES) - set(OTHER_NAMES) - set(age_names(MAX_DEPTH))
+            if unknown:
+                raise QueryError(f"unknown name{'s' if len(unknown) > 1 else ''} in the query: "
+                                 f"{', '.join(sorted(unknown))}")
+        if text != self.query:
+            self.query = text
+            self.viewChanged.emit()
+
+    def query_matches(self, depth: int) -> np.ndarray | None:
+        """
+        Which subcycles of ``depth`` satisfy the query (a boolean array), or None without one. If something it
+        needs is missing (a cycle model, the ephemeris), none match and ``query_problem`` says why.
+        """
+        if not self.query or depth < 1:
+            return None
+        key = (self.query, depth, self.color_parameters, self.model,
+               None if self.ephemeris is None else id(self.ephemeris[0]))
+        if key not in self._query_cache:
+            if len(self._query_cache) > 32:
+                self._query_cache.clear()
+            self._query_cache[key] = (self._evaluate_query(depth), self.query_problem)
+        matches, self.query_problem = self._query_cache[key]
+        return matches
+
+    def _evaluate_query(self, depth: int) -> np.ndarray:
+        from cycles.functions.cycle_analysis import dense_years
+        from cycles.functions.measure import MEASURES
+        from cycles.functions.query import QueryError, evaluate, names_in, parse
+        tree = parse(self.query)
+        level = self.cache.level(depth)
+        values = {}
+        self.query_problem = ''
+        try:
+            for name in names_in(tree):
+                if name in MEASURES:
+                    values[name] = self.measure_values(depth, name)
+                    if values[name] is None:
+                        raise QueryError(f"{name} {self.missing_for(name)}")
+                elif name in ('year', 'years'):
+                    if self.time_map is None:
+                        raise QueryError(f"{name} needs a cycle model")
+                    starts = self._start_years(depth)
+                    values['year'] = starts
+                    values['years'] = dense_years(self.time_map, level.starts + level.durations) - starts
+                elif name == 'duration':
+                    values[name] = level.durations
+                elif name == 'start':
+                    values[name] = level.starts
+                elif name == 'index':
+                    values[name] = np.arange(len(level.starts))
+                elif name == 'depth':
+                    values[name] = depth
+                elif name in ('first', 'last'):
+                    values[name] = level.lcoords[:, 0 if name == 'first' else -1]
+                else:                                       # a1, a2, …: no such digit above the depth matches nothing
+                    k = int(name[1:])
+                    values[name] = level.lcoords[:, k - 1].astype(float) if k <= depth else np.full(len(level.starts),
+                                                                                                    np.nan)
+            return evaluate(tree, values, level.lcoords)
+        except QueryError as error:
+            self.query_problem = str(error)
+            return np.zeros(len(level.starts), dtype=bool)
+
+    def highlighted(self, depth: int) -> np.ndarray | None:
+        """
+        Indices of the subcycles of ``depth`` to keep bright with the current highlight, or None for none there:
+        those matching the query (at every depth), or the class of the selection (at its depth).
+        """
+        if self.highlight == 'query':
+            matches = self.query_matches(depth)
+            return None if matches is None else np.flatnonzero(matches)
+        selection = self.selection
+        if selection is None or len(selection) != depth:
+            return None
+        return self.highlight_indices(selection)
+
     def set_compare_criteria(self, on: bool) -> None:
         self._set('compare_criteria', bool(on))
 
@@ -389,6 +512,174 @@ class CycleState(QObject):
                                    for name, y in years.items()}
         return self._criteria[key]
 
+    def colors(self, depth: int, key: str) -> np.ndarray:
+        """
+        RGB colors (N, 3) of the subcycles of ``depth`` for the coloring ``key``: those of the cycle model
+        (``MODEL_COLOR_KEYS``: the angular density, the sign and the element of the vernal point at each start)
+        and of the sky (``SKY_COLOR_KEYS``: the gathering of the planets and the trigon of the great conjunctions
+        at each start) here, light gray without what they need; the others from the level cache.
+        """
+        if key not in STATE_COLOR_KEYS:
+            return self.cache.colors(depth, key)
+        if not self.can_color(key):
+            return np.full((4 ** depth, 3), NO_MODEL_GRAY)
+        cached = ('colors', self.model, depth, key)          # apart from the measure values of the same name
+        store = self._sky if key in SKY_COLOR_KEYS else self._criteria
+        if cached not in store:
+            from cycles.functions.color import ELEMENT_COLORS, measure_colors, vernal_colors
+            if key in ('density', 'gathering'):
+                colors = measure_colors(self.measure_values(depth, key), key, self.cache.maps)[0]
+            elif key.startswith('vernal'):
+                from cycles.functions.cycle_analysis import dense_ayanamsa
+                colors = vernal_colors(dense_ayanamsa(self.model, self._start_years(depth)), key.split('_')[1])
+            else:
+                from cycles.functions.events import trigon_in_force
+                elements = trigon_in_force(self.great_conjunctions(), key.split('_')[1], self._tdb_starts(depth))
+                colors = np.where(elements[:, None] >= 0, ELEMENT_COLORS[np.clip(elements, 0, 3)], NO_MODEL_GRAY)
+            store[cached] = colors
+        return store[cached]
+
+    def can_color(self, key: str) -> bool:
+        """Whether the coloring (or measure) ``key`` can be computed now: with a model, and the ephemeris for the sky."""
+        from cycles.functions.measure import MEASURES
+        sky = key in SKY_COLOR_KEYS or MEASURES.get(key, {}).get('parameter') == 'sky'
+        model = sky or key in MODEL_COLOR_KEYS or MEASURES.get(key, {}).get('parameter') == 'model'
+        if model and (self.model is None or self.time_map is None):
+            return False
+        return not sky or self.ephemeris is not None
+
+    def missing_for(self, key: str) -> str:
+        """What the coloring (or measure) ``key`` still needs, as a phrase ('' if nothing)."""
+        from cycles.functions.measure import MEASURES
+        if self.can_color(key):
+            return ''
+        sky = key in SKY_COLOR_KEYS or MEASURES.get(key, {}).get('parameter') == 'sky'
+        return 'needs a cycle model and the ephemeris' if sky else 'needs a cycle model'
+
+    def context_of(self, key: str) -> tuple:
+        """
+        What the coloring (or measure) ``key`` depends on beyond the color parameters, for the panels to know when
+        to draw it again: the cycle model, and the ephemeris for the sky; () for the others.
+        """
+        from cycles.functions.measure import MEASURES
+        sky = key in SKY_COLOR_KEYS or MEASURES.get(key, {}).get('parameter') == 'sky'
+        if sky:
+            return (self.model, None if self.ephemeris is None else id(self.ephemeris[0]))
+        if key in MODEL_COLOR_KEYS or MEASURES.get(key, {}).get('parameter') == 'model':
+            return (self.model,)
+        return ()
+
+    # -- the sky: the ephemeris of the Sky panel
+
+    def set_ephemeris(self, tables, folder=None) -> None:
+        """Use the ephemeris ``tables`` (from ``folder``) for the measures and colors of the sky; None: none."""
+        value = None if not tables else (tables, folder)
+        if value is None and self.ephemeris is None:
+            return
+        self.ephemeris = value
+        self._sky = {}
+        self.viewChanged.emit()
+
+    def _start_years(self, depth: int) -> np.ndarray:
+        """Years (UT) of the starts of the subcycles of ``depth`` (interpolated for large levels: ``dense_years``)."""
+        cached = ('years', self.model, depth)
+        if cached not in self._criteria:
+            from cycles.functions.cycle_analysis import dense_years
+            self._criteria[cached] = dense_years(self.time_map, self.cache.level(depth).starts)
+        return self._criteria[cached]
+
+    @staticmethod
+    def _to_tdb(years) -> np.ndarray:
+        """UT years to TDB: ΔT changes slowly, so a grid is converted and interpolated."""
+        from cycles.functions.events import tdb_years
+        years = np.atleast_1d(np.asarray(years, dtype=float))
+        if len(years) < 50:
+            return tdb_years(years)
+        grid = np.linspace(years.min() - 1, years.max() + 1, 2001)
+        return years + np.interp(years, grid, tdb_years(grid) - grid)
+
+    def _tdb_starts(self, depth: int) -> np.ndarray:
+        """TDB years of the starts of the subcycles of ``depth`` (the model's years are UT)."""
+        cached = ('tdb', self.model, depth)
+        if cached not in self._sky:
+            self._sky[cached] = self._to_tdb(self._start_years(depth))
+        return self._sky[cached]
+
+    # -- one subcycle (the inspector): without computing its whole level when that is slow
+
+    def subcycle_measure(self, address: tuple, key: str) -> float | None:
+        """
+        The measure ``key`` of the subcycle ``address`` (None if it cannot be computed now). Those of the sky are
+        computed for this subcycle alone unless its level is already done.
+        """
+        from cycles.functions.measure import MEASURES
+        depth, index = len(address), tcoord(address)
+        if MEASURES[key]['parameter'] != 'sky' or ('measure', self.model, depth, key) in self._sky:
+            values = self.measure_values(depth, key)
+            return None if values is None else float(values[index])
+        if not self.can_color(key):
+            return None
+        from cycles.functions.events import CLASSICAL, around_point
+        start = self.time_map.to_physical(self.cache.level(depth).starts[index])
+        spread = around_point(self.ephemeris[0], self._to_tdb([start]), CLASSICAL)['spread'][0]
+        return float(1 - spread / 360.0)
+
+    def subcycle_color(self, address: tuple, key: str) -> np.ndarray | None:
+        """
+        The color (RGB) of the subcycle ``address`` in the coloring ``key`` (None if it cannot be computed now).
+        Those of the sky are computed for this subcycle alone unless its level is already done.
+        """
+        depth, index = len(address), tcoord(address)
+        if key not in SKY_COLOR_KEYS or ('colors', self.model, depth, key) in self._sky:
+            return None if key in STATE_COLOR_KEYS and not self.can_color(key) else self.colors(depth, key)[index]
+        if not self.can_color(key):
+            return None
+        from cycles.functions.color import ELEMENT_COLORS, measure_colors
+        if key == 'gathering':
+            return measure_colors(np.array([self.subcycle_measure(address, key)]), key, self.cache.maps)[0][0]
+        from cycles.functions.events import trigon_in_force
+        start = self.time_map.to_physical(self.cache.level(depth).starts[index])
+        element = int(trigon_in_force(self.great_conjunctions(), key.split('_')[1], self._to_tdb([start]))[0])
+        return ELEMENT_COLORS[element] if element >= 0 else np.full(3, NO_MODEL_GRAY)
+
+    def great_conjunctions(self) -> dict:
+        """The Jupiter–Saturn conjunctions over the whole ephemeris (as the Events panel's map; kept on disk)."""
+        if 'great' not in self._sky:
+            from cycles.functions.events import cached_conjunctions, table_span
+            tables, folder = self.ephemeris
+            start, end = table_span(tables)
+            self.busy.emit('Computing the Jupiter–Saturn conjunctions over the whole ephemeris (once; then kept '
+                           'on disk)…')
+            try:
+                self._sky['great'] = cached_conjunctions(tables, folder, 'jupiter', 'saturn', start + 1, end - 1)
+            finally:
+                self.busy.emit('')
+        return self._sky['great']
+
+    def measure_values(self, depth: int, key: str) -> np.ndarray | None:
+        """
+        Values (N,) of the measure ``key`` (``measure.MEASURES``) for the subcycles of ``depth``; None for a measure
+        of the cycle model when there is none, or of the sky without the ephemeris.
+        """
+        from cycles.functions.measure import MEASURES
+        if MEASURES[key]['parameter'] not in ('model', 'sky'):
+            return self.cache.measure(depth, key)
+        if not self.can_color(key):
+            return None
+        if MEASURES[key]['parameter'] == 'sky':
+            cached = ('measure', self.model, depth, key)
+            if cached not in self._sky:
+                from cycles.functions.events import CLASSICAL, around_point
+                spread = around_point(self.ephemeris[0], self._tdb_starts(depth), CLASSICAL)['spread']
+                self._sky[cached] = 1 - spread / 360.0
+            return self._sky[cached]
+        cached = (self.model, depth, key)
+        if cached not in self._criteria:
+            from cycles.functions.cycle_analysis import angular_density
+            level = self.cache.level(depth)
+            self._criteria[cached] = angular_density(self.model, level.starts, level.durations, self.time_map)
+        return self._criteria[cached]
+
     def set_permutation(self, sigma: tuple | None, first: int = 0) -> None:
         value = None if sigma is None else (tuple(sigma), int(first))
         if value != self.permutation:
@@ -419,6 +710,8 @@ class CycleState(QObject):
         """
         if address is None or not address or self.highlight == 'none':
             return None
+        if self.highlight == 'query':
+            return self.highlighted(len(address))
         level = self.cache.level(len(address))
         if self.highlight == 'duration':
             return equal_duration_indices(level, tcoord(address))
@@ -427,41 +720,94 @@ class CycleState(QObject):
         orbit = self.permutation_orbit(address)
         return None if orbit is None else np.array(sorted(tcoord(a) for a in orbit))
 
+    def highlight_links(self, address: tuple | None) -> tuple[str, np.ndarray] | None:
+        """
+        How the highlighted subcycles around ``address`` are joined in the plots, as ``(kind, pairs)`` with
+        ``pairs`` an (n, 2) array of indices in the level of ``address``:
+
+        * ``'orbit'`` (highlight ⟨σ⟩ orbit): the steps of the orbit in order, ``address`` → its image under σ →
+          … → back to ``address``;
+        * ``'swaps'`` (highlight Same composition): the orderings of its ages that differ by swapping two
+          neighbouring digits, each pair once.
+
+        None for the other highlights, or when there is nothing to join.
+        """
+        if address is None or not address:
+            return None
+        if self.highlight == 'orbit':
+            orbit = self.permutation_orbit(address)
+            if orbit is None or len(orbit) < 2:
+                return None
+            steps = [tcoord(a) for a in orbit]
+            return 'orbit', np.array([steps, steps[1:] + steps[:1]]).T
+        if self.highlight == 'composition':
+            level = self.cache.level(len(address))
+            lcoords = np.asarray(level.lcoords)[same_composition_indices(level, address)]
+            powers = 4 ** np.arange(lcoords.shape[1] - 1, -1, -1)
+            pairs = []
+            for k in range(lcoords.shape[1] - 1):
+                rising = lcoords[:, k] < lcoords[:, k + 1]          # each swap once
+                if rising.any():
+                    swapped = lcoords[rising].copy()
+                    swapped[:, [k, k + 1]] = swapped[:, [k + 1, k]]
+                    pairs.append(np.stack([lcoords[rising] @ powers, swapped @ powers], axis=1))
+            return ('swaps', np.concatenate(pairs)) if pairs else None
+        return None
+
     @property
     def color_parameters(self) -> tuple:
-        """``(bases, scales, tetrahedron colors)`` of the colorings and measures, as tuples."""
-        return (tuple(self.cache.bases), tuple(self.cache.scales),
-                tuple(tuple(float(c) for c in row) for row in self.cache.vertices))
-
-    def set_color_parameters(self, bases, scales, colors=None) -> None:
         """
-        Use new bases, scales and tetrahedron vertex colors (the current ones
-        if not given) for the colorings and measures. ``ValueError`` if they
-        could give repeated colors (see ``color_parameter_problems``).
+        ``(bases, scales, tetrahedron colors, color maps)`` of the colorings and measures, as tuples; the maps
+        are those of the measures, ``(sequential, diverging)``.
+        """
+        return (tuple(self.cache.bases), tuple(self.cache.scales),
+                tuple(tuple(float(c) for c in row) for row in self.cache.vertices), tuple(self.cache.maps))
+
+    def set_color_parameters(self, bases, scales, colors=None, maps=None) -> None:
+        """
+        Use new bases, scales, tetrahedron vertex colors and color maps of the
+        measures (the current ones if not given) for the colorings and measures.
+        ``ValueError`` if they could give repeated colors, or the maps are not
+        known (see ``color_parameter_problems``). Other maps alone recolor the
+        measures without computing the levels again.
         """
         colors = self.cache.vertices if colors is None else np.asarray(colors, dtype=float)
-        problems = color_parameter_problems(bases, scales, colors)
+        maps = self.cache.maps if maps is None else tuple(maps)
+        problems = color_parameter_problems(bases, scales, colors, maps)
         if problems:
             raise ValueError('; '.join(problems))
-        new = (tuple(bases), tuple(scales), tuple(tuple(float(c) for c in row) for row in colors))
+        new = (tuple(bases), tuple(scales), tuple(tuple(float(c) for c in row) for row in colors), tuple(maps))
         old = self.color_parameters
         if new == old:
             return
         changed = self._named_parameters(*old).items() ^ self._named_parameters(*new).items()
         affected = frozenset(key for name, _ in changed for key in COLOR_PARAMETER_EFFECTS[name])
-        self.cache = LevelCache(bases, scales, colors)     # levels are recomputed when next needed
+        if new[:3] == old[:3]:
+            self.cache.set_maps(maps)
+        else:
+            self.cache = LevelCache(bases, scales, colors, maps)     # levels are recomputed when next needed
+        for store in (self._criteria, self._sky):
+            for cached in [k for k in store if k[0] == 'colors']:
+                del store[cached]                                     # the colorings of the model and the sky
         self.colorParametersChanged.emit(affected)
 
     @staticmethod
-    def _named_parameters(bases, scales, colors) -> dict:
+    def _named_parameters(bases, scales, colors, maps=DEFAULT_COLOR_MAPS) -> dict:
         """The parameters by the names of ``COLOR_PARAMETER_EFFECTS``."""
         return {'color_base': bases[1], 'purity_base': bases[2], 'cmyk_scale': scales[0],
-                'black_scale': scales[1], 'tetrahedron_step': scales[2], 'tetrahedron_colors': tuple(colors)}
+                'black_scale': scales[1], 'tetrahedron_step': scales[2], 'tetrahedron_colors': tuple(colors),
+                'sequential_map': maps[0], 'diverging_map': maps[1]}
 
     def parameters_of(self, key: str) -> tuple:
-        """Values of the parameters that the coloring (or measure) ``key`` depends on."""
+        """Values of the parameters that the coloring (or measure) ``key`` depends on, color maps included."""
         named = self._named_parameters(*self.color_parameters)
         return tuple(value for name, value in named.items() if key in COLOR_PARAMETER_EFFECTS[name])
+
+    def measure_parameters_of(self, key: str) -> tuple:
+        """Values of the parameters that the values of the measure ``key`` depend on (not the color maps)."""
+        named = self._named_parameters(*self.color_parameters)
+        return tuple(value for name, value in named.items()
+                     if key in COLOR_PARAMETER_EFFECTS[name] and not name.endswith('_map'))
 
     def set_borders(self, on: bool) -> None:
         self._set('borders', bool(on))

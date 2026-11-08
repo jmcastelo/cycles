@@ -105,7 +105,7 @@ cuadrática media.
 | Cuadrática media | 0,0051 | 0,0023 | 0,0012 | 0,0004 | 0,0001 |
 
 Dentro de los yugas la desviación se reduce con la profundidad: los subciclos son cortos frente a la variación
-de la tasa. En el explorador, el conmutador *Criteria* del navegador dibuja dónde pone las fronteras el otro
+de la tasa. En el explorador, *View → Compare the division criteria* dibuja dónde pone las fronteras el otro
 criterio (capítulo 12): las de los yugas difieren hasta unos 300 años; dentro del Kali, por ejemplo, Kali ›
 Dvapara empezaría 6,4 años antes dividiendo los años.
 

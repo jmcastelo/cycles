@@ -19,7 +19,8 @@ from PySide6.QtWidgets import (
 
 from cycles.functions.division import CMYK_KEYS
 from cycles.functions.view import bottom_view, camera_view_angles, top_view
-from cycles.gui.state import MOMENT_COLOR, CycleState, address_of, children_range, tcoord
+from cycles.gui.links import draw_links
+from cycles.gui.state import MOMENT_COLOR, SELECTION_COLOR, CycleState, address_of, children_range, tcoord
 from cycles.plotting.color import draw_color_path_3d, draw_colors_3d, draw_rgb_cube, setup_color_axes_3d
 
 MAX_PLOT_DEPTH = 7
@@ -91,12 +92,15 @@ class ColorSpacePanel(QWidget):
         self.tetrahedron = QCheckBox('Tetrahedron')
         self.tetrahedron.setChecked(True)
         self.tetrahedron.setToolTip('Vertices and edges of the tetrahedron coloring (when it is shown)')
+        self.join = QCheckBox('Join')
+        self.join.setChecked(True)
+        self.join.setToolTip('Join the highlighted subcycles: the steps of the ⟨σ⟩ orbit of the selection, with arrows, or the swaps of neighbouring digits between the orderings of its ages (Same composition)')
         self.view = QComboBox()
         self.view.addItem('Free (drag to rotate)', None)
         for key, (label, _) in VIEWS.items():
             self.view.addItem(label, key)
         self.view.setCurrentIndex(self.view.findData('gray'))
-        for widget in (self.inside, self.sized, self.cube, self.tetrahedron):
+        for widget in (self.inside, self.sized, self.cube, self.tetrahedron, self.join):
             row.addWidget(widget)
         row.addStretch(1)
         row.addWidget(QLabel('View'))
@@ -123,7 +127,7 @@ class ColorSpacePanel(QWidget):
             widget.currentIndexChanged.connect(self._schedule)
         self.view.currentIndexChanged.connect(self._apply_view)
         self.depth.valueChanged.connect(self._schedule)
-        for widget in (self.inside, self.sized, self.cube, self.tetrahedron):
+        for widget in (self.inside, self.sized, self.cube, self.tetrahedron, self.join):
             widget.toggled.connect(self._schedule)
         for signal in (state.selectionChanged, state.focusChanged, state.viewChanged, state.colorParametersChanged,
                        state.skyTimeChanged, state.permutationChanged):
@@ -167,6 +171,7 @@ class ColorSpacePanel(QWidget):
         key = state.color_key
         self.space.setEnabled(key in CMYK_KEYS)
         base = (self.plot.currentData(), self.space_key(), depth, scope, key, state.parameters_of(key),
+                state.context_of(key),
                 self.sized.isChecked(), self.cube.isChecked(), self.tetrahedron.isChecked())
         if base != self._base:
             self._draw_base(depth, scope)
@@ -181,7 +186,7 @@ class ColorSpacePanel(QWidget):
         level = state.cache.level(depth)
         span = children_range(scope, depth)
         indices = np.arange(span.start, span.stop)
-        rgbs = state.cache.colors(depth, state.color_key)[indices]
+        rgbs = state.colors(depth, state.color_key)[indices]
         cmy = self.space_key() == 'cmy'
         coords = level.cmyk(state.color_key)[indices, :3] if cmy else rgbs
 
@@ -260,20 +265,23 @@ class ColorSpacePanel(QWidget):
             self._highlights.append(self.ax.scatter([c[0]], [c[1]], [c[2]], s=170, facecolors='none',
                                                     edgecolors=MOMENT_COLOR, linewidths=2.0, depthshade=False))
         selection = state.selection
-        if selection is None or len(selection) != self._depth:
-            return
-        bright = state.highlight_indices(selection)
+        at_selection = selection is not None and len(selection) == self._depth
+        if at_selection and self.join.isChecked():
+            self._highlights += draw_links(self.ax, state.highlight_links(selection), positions, self._coords)
+        bright = state.highlighted(self._depth)       # the class of the selection, or the matches of the query
         if bright is not None:
             equal = [positions[int(i)] for i in bright if int(i) in positions]
             if equal:
                 c = self._coords[equal]
                 self._highlights.append(self.ax.scatter(c[:, 0], c[:, 1], c[:, 2], s=70, facecolors='none',
                                                         edgecolors='black', linewidths=0.8, depthshade=False))
+        if not at_selection:
+            return
         k = positions.get(tcoord(selection))
         if k is not None:
             c = self._coords[k]
             self._highlights.append(self.ax.scatter([c[0]], [c[1]], [c[2]], s=220, facecolors='none',
-                                                    edgecolors='#1f77b4', linewidths=2.5, depthshade=False))
+                                                    edgecolors=SELECTION_COLOR, linewidths=2.5, depthshade=False))
 
     # -- interaction
 
@@ -316,6 +324,6 @@ class ColorSpacePanel(QWidget):
             QToolTip.hideText()
             return
         address = address_of(int(self._indices[k]), self._depth)
-        r, g, b = np.clip(self.state.cache.colors(self._depth, self.state.color_key)[self._indices[k]], 0, 1)
+        r, g, b = np.clip(self.state.colors(self._depth, self.state.color_key)[self._indices[k]], 0, 1)
         QToolTip.showText(QCursor.pos(), ' › '.join(self.state.names[d] for d in address)
                           + f"\n#{round(r * 255):02x}{round(g * 255):02x}{round(b * 255):02x}", self.canvas)

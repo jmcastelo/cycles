@@ -90,6 +90,16 @@ cada uno, da su estructura (ciclos, tipo, orden, paridad, fijos, órbitas) y có
 porcentaje movido, desplazamiento medio, correlación del orden temporal, cambio medio de color, de dharma y de
 pureza. Se puede ordenar y filtrar, y elegir un elemento lo carga en el panel.
 
+Los paneles *Measures* y *Color space* **unen** los subciclos resaltados alrededor de la selección (capítulo 12):
+la órbita de $\langle\sigma\rangle$ con flechas, paso a paso, y las ordenaciones de su composición con una
+línea por cada **intercambio de dos dígitos vecinos**. Estas líneas tienen una propiedad sencilla: si se
+intercambian las posiciones $k$ y $k+1$, con $\delta = v_{k+1} - v_k$ la diferencia de sus virtudes, el dharma
+cambia en $(\hat w_k - \hat w_{k+1})\,\delta$ y la tendencia en $\delta\,(\hat w'_{k-1} - 2\hat w'_k +
+\hat w'_{k+1})/\tfrac34$ (2.4; los términos que no existen en los extremos, fuera). Ambos cambios son
+proporcionales a $\delta$ con coeficientes que solo dependen de $k$: en el plano tendencia–dharma, todos los
+intercambios de una misma posición son **paralelos**, y su longitud es proporcional a lo distintas que sean las
+dos edades. Con base 2, el intercambio de los dos últimos dígitos no cambia la tendencia (líneas horizontales).
+
 ## 3.6 Ajustes predefinidos del panel
 
 | Nombre | σ (una línea, *m* posiciones) |
@@ -106,5 +116,6 @@ pureza. Se puede ordenar y filtrar, y elegir un elemento lo carga en el panel.
 
 - σ reordena los dígitos de la cola de cada dirección: a ↦ a ∘ σ.
 - Conserva duraciones y composiciones; mueve lugares, colores y medidas.
+- En los gráficos de medidas, los intercambios de dígitos vecinos de una misma posición son paralelos.
 - Fijos: $4^{c(\sigma)}$. Órbitas de $\langle\sigma\rangle$: media de los fijos de sus potencias (Burnside).
 - Las órbitas de todo $S_m$ son las composiciones: $\binom{m+3}{3}$.

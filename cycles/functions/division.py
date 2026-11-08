@@ -13,7 +13,10 @@ import itertools as itools
 from typing import NamedTuple
 
 from cycles.functions.conversion import tcoord_to_lcoords
-from cycles.functions.color import lcoords_to_cmyk, cmyk_to_rgb, lcoords_to_lrgb, lcoords_to_rgb_tetrahedron
+from cycles.functions.color import (
+    DEFAULT_COLOR_MAPS, cmyk_to_rgb, duration_class_colors, lcoords_to_cmyk, lcoords_to_lrgb,
+    lcoords_to_rgb_tetrahedron, level_rgb_oklab_tetrahedron, level_rgb_tetrahedron, measure_colors,
+)
 from cycles.functions.duration import count_digits
 from cycles.functions.measure import dharma_measure, purity_measure
 
@@ -28,7 +31,7 @@ offsets = np.insert(np.cumsum(proportions[:-1], dtype=float), 0, 0)
 # CMYK variants come from lcoords_to_cmyk; the RGB variants are those same
 # variants converted to RGB, plus the Sierpinski tetrahedron coloring.
 CMYK_KEYS = ('cmyk', 'cmyk_normalised', 'cmyk_scaled', 'cmyk_kscaled', 'cmyk_composition', 'wcmy')
-RGB_KEYS = CMYK_KEYS + ('tetrahedron',)
+RGB_KEYS = CMYK_KEYS + ('tetrahedron', 'tetrahedron_oklab')
 
 # 'cmyk_normalised' is the coloring of the original code (one CMYK/RGB color per subcycle)
 DEFAULT_COLOR_KEY = 'cmyk_normalised'
@@ -41,19 +44,64 @@ DEFAULT_SCALES = [1 / 2, 2 / 3, 0.5]
 # Vertex colors of the tetrahedron coloring: Golden, Silver, Bronze, Iron
 TETRAHEDRON_COLORS = np.array([[1, 1, 0], [0, 1, 1], [1, 0, 1], [0, 0, 0]])
 
-# Names accepted by level_colors: the RGB variants of a Level, plus three more
-COLOR_KEYS = RGB_KEYS + ('lrgb', 'dharma', 'purity')
+# The colorings. level_colors gives those of a Level alone (the RGB variants and two more, and dharma and purity);
+# the other measures of MEASURE_COLOR_KEYS also need the weights (gui.state.LevelCache), those of
+# MODEL_COLOR_KEYS the cycle model and those of SKY_COLOR_KEYS the model and the ephemeris
+# (gui.state.CycleState.colors). The measures take the sequential or the diverging
+# color map of color.DEFAULT_COLOR_MAPS, or of the parameters.
+LEVEL_COLOR_KEYS = RGB_KEYS + ('lrgb', 'duration_class')
+MEASURE_COLOR_KEYS = ('dharma', 'purity', 'mixture', 'tension', 'trend', 'roughness', 'contrast', 'balance',
+                      'microcosm', 'complexity')
+MODEL_COLOR_KEYS = ('density', 'vernal_sign', 'vernal_element')
+SKY_COLOR_KEYS = ('gathering', 'trigon_sidereal', 'trigon_tropical')      # need the model and the ephemeris
+STATE_COLOR_KEYS = MODEL_COLOR_KEYS + SKY_COLOR_KEYS                     # given by CycleState.colors
+COLOR_KEYS = LEVEL_COLOR_KEYS + MEASURE_COLOR_KEYS + STATE_COLOR_KEYS
+COLOR_DESCRIPTIONS = {
+    'cmyk': 'the ages as inks (Satya cyan, Treta magenta, Dvapara yellow, Kali black), weighted by level',
+    'cmyk_normalised': 'the weighted inks divided by the sum of the weights',
+    'cmyk_scaled': 'normalised and lightened by the cmyk_scaled scale',
+    'cmyk_kscaled': 'normalised, with only the black lightened',
+    'cmyk_composition': 'the digit counts as inks: one color per composition',
+    'wcmy': 'normalised and shifted one ink: Satya white, Treta cyan, Dvapara magenta, Kali yellow',
+    'tetrahedron': 'chaos game towards the four vertex colors, in RGB: a Sierpinski tetrahedron',
+    'tetrahedron_oklab': 'the same chaos game in OKLab, a perceptual space: equal steps look equal',
+    'lrgb': 'the ink of the innermost age',
+    'duration_class': 'one color per class of equal duration',
+    'dharma': 'dharma (weighted mean virtue), on the sequential map',
+    'purity': 'purity (largest share of an age minus the smallest), on the sequential map',
+    'mixture': 'mixture (entropy of the age shares), on the sequential map',
+    'tension': 'tension (spread of the virtues), on the sequential map',
+    'trend': 'trend (inner levels better or worse), on the diverging map: 0 in the middle',
+    'roughness': 'roughness (jumps between levels), on the sequential map',
+    'contrast': 'contrast (the jump of dharma from the previous subcycle), on the diverging map',
+    'balance': 'balance (running sum of dharma above its mean), on the diverging map',
+    'microcosm': 'microcosm (how closely the age shares match the whole cycle\'s), on the sequential map',
+    'complexity': 'complexity (Lempel–Ziv, of the order of the ages), on the sequential map',
+    'density': 'angular density (needs a cycle model), on the diverging map: 1, the mean rate, in the middle',
+    'vernal_sign': 'the sidereal sign of the vernal point at the start (needs a cycle model)',
+    'vernal_element': 'the element of that sign: fire red, earth green, air yellow, water blue (needs a model)',
+    'gathering': 'how gathered Sun to Saturn are at the start, on the sequential map (needs a model and the '
+                 'ephemeris)',
+    'trigon_sidereal': 'the element of the great conjunctions in force at the start, sidereal zodiac: fire red, '
+                       'earth green, air yellow, water blue (needs a model and the ephemeris)',
+    'trigon_tropical': 'the same in the tropical zodiac (needs a model and the ephemeris)',
+}
 
-# Colorings (names of level_colors) that each parameter of compute_level changes;
-# cmyk_composition and lrgb depend on none. The color base also changes the
-# dharma values, and the purity base the purity values.
+# Colorings (and measures, of the same names) that each color parameter changes; cmyk_composition and lrgb depend
+# on none. The color base also changes the dharma values and the measures of measure.MEASURES built on the
+# virtues, and the purity base the purity and mixture values; the two color maps only the colorings of the
+# measures (CycleState.measure_parameters_of leaves them out).
 COLOR_PARAMETER_EFFECTS = {
-    'color_base': ('cmyk', 'cmyk_normalised', 'cmyk_scaled', 'cmyk_kscaled', 'wcmy', 'dharma'),   # bases[1]
-    'purity_base': ('purity',),                                                                 # bases[2]
+    'color_base': ('cmyk', 'cmyk_normalised', 'cmyk_scaled', 'cmyk_kscaled', 'wcmy', 'dharma',    # bases[1]
+                   'tension', 'trend', 'roughness', 'contrast', 'balance'),
+    'purity_base': ('purity', 'mixture', 'microcosm'),                                          # bases[2]
     'cmyk_scale': ('cmyk_scaled',),                                                             # scales[0]
     'black_scale': ('cmyk_kscaled',),                                                           # scales[1]
-    'tetrahedron_step': ('tetrahedron',),                                                       # scales[2]
-    'tetrahedron_colors': ('tetrahedron',),                                                     # colors
+    'tetrahedron_step': ('tetrahedron', 'tetrahedron_oklab'),                                   # scales[2]
+    'tetrahedron_colors': ('tetrahedron', 'tetrahedron_oklab'),                                 # colors
+    'sequential_map': ('dharma', 'purity', 'mixture', 'tension', 'roughness', 'microcosm',     # maps[0]
+                       'complexity', 'gathering'),
+    'diverging_map': ('trend', 'contrast', 'balance', 'density'),                               # maps[1]
 }
 
 
@@ -84,16 +132,19 @@ class Level(NamedTuple):
         return Level(*(field[index] for field in self))
 
 
-def level_colors(level: Level) -> dict[str, np.ndarray]:
+def level_colors(level: Level, maps=DEFAULT_COLOR_MAPS) -> dict[str, np.ndarray]:
     """
-    RGB color of every subcycle of ``level`` for each name in ``COLOR_KEYS``:
-    the Level's RGB variants, ``lrgb`` (pure ink of the innermost age), and
-    ``dharma`` / ``purity`` as gray levels.
+    RGB color of every subcycle of ``level`` for each name in ``LEVEL_COLOR_KEYS``:
+    the Level's RGB variants, ``lrgb`` (pure ink of the innermost age) and
+    ``duration_class`` (one color per class of equal duration); and ``dharma``
+    and ``purity`` on the sequential map of ``maps`` (``color.measure_colors``).
     """
     colors = {key: level.rgb(key) for key in RGB_KEYS}
-    colors['lrgb'] = np.array([lcoords_to_lrgb(lcoords)[-1] for lcoords in level.lcoords])
-    colors['dharma'] = np.repeat(level.dharmas[:, None], 3, axis=1)
-    colors['purity'] = np.repeat(level.purities[:, None], 3, axis=1)
+    inks = np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0], [0, 0, 0]], dtype=float)    # pure cyan, magenta, yellow, black
+    colors['lrgb'] = inks[level.lcoords[:, -1]]
+    colors['dharma'] = measure_colors(level.dharmas, 'dharma', maps)[0]
+    colors['purity'] = measure_colors(level.purities, 'purity', maps)[0]
+    colors['duration_class'] = duration_class_colors(level.durations)
     return colors
 
 
@@ -121,6 +172,11 @@ def compute_start(lcoords: np.ndarray) -> float:
     return np.dot(offsets[lcoords], np.insert(np.cumprod(proportions[lcoords][:-1]), 0, 1))
 
 
+def level_lcoords(depth: int, base: int = 4) -> np.ndarray:
+    """The addresses of all ``base^depth`` subcycles of ``depth``, in time order: (N, depth) digits."""
+    return (np.arange(base ** depth)[:, None] // base ** np.arange(depth - 1, -1, -1)) % base
+
+
 def compute_level(depth: int, bases: list[int] = DEFAULT_BASES, scales: list[float] = DEFAULT_SCALES,
                   colors: np.ndarray = TETRAHEDRON_COLORS) -> Level:
     """
@@ -139,20 +195,31 @@ def compute_level(depth: int, bases: list[int] = DEFAULT_BASES, scales: list[flo
     Returns a ``Level``: addresses, durations, starts, all CMYK and RGB color
     variants, dharma and purity of each subcycle.
     """
-    lcoords = np.array([tcoord_to_lcoords(i, bases[0], depth) for i in range(bases[0] ** depth)], dtype=int)
-
-    durations = np.apply_along_axis(compute_duration, 1, lcoords)
-    starts = np.apply_along_axis(compute_start, 1, lcoords)
+    lcoords = level_lcoords(depth, bases[0])
+    n = len(lcoords)
+    shares = proportions[lcoords]                                   # (N, depth)
+    durations = np.prod(shares, axis=1) if depth else np.ones(n)
+    # the start: each digit's offset scaled by the product of the shares of the levels above it
+    above = np.hstack([np.ones((n, 1)), np.cumprod(shares, axis=1)[:, :-1]]) if depth else np.ones((n, 0))
+    starts = np.sum(offsets[lcoords] * above, axis=1)
 
     w1 = weights(bases[1], depth)
-    cmyks = np.array([lcoords_to_cmyk(lcoord, w1, scales) for lcoord in lcoords], dtype=float)
-    rgbs = np.apply_along_axis(cmyk_to_rgb, 2, cmyks)
-    rgbs_tetrahedron = np.array([[lcoords_to_rgb_tetrahedron(lcoord, colors, scales[2])] for lcoord in lcoords])
-    all_rgbs = np.concatenate((rgbs, rgbs_tetrahedron), axis=1)
-    dharmas = np.array([dharma_measure(lcoord, w1) for lcoord in lcoords])
+    ink = lcoords[:, :, None] == np.arange(4)                       # (N, depth, 4): the ink of each digit
+    sums = np.einsum('nki,k->ni', ink, w1)                          # weighted ink sums (lcoords_to_cmyk)
+    normalised = sums / w1.sum()
+    composition = ink.sum(axis=1) / max(depth, 1)
+    cmyks = np.stack([sums, normalised, normalised * scales[0], normalised * [1, 1, 1, scales[1]], composition,
+                      np.hstack([normalised[:, 1:], np.zeros((n, 1))])], axis=1)
+    rgbs = (1 - cmyks[:, :, :3]) * (1 - cmyks[:, :, 3:])           # cmyk_to_rgb for every variant
+    colors = np.asarray(colors, dtype=float)
+    rgbs_tetrahedron = level_rgb_tetrahedron(lcoords, colors, scales[2])[:, None]
+    rgbs_oklab = level_rgb_oklab_tetrahedron(lcoords, colors, scales[2])[:, None]
+    all_rgbs = np.concatenate((rgbs, rgbs_tetrahedron, rgbs_oklab), axis=1)
+    dharmas = (4 - lcoords) @ w1 / (4 * w1.sum())                   # dharma_measure
 
     w2 = weights(bases[2], depth)
-    purities = np.array([purity_measure(lcoord, w2) for lcoord in lcoords])
+    purity_shares = np.einsum('nki,k->ni', ink, w2)                 # purity_measure
+    purities = (purity_shares.max(axis=1) - purity_shares.min(axis=1)) / w2.sum()
 
     return Level(lcoords, durations, starts, cmyks, all_rgbs, dharmas, purities)
 
