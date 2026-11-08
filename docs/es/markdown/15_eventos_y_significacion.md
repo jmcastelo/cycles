@@ -54,13 +54,13 @@ Calcular los tres lleva unos 30 s; `study_of_events.py` los guarda en `sandbox/d
 - **Modelo nulo: rotación rígida.** Todas las fronteras se desplazan **la misma cantidad** al azar, dando la vuelta
   al ciclo: se conserva su espaciado y solo cambia su colocación. Es la comparación adecuada para acontecimientos
   **periódicos**: con instantes al azar, el ritmo propio de las conjunciones (cada 20 años) se confundiría con una
-  coincidencia con la división. En los histogramas de la figura 15.2 se ve: para Júpiter y Saturno, la
+  coincidencia con la división. En los histogramas de la figura 15.3 se ve: para Júpiter y Saturno, la
   distribución nula es bimodal a partir de la profundidad 2, por la interacción del periodo de las conjunciones
   con el espaciado de las fronteras.
 - **Valor p** unilateral, con $N = 5000$ rotaciones y $S_r$ el estadístico de cada una:
   $p = \left(1 + \#\{r : S_r \le S_{\text{obs}}\}\right) / (1 + N)$.
 - **Corrección de Holm** sobre toda la familia de pruebas: con muchas pruebas, alguna sale «significativa» por azar
-  (con 29 pruebas se esperan unas 1,5 con p < 0,05).
+  (con 37 pruebas se esperan unas 1,9 con p < 0,05).
 
 Las fronteras son las de profundidad 1 a 5 del modelo (de 5 a 1025), convertidas de UT a TDB como en el explorador.
 
@@ -94,7 +94,66 @@ esa configuración.
 
 ![H1: ángulo medio de los planetas desde 0° de Aries en las fronteras (rojo) frente a las rotaciones (gris), con y sin el ancla, en ambos zodiacos](figuras/eventos_h1_surya_siddhanta.png)
 
-## 15.5 H2: las grandes conjunciones y sus cambios de trígono
+## 15.5 H1m: los planetas medios del Sūrya Siddhānta
+
+El Sūrya Siddhānta habla de planetas **medios**: el Sol medio, la longitud media heliocéntrica de Mercurio y de Venus
+(su *śīghra*) y la de Marte, Júpiter y Saturno. `events.mean_longitudes` las da con los elementos medios de Simon
+et al. (1994), como en Meeus (tabla 31.A), lineales en el tiempo, en el marco sidéreo de Lahiri del resto del
+proyecto (o trópico, sumando el ayanāṃśa de largo plazo): con $L_0$ la longitud media en J2000, $n$ su ritmo por siglo
+juliano y $p_A = 1{,}396971^\circ$ la precesión general por siglo,
+
+$$
+\lambda_{\text{sid}}(T) = L_0 - 23{,}853^\circ + (n - p_A)\, T, \qquad T = \frac{\text{año} - 2000}{100}
+$$
+
+**El propio texto.** Sus revoluciones por Mahāyuga (4 320 000 años; 1.29–34, trad. de Burgess) son Sol 4 320 000,
+Mercurio 17 937 060, Venus 7 022 376, Marte 2 296 832, Júpiter 364 220 y Saturno 146 568, en 1 577 917 828 días
+civiles (un año de 365,258756 días). **Todas son pares**: una conjunción en una época se repite cada medio
+Mahāyuga. Con la conjunción al inicio del Kali, sus planetas medios también se reúnen en 0° de Aries al inicio del
+**Treta**, pero no en los del Satya ni del Dvapara.
+
+**Los planetas medios reales en las fronteras** (sidéreo, en grados):
+
+| Frontera | Sol | Mercurio | Venus | Marte | Júpiter | Saturno | Ángulo medio (azar ≤) | Arco (azar ≤) |
+|---|---:|---:|---:|---:|---:|---:|---|---|
+| inicio del Satya | 256,4 | 302,5 | 279,1 | 258,8 | 225,8 | 148,8 | 104,4° (75 %) | 153,6° (9 %) |
+| inicio del Treta | 35,5 | 196,9 | 14,5 | 267,3 | 349,2 | 90,9 | 67,9° (16 %) | 254,1° (87 %) |
+| inicio del Dvapara | 316,4 | 332,7 | 234,5 | 72,6 | 349,3 | 328,6 | 51,9° (4 %) | 198,1° (30 %) |
+| **inicio del Kali** | 349,2 | 318,6 | 22,8 | 337,1 | 5,1 | 328,2 | **22,4° (0,0 %)** | **64,1° (0,1 %)** |
+| fin | 108,4 | 338,6 | 269,8 | 313,2 | 185,3 | 137,8 | 96,5° (62 %) | 230,1° (62 %) |
+
+| Prueba (rotaciones rígidas) | Sidéreo | Trópico |
+|---|---:|---:|
+| las cinco fronteras | p = 0,024 | 0,54 |
+| sin el ancla | 0,20 | 0,75 |
+| Treta y Kali (las conjunciones del texto) | **0,004** | 0,29 |
+| Treta (la otra conjunción del texto, sin el ancla) | 0,17 | 0,70 |
+
+Los planetas medios reales sí estaban reunidos cerca de 0° de Aries sidéreo al inicio del Kali (a 22° de media,
+dentro de 64°), aunque no en la conjunción exacta del texto; pero es el ancla. La otra conjunción que predice el
+texto, al inicio del Treta, no está en el cielo real (p = 0,17). El valor más bajo, 0,004 (Treta y Kali), descansa
+en el ancla y no sobrevive a la corrección de la familia (0,15 con Holm, entre 37 pruebas).
+
+**Cuánto se aleja el texto del cielo.** Con sus movimientos medios, todos en 0° al inicio del Kali, frente a los
+planetas medios reales (en grados, real − texto; una diferencia constante entre su origen del zodiaco y el de Lahiri
+desplazaría todos por igual):
+
+| Año | Sol | Mercurio | Venus | Marte | Júpiter | Saturno | Media |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| −3101 | −10,8 | −41,4 | 22,8 | −22,9 | 5,1 | −31,8 | 22,4 |
+| 0 | −3,5 | −17,8 | 4,7 | −7,7 | −0,8 | −8,7 | 7,2 |
+| 499 | −2,4 | −14,0 | 1,8 | −5,2 | −1,7 | −5,0 | 5,0 |
+| 1000 | −1,2 | −10,2 | −1,1 | −2,7 | −2,7 | −1,3 | 3,2 |
+| 1500 | 0,0 | −6,4 | −4,0 | −0,3 | −3,6 | 2,4 | 2,8 |
+| 2000 | 1,2 | −2,7 | −6,9 | 2,2 | −4,5 | 6,2 | 3,9 |
+
+El texto se ajusta mejor al cielo hacia el **año 1172** (2,8° de media; 1,5° sin Mercurio) y se separa más de 20°
+en su propia época: sus parámetros reflejan el cielo de muchos siglos después, y la conjunción del inicio del Kali
+es un cálculo hacia atrás con ellos (la conclusión de Billard para la astronomía india clásica).
+
+![H1m: la prueba de las cinco fronteras con los planetas medios (izquierda) y la diferencia entre los planetas medios reales y los del Sūrya Siddhānta desde el inicio del Kali (derecha)](figuras/eventos_h1m_planetas_medios.png)
+
+## 15.6 H2: las grandes conjunciones y sus cambios de trígono
 
 La doctrina persa de las edades del mundo (Māshāʾallāh, Abū Maʿshar) dividía la historia con las conjunciones de
 Júpiter y Saturno y sus cambios de trígono. ¿Caen las fronteras cerca de ellas?
@@ -107,7 +166,7 @@ Júpiter y Saturno y sus cambios de trígono. ¿Caen las fronteras cerca de ella
 
 ![H2: distancia media de las fronteras a las grandes conjunciones y a los cambios de trígono, por profundidad](figuras/eventos_h2_great_conjunctions.png)
 
-## 15.6 H3: las conjunciones de los planetas exteriores
+## 15.7 H3: las conjunciones de los planetas exteriores
 
 | Prueba | Prof. 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|
@@ -116,21 +175,22 @@ Júpiter y Saturno y sus cambios de trígono. ¿Caen las fronteras cerca de ella
 
 ![H3: distancia media de las fronteras a las conjunciones de Urano y Neptuno y de Neptuno y Plutón](figuras/eventos_h3_outer_conjunctions.png)
 
-## 15.7 Resultado
+## 15.8 Resultado
 
-Con el modelo por defecto, **ninguna de las 29 pruebas es significativa tras la corrección de Holm**. Los dos
-valores p brutos por debajo de 0,05 (H1 sidéreo con el ancla, 0,020; cambios de trígono trópicos a profundidad 1,
-0,039) son los que se esperan por azar en una familia de este tamaño, y el primero se explica por la elección del
-ancla.
+Con el modelo por defecto, **ninguna de las 37 pruebas es significativa tras la corrección de Holm**. Los cuatro
+valores p brutos por debajo de 0,05 (H1 sidéreo con el ancla, 0,020; H1m sidéreo con el ancla, 0,024, y en Treta y
+Kali, 0,004; cambios de trígono trópicos a profundidad 1, 0,039) son, en número, los que cabe esperar por azar en
+una familia de este tamaño, y los tres primeros descansan en el ancla.
 
 Matices:
 
-- El resultado es **condicional al modelo** (ancla y arco); la sección 15.8 lo extiende a todos los modelos.
+- El resultado es **condicional al modelo** (ancla y arco); la sección 15.9 lo extiende a todos los modelos.
 - Antes de −3000 la efeméride no tiene referencia independiente; los planetas lentos, los de H2 y H3, son los más
   robustos.
-- H1 mide los planetas **verdaderos**; la afirmación del Sūrya Siddhānta es sobre los **medios**.
+- H1 mide los planetas **verdaderos**; la afirmación del Sūrya Siddhānta es sobre los **medios**: la sección
+  15.5 la contrasta con ellos.
 
-## 15.8 Todos los modelos a la vez
+## 15.9 Todos los modelos a la vez
 
 Los resultados anteriores son de un modelo. ¿Hay **alguna** colocación del ciclo (ancla y arco) cuyas fronteras
 caigan sobre los acontecimientos más de lo que permite el azar? Comparar muchos modelos y quedarse con el mejor es
@@ -168,32 +228,32 @@ A profundidad 1 el mapa parece ruido: mover el ancla 1000 años desplaza cada fr
 el ritmo de los acontecimientos (20 años para Júpiter y Saturno). El contraste global es válido para la rejilla
 explorada; una rejilla más fina sería simplemente una búsqueda mayor.
 
-## 15.9 Cómo se ejecuta
+## 15.10 Cómo se ejecuta
 
 ```bash
 python sandbox/study_of_events.py --list
 python sandbox/study_of_events.py event_catalog          # calcular o cargar los catálogos
 python sandbox/study_of_events.py surya_siddhanta        # H1
+python sandbox/study_of_events.py mean_planets           # H1m: planetas medios y deriva del texto
 python sandbox/study_of_events.py great_conjunctions     # H2
 python sandbox/study_of_events.py outer_conjunctions     # H3
-python sandbox/study_of_events.py summary --save         # las 29 pruebas con Holm; guarda summary.csv
+python sandbox/study_of_events.py summary --save         # las 37 pruebas con Holm; guarda summary.csv
 python sandbox/study_of_events.py model_map --save       # todos los modelos (ancla × arco) y el p global
 python sandbox/study_of_events.py --all --session sandbox/sessions/otro_modelo.cycles.json
 ```
 
-## 15.10 En el explorador
+## 15.11 En el explorador
 
 El panel *Events* (capítulo 12) hace cada una de estas pruebas de forma interactiva: elige el catálogo, la
 profundidad, todo el ciclo o solo el zoom y el número de rotaciones; dibuja la distribución nula con el valor
 observado, lista los acontecimientos del tramo (y lleva el momento del cielo a cualquiera de ellos) y los marca en
-el navegador. Con la vista *Over the models* dibuja el mapa de la sección 15.8 para la prueba y la profundidad
+el navegador. Con la vista *Over the models* dibuja el mapa de la sección 15.9 para la prueba y la profundidad
 elegidas, con el modelo actual, el mejor y el p global; un doble clic en el mapa, o en una fila de la lista de los
 mejores modelos, coloca allí el ciclo. Usa los mismos catálogos guardados que el estudio. Cada resultado del panel es una sola prueba: la
 corrección de la familia está en `summary`.
 
-## 15.11 Pendiente
+## 15.12 Pendiente
 
 Otras familias de acontecimientos (aspectos, ingresos en signos y nakṣatras, estaciones, reuniones de planetas, el
 punto vernal entrando en un signo), el Sol y Júpiter en Puṣya al final del Kali, el modelo nulo de las
-permutaciones de dígitos, H1 con los planetas medios del propio Sūrya Siddhānta y los acontecimientos históricos
-con fecha (los mismos contrastes con otro catálogo).
+permutaciones de dígitos y los acontecimientos históricos con fecha (los mismos contrastes con otro catálogo).

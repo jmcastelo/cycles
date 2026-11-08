@@ -25,6 +25,27 @@ SIGN_NAMES = ('Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'S
               'Capricorn', 'Aquarius', 'Pisces')
 ELEMENTS = ('fire', 'earth', 'air', 'water')          # of the signs in order: Aries fire, Taurus earth…
 CLASSICAL = ('sun', 'mercury', 'venus', 'mars', 'jupiter', 'saturn')   # the visible planets but the Moon
+
+# Mean planets, as the Sūrya Siddhānta means them: the mean Sun, the heliocentric mean longitudes of Mercury and
+# Venus (their śīghra) and of Mars, Jupiter and Saturn. Mean longitudes at J2000.0 (mean equinox of date) and
+# their rates in degrees per Julian century: Simon et al. (1994), as in Meeus, Astronomical Algorithms, table 31.A.
+MEAN_ELEMENTS = {
+    'sun': (280.466457, 36000.7698278),           # the Earth's + 180°
+    'mercury': (252.250906, 149474.0722491),
+    'venus': (181.979801, 58519.2130302),
+    'mars': (355.433000, 19141.6964471),
+    'jupiter': (34.351519, 3036.3027748),
+    'saturn': (50.077444, 1223.5110686),
+}
+GENERAL_PRECESSION = 1.396971                     # degrees per Julian century at J2000 (5028.796″)
+
+# The Sūrya Siddhānta's mean motions (1.29–34, Burgess's translation): revolutions in a Mahāyuga of 4 320 000
+# years and its civil days. All are even, so a conjunction repeats every half Mahāyuga.
+SURYA_SIDDHANTA_REVOLUTIONS = {
+    'sun': 4_320_000, 'mercury': 17_937_060, 'venus': 7_022_376, 'mars': 2_296_832, 'jupiter': 364_220,
+    'saturn': 146_568,
+}
+SURYA_SIDDHANTA_DAYS = 1_577_917_828
 DAYS_PER_YEAR = 365.25
 CHUNK = 200_000                                       # moments per call to the ephemeris
 # Where the catalogues of conjunctions are kept (shared by the explorer and study_of_events.py)
@@ -135,13 +156,47 @@ def trigon_changes(catalog: dict, zodiac: str, settle: int = 2) -> np.ndarray:
     return times[lasting][changed]
 
 
-def around_point(tables, years, bodies=CLASSICAL, point: float = 0.0, zodiac: str = 'sidereal') -> dict:
+def mean_longitudes(years, bodies=CLASSICAL, zodiac: str = 'sidereal') -> dict:
+    """
+    Mean longitudes (degrees) of the mean planets (``MEAN_ELEMENTS``) at ``years`` (TDB): sidereal in the Lahiri
+    frame of the rest of the project (23.853° at J2000, advancing at the sidereal rates), or tropical (the sidereal
+    plus the long-term ayanamsa). Linear in time: the mean planets, not the true ones.
+    """
+    from cycles.plotting.equinoctial_precession import LAHIRI_AYANAMSA_J2000_DEG, long_term_ayanamsa
+    if zodiac not in ZODIACS:
+        raise ValueError(f"zodiac must be one of {ZODIACS}")
+    years = np.atleast_1d(np.asarray(years, dtype=float))
+    centuries = (years - 2000.0) / 100.0
+    out = {}
+    for b in bodies:
+        start, rate = MEAN_ELEMENTS[b]
+        out[b] = (start - LAHIRI_AYANAMSA_J2000_DEG + (rate - GENERAL_PRECESSION) * centuries) % 360.0
+    if zodiac == 'tropical':
+        ayanamsa = np.asarray(long_term_ayanamsa(years), dtype=float)
+        out = {b: (v + ayanamsa) % 360.0 for b, v in out.items()}
+    return out
+
+
+def surya_siddhanta_longitudes(years, epoch: float, bodies=CLASSICAL) -> dict:
+    """
+    Mean longitudes (degrees) by the Sūrya Siddhānta's own mean motions, all 0 at ``epoch`` (the start of Kali, in
+    its tradition): its revolutions per Mahāyuga over its civil days, counted in days from the epoch (decimal
+    Julian years of 365.25 days; the text's own year is 365.258756 days, so its periodicities, such as the
+    conjunction every half Mahāyuga, hold in its years, not in these).
+    """
+    days = (np.atleast_1d(np.asarray(years, dtype=float)) - epoch) * DAYS_PER_YEAR
+    return {b: (360.0 * SURYA_SIDDHANTA_REVOLUTIONS[b] * days / SURYA_SIDDHANTA_DAYS) % 360.0 for b in bodies}
+
+
+def around_point(tables, years, bodies=CLASSICAL, point: float = 0.0, zodiac: str = 'sidereal',
+                 mean: bool = False) -> dict:
     """
     How ``bodies`` stand around the longitude ``point`` (0 = the start of Aries) at ``years``: ``mean_distance``,
     the mean angle of the bodies from it (0 if all are on it, 90° on average for random longitudes), and
-    ``spread``, the smallest arc that contains them all.
+    ``spread``, the smallest arc that contains them all. With ``mean``, the mean planets (``mean_longitudes``,
+    no ephemeris needed) instead of the true ones.
     """
-    lon = longitudes(tables, years, bodies, zodiac)
+    lon = mean_longitudes(years, bodies, zodiac) if mean else longitudes(tables, years, bodies, zodiac)
     stack = np.vstack([lon[b] for b in bodies])                          # (bodies, moments)
     distance = np.abs(wrap180(stack - point)).mean(axis=0)
     ordered = np.sort(stack % 360.0, axis=0)

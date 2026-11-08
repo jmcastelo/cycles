@@ -136,3 +136,12 @@ def test_the_map_over_the_models(window, panel, spin):
     choose(panel, 'aries_sidereal')
     panel.render()
     assert panel.result is None and 'this model only' in panel.heading.text()
+
+
+def test_the_mean_planets(window, panel):
+    choose(panel, 'mean_sidereal')
+    panel.depth.setValue(1)
+    panel.render()
+    r = panel.result
+    assert r['unit'] == '°' and 'mean planets' in r['statistic'] and r['rotations'] == 1000
+    assert panel.table.rowCount() == 5 and 'mean angle' in panel.table.item(3, 2).text()

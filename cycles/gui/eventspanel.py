@@ -34,6 +34,8 @@ TESTS = {
     'neptune_pluto': ('Neptune–Pluto conjunctions', 'conjunctions', ('neptune', 'pluto')),
     'aries_sidereal': ('Sun…Saturn at 0° Aries (sidereal, Sūrya Siddhānta)', 'aries', 'sidereal'),
     'aries_tropical': ('Sun…Saturn at 0° Aries (tropical: the vernal point)', 'aries', 'tropical'),
+    'mean_sidereal': ('Mean planets at 0° Aries (sidereal: the Sūrya Siddhānta\'s claim)', 'aries_mean', 'sidereal'),
+    'mean_tropical': ('Mean planets at 0° Aries (tropical)', 'aries_mean', 'tropical'),
 }
 MARGIN = 200.0                     # years of events beyond the cycle (as in study_of_events)
 MAX_POSITIONS = 400_000            # boundaries × rotations whose sky is computed in a test of the planets at 0° Aries
@@ -281,14 +283,17 @@ class EventsPanel(QWidget):
             result['unit'] = 'years'
             result['statistic'] = 'mean distance from the boundaries to the nearest event'
         else:
-            zodiac = TESTS[self.kind.currentData()][2]
-            n = max(200, min(n, MAX_POSITIONS // len(boundaries)))
+            _, kind, zodiac = TESTS[self.kind.currentData()]
+            mean = kind == 'aries_mean'
+            if not mean:
+                n = max(200, min(n, MAX_POSITIONS // len(boundaries)))
 
             def value(times):
-                return around_point(self.sky_panel.tables, times, CLASSICAL, 0.0, zodiac)['mean_distance']
+                return around_point(self.sky_panel.tables, times, CLASSICAL, 0.0, zodiac, mean=mean)['mean_distance']
             result = value_test(boundaries, value, start, end, n)
             result['unit'] = '°'
-            result['statistic'] = 'mean angle of Sun…Saturn from 0° Aries at the boundaries'
+            result['statistic'] = (f"mean angle of the {'mean ' if mean else ''}planets Sun…Saturn from 0° Aries "
+                                   f"at the boundaries")
         result['rotations'] = n
         result['count'] = len(boundaries)
         return result
@@ -333,10 +338,11 @@ class EventsPanel(QWidget):
                 if lo <= year <= hi:
                     rows.append((year, what, sign_text(sidereal), sign_text(tropical)))
         else:
-            zodiac = TESTS[self.kind.currentData()][2]
+            _, kind, zodiac = TESTS[self.kind.currentData()]
             inside = boundaries_ut[(boundaries_ut >= lo) & (boundaries_ut <= hi)][:MAX_ROWS]
             if len(inside):
-                at = around_point(self.sky_panel.tables, tdb_years(inside), CLASSICAL, 0.0, zodiac)
+                at = around_point(self.sky_panel.tables, tdb_years(inside), CLASSICAL, 0.0, zodiac,
+                                  mean=kind == 'aries_mean')
                 for year, d, spread in zip(inside, at['mean_distance'], at['spread']):
                     rows.append((year, 'boundary', f"mean angle {d:.1f}° ({zodiac})", f"all within {spread:.1f}°"))
         self._listed = (min(len(rows), MAX_ROWS), len(rows))
@@ -403,7 +409,7 @@ class EventsPanel(QWidget):
 
     def _render_map(self) -> None:
         state = self.state
-        if TESTS[self.kind.currentData()][1] == 'aries':
+        if TESTS[self.kind.currentData()][1] in ('aries', 'aries_mean'):
             self._message('The map over the models is for events (conjunctions, trigon changes); the planets at '
                           '0° Aries are tested on this model only.')
             return

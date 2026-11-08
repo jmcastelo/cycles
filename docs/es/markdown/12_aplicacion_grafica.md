@@ -211,10 +211,10 @@ Se elige la prueba:
 - conjunciones de Júpiter y Saturno, de Urano y Neptuno o de Neptuno y Plutón;
 - cambios de trígono de las grandes conjunciones, en el zodiaco sidéreo o en el trópico;
 - los planetas del Sol a Saturno en 0° de Aries, sidéreo (la afirmación del Sūrya Siddhānta) o trópico (el punto
-  vernal).
+  vernal), verdaderos o medios (capítulo 15.5).
 
 Y la **vista**: *This model* (las fronteras del modelo actual frente a rotaciones de ellas) u *Over the models*
-(el mapa de todos los modelos, ancla × arco, con el p global que tiene en cuenta la búsqueda; capítulo 15.8: un
+(el mapa de todos los modelos, ancla × arco, con el p global que tiene en cuenta la búsqueda; capítulo 15.9: un
 doble clic en el mapa, o en una fila de la lista de los mejores, coloca allí el ciclo). También la profundidad de
 las fronteras (1 a 6), si se prueban en todo el ciclo o solo dentro del zoom, y el
 número de rotaciones. El gráfico muestra la distribución del estadístico para las rotaciones rígidas de las

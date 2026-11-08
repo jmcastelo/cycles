@@ -6,6 +6,10 @@ Three hypotheses, tested in the sidereal (Lahiri, Jyotiṣa) and the tropical (W
   (measured on the true planets Sun to Saturn, the Moon left out: their mean angle from 0° Aries); tested on the
   five boundaries and on the four that are not the model's anchor, since the traditional epoch may have been
   chosen for its gathering of planets;
+* H1m, the same with the mean planets the text speaks of (the mean Sun, the heliocentric mean longitudes of
+  Mercury and Venus, their śīghra, and of Mars, Jupiter and Saturn; Simon et al. 1994), on the five boundaries,
+  without the anchor, on the two where the text's own mean motions put a conjunction (Treta and Kali: all its
+  revolutions per Mahāyuga are even), and on Treta alone (not the anchor); and how far the text's mean motions drift from the real mean planets;
 * H2, great conjunctions: the boundaries of depths 1 to 5 fall near the Jupiter–Saturn conjunctions, or near
   the changes of their trigon (element), as in the Persian doctrine of world ages;
 * H3, outer conjunctions: the boundaries fall near the Uranus–Neptune or Neptune–Pluto conjunctions.
@@ -24,8 +28,8 @@ from common import DATA_DIR, PLOTS_DIR, save_figure
 from cycles.functions.cycle_analysis import boundary_fractions, boundary_grid
 from cycles.functions.cycle_model import DEFAULT_PRESET, load_presets
 from cycles.functions.events import (
-    CLASSICAL, ZODIACS, around_point, cached_conjunctions, first_of_series, table_span, tdb_years,
-    trigon_changes,
+    CLASSICAL, ZODIACS, around_point, cached_conjunctions, first_of_series, mean_longitudes,
+    surya_siddhanta_longitudes, table_span, tdb_years, trigon_changes,
 )
 from cycles.functions.significance import holm, proximity_test, rotations, scan_models, value_test
 
@@ -158,6 +162,90 @@ def surya_siddhanta(ctx, opts):
     finish(fig, opts, 'h1_surya_siddhanta.png')
 
 
+# -- H1m: the mean planets
+
+def h1m_tests(ctx) -> list[dict]:
+    """The mean planets around 0° Aries: all five boundaries, without the anchor, and Treta and Kali (the text's)."""
+    if 'h1m' in ctx.results:
+        return ctx.results['h1m']
+    from cycles.functions.cycle_model import ANCHOR_POINTS
+    yugas = ctx.boundaries[1]
+    anchor = list(ANCHOR_POINTS).index(ctx.model.anchor_point)
+    treta = list(ANCHOR_POINTS).index('treta')
+    kali = list(ANCHOR_POINTS).index('kali')
+    subsets = {'': np.arange(5), ', without the anchor': np.delete(np.arange(5), anchor),
+               ', Treta and Kali': np.array([treta, kali]),        # where the text's own motions conjoin them
+               ', Treta': np.array([treta])}                      # the text's other conjunction, not the anchor
+    rows = []
+    for zodiac in ZODIACS:
+        def value(times, zodiac=zodiac):
+            return around_point(None, times, CLASSICAL, 0.0, zodiac, mean=True)['mean_distance']
+        shifted = rotations(yugas, ctx.start, ctx.end, ROTATIONS, seed=2)
+        for name, keep in subsets.items():
+            null = value(shifted[:, keep].ravel()).reshape(len(shifted), len(keep)).mean(axis=1)
+            observed = float(value(yugas[keep]).mean())
+            rows.append({'observed': observed, 'null': null, 'expected': float(null.mean()),
+                         'p': float((1 + np.count_nonzero(null <= observed)) / (1 + len(null))),
+                         'ratio': observed / float(null.mean()), 'hypothesis': 'H1m mean planets',
+                         'test': f"mean planets{name} ({zodiac})", 'depth': 1, 'unit': '°',
+                         'zodiac': zodiac})
+    ctx.results['h1m'] = rows
+    return rows
+
+
+@study
+def mean_planets(ctx, opts):
+    """H1m: the mean planets of the Sūrya Siddhānta at 0° Aries at the yuga boundaries; the drift of its motions."""
+    yugas = ctx.boundaries[1]
+    rng = np.random.default_rng(7)
+    randoms = rng.uniform(ctx.start, ctx.end, 20000)
+    for zodiac in ZODIACS:
+        at = around_point(None, yugas, CLASSICAL, 0.0, zodiac, mean=True)
+        ref = around_point(None, randoms, CLASSICAL, 0.0, zodiac, mean=True)
+        print(f"\nZodiac {zodiac}: mean planets (Sun, Mercury, Venus, Mars, Jupiter, Saturn) from 0° Aries")
+        for label, year, distance, spread in zip(YUGA_LABELS, yugas, at['mean_distance'], at['spread']):
+            lon = '  '.join(f"{at['longitudes'][b][list(yugas).index(year)]:5.1f}" for b in CLASSICAL)
+            print(f"  {label:17s} {year:10.1f}  [{lon}]  mean angle {distance:5.1f}° "
+                  f"(random ≤: {100 * np.mean(ref['mean_distance'] <= distance):5.1f} %)  spread {spread:5.1f}° "
+                  f"(random ≤: {100 * np.mean(ref['spread'] <= spread):5.1f} %)")
+    rows = h1m_tests(ctx)
+    print()
+    for r in rows:
+        print(f"{r['test']:44s} observed {r['observed']:6.1f}°, rotations {r['expected']:5.1f}°, p = {r['p']:.3f}")
+    # how far the text's mean motions (0 at its epoch, the start of Kali) are from the real mean planets
+    epoch = yugas[3]
+    years = np.arange(np.ceil(epoch), 2501.0, 1.0)
+    real = mean_longitudes(years, CLASSICAL, 'sidereal')
+    text = surya_siddhanta_longitudes(years, epoch, CLASSICAL)
+    gap = np.vstack([np.abs((real[b] - text[b] + 180) % 360 - 180) for b in CLASSICAL])
+    print("\nThe text's mean planets (all at 0° at the start of Kali) against the real ones (sidereal, Lahiri):")
+    print(f"  {'year':>7s} " + ' '.join(f"{b:>8s}" for b in CLASSICAL) + '   mean')
+    for year in (epoch, 0.0, 499.0, 1000.0, 1500.0, 2000.0):
+        k = int(np.argmin(np.abs(years - year))) if year != epoch else None
+        real_y = mean_longitudes([year], CLASSICAL)
+        text_y = surya_siddhanta_longitudes([year], epoch, CLASSICAL)
+        diffs = [((real_y[b][0] - text_y[b][0] + 180) % 360) - 180 for b in CLASSICAL]
+        print(f"  {year:7.0f} " + ' '.join(f"{d:8.1f}" for d in diffs) + f"   {np.mean(np.abs(diffs)):5.1f}")
+    best = int(np.argmin(gap.mean(axis=0)))
+    without_mercury = int(np.argmin(np.delete(gap, 1, axis=0).mean(axis=0)))
+    print(f"  closest overall in year {years[best]:.0f} (mean gap {gap.mean(axis=0)[best]:.1f}°); without Mercury in "
+          f"{years[without_mercury]:.0f} ({np.delete(gap, 1, axis=0).mean(axis=0)[without_mercury]:.1f}°)")
+    fig, axes = plt.subplots(1, 2, figsize=(13, 3.8), gridspec_kw={'width_ratios': [1, 1.4]})
+    for b in CLASSICAL:
+        axes[1].plot(years, ((real[b] - text[b] + 180) % 360) - 180, lw=1, label=b)
+    axes[1].axhline(0, color='0.5', lw=0.6)
+    axes[1].set_xlabel('year'); axes[1].set_ylabel('real − text (°)')
+    axes[1].set_title("The text's mean motions against the real mean planets (0 at the start of Kali)", fontsize=9)
+    axes[1].legend(fontsize=7, ncols=3)
+    row = rows[0]
+    axes[0].hist(row['null'], bins=60, color='0.75')
+    axes[0].axvline(row['observed'], color='#d62728', lw=2)
+    axes[0].set_title(f"{row['test']}: p = {row['p']:.3f}", fontsize=9)
+    axes[0].set_xlabel('mean angle from 0° Aries over the 5 boundaries (°)')
+    fig.tight_layout()
+    finish(fig, opts, 'h1m_mean_planets.png')
+
+
 # -- H2 and H3: conjunctions near the boundaries
 
 def proximity_rows(ctx, hypothesis: str, test: str, events: np.ndarray, zodiac: str = '') -> list[dict]:
@@ -234,8 +322,8 @@ def outer_conjunctions(ctx, opts):
 
 @study
 def summary(ctx, opts):
-    """All the tests of H1, H2 and H3, with p-values corrected for the whole family (Holm)."""
-    rows = h1_tests(ctx) + h2_tests(ctx) + h3_tests(ctx)
+    """All the tests of H1, H1m, H2 and H3, with p-values corrected for the whole family (Holm)."""
+    rows = h1_tests(ctx) + h1m_tests(ctx) + h2_tests(ctx) + h3_tests(ctx)
     adjusted = holm([r['p'] for r in rows])
     print(f"{len(rows)} tests; p: one-sided (closer than the rotated boundaries), {ROTATIONS} rotations each\n")
     print(f"  {'hypothesis':24s} {'test':38s} {'depth':>5s} {'observed':>9s} {'expected':>9s} {'p':>7s} "

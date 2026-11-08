@@ -372,7 +372,10 @@ and a batch run that saves every figure. They use the interpreter in `.venv`.
 `study_of_events.py` asks whether the subcycle boundaries fall on planetary
 events more than chance would place them, in the sidereal (Lahiri) and the
 tropical zodiac: the Sūrya Siddhānta claim that the planets stand together at
-0° Aries at the yuga boundaries, the Jupiter–Saturn great conjunctions and the
+0° Aries at the yuga boundaries (with the true planets, and with the mean
+planets the text speaks of: `mean_planets` also shows that the text's mean
+motions fit the sky around AD 1172 and are more than 20° off at its own epoch,
+the start of Kali), the Jupiter–Saturn great conjunctions and the
 changes of their trigon (element, counted when the conjunctions settle in it:
 every 200 years in the tropical zodiac, as in the Persian doctrine of world
 ages), and the Uranus–Neptune and Neptune–Pluto conjunctions. Each test

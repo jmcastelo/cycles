@@ -51,7 +51,8 @@ regeneran las figuras, en `generar_figuras/`.
    rectificada.
 5. **El cielo en los inicios de los subciclos** no se parece al de la selección más que el de instantes al azar: los
    parecidos vienen de los periodos de los planetas.
-6. **Ninguna de las 29 pruebas de acontecimientos planetarios** (Sūrya Siddhānta, grandes conjunciones y sus
+6. **Ninguna de las 37 pruebas de acontecimientos planetarios** (Sūrya Siddhānta con los planetas verdaderos y los
+   medios, grandes conjunciones y sus
    cambios de trígono, conjunciones de los planetas exteriores) es significativa tras la corrección de Holm; la
    reunión de planetas en 0° de Aries sidéreo al inicio del Kali es la del ancla del modelo. Tampoco **ningún otro
    modelo** (ancla × arco) se acerca a los acontecimientos más de lo que permite el azar, tenida en cuenta la búsqueda.
@@ -157,4 +158,9 @@ al azar.
 - Abhyankar, K. D. (1993). Artículo sobre dos sellos de Mohenjo-daro. Bull. Astr. Soc. India 21, 475–479 (copia en
   `sandbox/docs/papers/`).
 - ERFA (Essential Routines for Fundamental Astronomy), derivada de SOFA (IAU).
+- Simon, J. L. et al. (1994). *Numerical expressions for precession formulae and mean elements for the Moon and
+  the planets.* A&A 282, 663; los elementos medios, como en Meeus, J. (1998), *Astronomical Algorithms*, 2.ª ed.,
+  tabla 31.A.
+- Burgess, E. (1860). *Translation of the Sûrya-Siddhânta.* Journal of the American Oriental Society 6.
+- Billard, R. (1971). *L'astronomie indienne.* École française d'Extrême-Orient.
 - Guénon, R. *Formes traditionnelles et cycles cosmiques*; Hani, J. (sobre la subdivisión de los ciclos).

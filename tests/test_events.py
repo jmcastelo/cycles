@@ -129,3 +129,35 @@ def test_scan_models_finds_a_planted_model_and_corrects_for_the_search():
     models[1, 1, 3] = np.nan
     left_out = scan_models(models, events, span, 10)
     assert not left_out['valid'][0, 0] and not left_out['valid'][1, 1] and left_out['valid'].sum() == 1198
+
+
+# -- the mean planets and the Sūrya Siddhānta
+
+def test_mean_planets():
+    from cycles.functions.events import CLASSICAL, MEAN_ELEMENTS, around_point, mean_longitudes
+    tropical = mean_longitudes([2000.0], CLASSICAL, 'tropical')
+    sidereal = mean_longitudes([2000.0], CLASSICAL, 'sidereal')
+    for b in CLASSICAL:
+        assert np.isclose(tropical[b][0], MEAN_ELEMENTS[b][0])                 # Meeus at J2000
+        assert np.isclose((tropical[b][0] - sidereal[b][0]) % 360, 23.853)    # the Lahiri ayanamsa
+    # the mean Sun takes a sidereal year (365.2564 days) to come back
+    year = 365.256363 / 365.25
+    sun = mean_longitudes([100.0, 100.0 + year], ('sun',))['sun']
+    assert abs(((sun[1] - sun[0] + 180) % 360) - 180) < 1e-3
+    kali = around_point(None, [-3100.83], CLASSICAL, 0.0, 'sidereal', mean=True)
+    assert kali['mean_distance'][0] < 25 and kali['spread'][0] < 70          # together near 0° sidereal Aries
+
+
+def test_the_surya_siddhanta_mean_motions():
+    from cycles.functions.events import (
+        CLASSICAL, SURYA_SIDDHANTA_DAYS, SURYA_SIDDHANTA_REVOLUTIONS, mean_longitudes, surya_siddhanta_longitudes,
+    )
+    assert all(r % 2 == 0 for r in SURYA_SIDDHANTA_REVOLUTIONS.values())     # a conjunction every half Mahāyuga
+    assert np.isclose(SURYA_SIDDHANTA_DAYS / SURYA_SIDDHANTA_REVOLUTIONS['sun'], 365.258756, atol=1e-6)
+    epoch = -3100.83
+    assert all(np.isclose(v[0], 0.0) for v in surya_siddhanta_longitudes([epoch], epoch).values())
+    # the text and the real mean planets agree to a few degrees around AD 1000, not at its epoch
+    years = np.array([epoch, 1000.0])
+    text, real = surya_siddhanta_longitudes(years, epoch), mean_longitudes(years)
+    gaps = np.array([np.abs((real[b] - text[b] + 180) % 360 - 180) for b in CLASSICAL])
+    assert gaps[:, 1].mean() < 5 and gaps[:, 0].mean() > 15

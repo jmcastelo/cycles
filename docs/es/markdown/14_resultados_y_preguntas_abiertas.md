@@ -48,10 +48,14 @@ periodos propios de los planetas, no de la división.
 **Configuraciones notables** (Abhyankar, conjunciones en Puṣya): son frecuentes; sin un modelo de azar no tienen
 valor probatorio (capítulo 9).
 
-**Acontecimientos planetarios** (capítulo 15). Ninguna de las 29 pruebas (el Sūrya Siddhānta en 0° de Aries, las
+**Acontecimientos planetarios** (capítulo 15). Ninguna de las 37 pruebas (el Sūrya Siddhānta en 0° de Aries, las
 grandes conjunciones y sus cambios de trígono, las conjunciones de Urano–Neptuno y Neptuno–Plutón; profundidades 1
 a 5; zodiacos sidéreo y trópico) es significativa tras la corrección de Holm. Los planetas sí se reúnen cerca de 0°
 de Aries sidéreo al inicio del Kali (ángulo medio 15°, arco 41°), pero es el ancla del modelo; sin ella, p = 0,19.
+Con los **planetas medios** del Sūrya Siddhānta ocurre lo mismo (22°, 64°; sin el ancla, p = 0,20), y la otra
+conjunción que predicen sus movimientos medios, al inicio del Treta, no está en el cielo (p = 0,17). Los movimientos
+del texto se ajustan al cielo hacia el año 1172 y se separan más de 20° en su propia época: su conjunción del Kali
+es un cálculo hacia atrás.
 Y explorando **todos los modelos** (474 combinaciones de ancla y arco, 15 pruebas), ninguno se acerca a los
 acontecimientos más de lo que permite el azar una vez tenida en cuenta la búsqueda (menor p global 0,032; 0,48
 con Holm).
@@ -60,7 +64,7 @@ con Holm).
 
 | Tema | Estado |
 |---|---|
-| **Eventos y significación** (idea 4) | hecho para tres hipótesis astronómicas, con estudio y panel *Events* (capítulo 15); con el mapa sobre todos los modelos; pendientes: otras familias de acontecimientos, H1 con los planetas medios del Sūrya Siddhānta, el nulo de las permutaciones de dígitos y los acontecimientos históricos con fecha (falta un conjunto de datos) |
+| **Eventos y significación** (idea 4) | hecho para tres hipótesis astronómicas, con estudio y panel *Events* (capítulo 15); con el mapa sobre todos los modelos; pendientes: otras familias de acontecimientos, el nulo de las permutaciones de dígitos y los acontecimientos históricos con fecha (falta un conjunto de datos) |
 | **Sonido en el explorador** (idea 7) | reproducir el tramo ampliado con un cursor ligado al momento del cielo, y oír el efecto de σ |
 | **Animación de permutaciones** | reproducir el panel de permutaciones a través de σ⁰, σ¹, σ², … |
 | **Acoplamiento con QtAds** (opcional) | destinos de soltado al arrastrar paneles y paneles que se ocultan en un borde, si los menús de colocación se quedan cortos |

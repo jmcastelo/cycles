@@ -92,6 +92,13 @@ que el Kali empezara en 3104 a. C. Es uno de los presets del modelo de ciclo.
 configuración notable en una fecha dada no tiene valor probatorio. El panel *Sky comparison* del explorador
 (capítulo 12) hace este tipo de contraste de forma sistemática, comparando con instantes al azar.
 
+**Los planetas medios del propio texto** (capítulo 15.5): el Sūrya Siddhānta pone sus planetas medios en 0° de
+Aries al inicio del Kali. Los planetas medios reales estaban entonces a 22° de media de ese punto (todos dentro de
+64°): una reunión, pero no la conjunción exacta. Los movimientos medios del texto coinciden con el cielo hacia el
+año 1172 y se alejan más de 20° en su propia época, de modo que la conjunción del Kali es un cálculo hacia atrás con
+parámetros muy posteriores; y la otra conjunción que implican (al inicio del Treta, porque todas sus revoluciones
+por Mahāyuga son pares) no está en el cielo real.
+
 ## 9.5 Pasajes puránicos sobre el cambio de yuga
 
 Resumen de los pasajes (en IAST, del corpus GRETIL, con traducciones provisionales; el fichero

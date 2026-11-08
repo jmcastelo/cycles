@@ -137,7 +137,9 @@ Usa las tablas de la efeméride y el modelo de ciclo (o el de una sesión); los 
 | `surya_siddhanta`* | H1: los planetas en 0° de Aries en las fronteras de los yugas, con y sin el ancla, en ambos zodiacos |
 | `great_conjunctions`* | H2: distancia de las fronteras (profundidad 1 a 5) a las grandes conjunciones y a los cambios de trígono |
 | `outer_conjunctions`* | H3: lo mismo con las conjunciones de los planetas exteriores |
-| `summary`* | las 29 pruebas con la corrección de Holm; con `--save`, `summary.csv` |
+| `mean_planets`* | H1m: los planetas medios del Sūrya Siddhānta en 0° de Aries (cinco fronteras, sin el ancla, Treta y Kali, Treta) y cuánto se alejan del cielo los movimientos medios del texto |
+| `model_map` | todos los modelos (ancla × arco) frente a los acontecimientos, con el p global de la búsqueda |
+| `summary`* | las 37 pruebas con la corrección de Holm; con `--save`, `summary.csv` |
 
 ### `study_of_sound.py`: sonido
 
