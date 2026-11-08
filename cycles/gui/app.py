@@ -3,7 +3,7 @@
 import sys
 
 from PySide6.QtCore import QSettings, Qt
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtGui import QAction, QActionGroup, QKeySequence
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QDockWidget, QLabel, QLineEdit, QMainWindow, QMessageBox, QSpinBox,
     QToolBar, QToolButton, QVBoxLayout, QWidget,
@@ -241,7 +241,8 @@ class MainWindow(QMainWindow):
         state.modelChanged.connect(self._fill_model_box)
         state.presetsChanged.connect(self._fill_model_box)
 
-        bar.addWidget(QLabel('  Color '))
+        bar.addSeparator()
+        bar.addWidget(QLabel(' Color '))
         self.color_box = QComboBox()
         # in groups: of the address, of a measure, of the cycle model
         for group in (LEVEL_COLOR_KEYS, MEASURE_COLOR_KEYS, MODEL_COLOR_KEYS, SKY_COLOR_KEYS):
@@ -261,7 +262,8 @@ class MainWindow(QMainWindow):
         color_button.clicked.connect(self.show_color_dialog)
         bar.addWidget(color_button)
 
-        bar.addWidget(QLabel('  Levels '))
+        bar.addSeparator()
+        bar.addWidget(QLabel(' Levels '))
         self.rows_box = QSpinBox()
         self.rows_box.setRange(1, 6)
         self.rows_box.setValue(state.rows)
@@ -269,42 +271,8 @@ class MainWindow(QMainWindow):
         self.rows_box.valueChanged.connect(state.set_rows)
         bar.addWidget(self.rows_box)
 
-        bar.addWidget(QLabel('  Widths '))
-        self.spacing_box = QComboBox()
-        self.spacing_box.addItem('by duration', 'time')
-        self.spacing_box.addItem('equal', 'index')
-        self.spacing_box.setToolTip('By duration: the horizontal axis is time. Equal: it is the index.')
-        self.spacing_box.currentIndexChanged.connect(
-            lambda i: state.set_spacing(self.spacing_box.itemData(i)))
-        bar.addWidget(self.spacing_box)
-
-        bar.addWidget(QLabel('  Names '))
-        self.names_box = QComboBox()
-        for label, names in NAME_SETS.items():
-            self.names_box.addItem(label, names)
-        self.names_box.currentIndexChanged.connect(lambda i: state.set_names(self.names_box.itemData(i)))
-        bar.addWidget(self.names_box)
-
-        bar.addWidget(QLabel('  Labels '))
-        self.labels_box = QComboBox()
-        for key, label in LABEL_MODES.items():
-            self.labels_box.addItem(label, key)
-        self.labels_box.setToolTip('Names (rotated in tall cells) and/or dots: 4 for Satya, 3 Treta, 2 Dvapara, '
-                                   '1 Kali')
-        self.labels_box.setCurrentIndex(self.labels_box.findData(state.labels))
-        self.labels_box.currentIndexChanged.connect(lambda i: state.set_labels(self.labels_box.itemData(i)))
-        bar.addWidget(self.labels_box)
-        self.borders_box = QCheckBox('Borders')
-        self.borders_box.setChecked(state.borders)
-        self.borders_box.toggled.connect(state.set_borders)
-        bar.addWidget(self.borders_box)
-
-        # a second row: what to highlight, the query, and the comparison of the division criteria
-        self.addToolBarBreak()
-        bar = QToolBar('Highlight')
-        bar.setObjectName('highlight')
-        self.addToolBar(bar)
-        bar.addWidget(QLabel('Highlight '))
+        bar.addSeparator()
+        bar.addWidget(QLabel(' Highlight '))
         self.highlight_box = QComboBox()
         for key, label in HIGHLIGHTS.items():
             self.highlight_box.addItem(label, key)
@@ -318,22 +286,14 @@ class MainWindow(QMainWindow):
         self.query_edit = QLineEdit()
         self.query_edit.setPlaceholderText('query, e.g. trend > 0.3 and dharma < 0.5')
         self.query_edit.setClearButtonEnabled(True)
-        self.query_edit.setMinimumWidth(240)
+        self.query_edit.setMinimumWidth(260)
         self.query_edit.setToolTip(QUERY_HELP)
         self.query_edit.editingFinished.connect(self._apply_query)
         bar.addWidget(self.query_edit)
         self.query_info = QLabel()
         bar.addWidget(self.query_info)
-        bar.addSeparator()
         for signal in (state.viewChanged, state.selectionChanged, state.focusChanged, state.colorParametersChanged):
             signal.connect(self._show_query)
-        self.criteria_box = QCheckBox('Criteria')
-        self.criteria_box.setToolTip(
-            'Compare the two criteria for dividing the cycle, 4:3:2:1 of the precession arc and 4:3:2:1 of the '
-            'years:\nwhere the one that is not the model\'s division puts the boundaries (dashed), with the gap '
-            'shaded.\nThe tooltip of a subcycle gives the dates. Needs a cycle model.')
-        self.criteria_box.toggled.connect(state.set_compare_criteria)
-        bar.addWidget(self.criteria_box)
 
         state.viewChanged.connect(self._sync_toolbar)
 
@@ -424,15 +384,59 @@ class MainWindow(QMainWindow):
         self.color_box.setCurrentText(state.color_key)
         self.highlight_box.setCurrentIndex(self.highlight_box.findData(state.highlight))
         self.rows_box.setValue(state.rows)
-        self.spacing_box.setCurrentIndex(self.spacing_box.findData(state.spacing))
-        names = next((i for i in range(self.names_box.count())
-                      if tuple(self.names_box.itemData(i)) == tuple(state.names)), -1)
-        if names >= 0:
-            self.names_box.setCurrentIndex(names)
-        self.labels_box.setCurrentIndex(self.labels_box.findData(state.labels))
-        self.borders_box.setChecked(state.borders)
-        self.criteria_box.setChecked(state.compare_criteria)
+        self.spacing_actions[state.spacing].setChecked(True)
+        names = next((label for label, names in NAME_SETS.items() if tuple(names) == tuple(state.names)), None)
+        if names is not None:
+            self.names_actions[names].setChecked(True)
+        self.labels_actions[state.labels].setChecked(True)
+        self.borders_action.setChecked(state.borders)
+        self.criteria_action.setChecked(state.compare_criteria)
         self.sky_panel.follow.setChecked(state.follow)
+
+    def _build_view_options(self, menu) -> None:
+        """How the navigator draws the cycle: widths, names, labels, borders, the comparison of the criteria."""
+        state = self.state
+        menu.setToolTipsVisible(True)
+
+        def choices(title: str, options: dict, setter, tip: str = '') -> dict:
+            submenu = menu.addMenu(title)
+            submenu.setToolTipsVisible(True)
+            if tip:
+                submenu.menuAction().setToolTip(tip)
+            group = QActionGroup(self)
+            actions = {}
+            for key, (label, value) in options.items():
+                action = QAction(label, self, checkable=True)
+                if tip:
+                    action.setToolTip(tip)
+                action.toggled.connect(lambda on, value=value: setter(value) if on else None)
+                group.addAction(action)
+                submenu.addAction(action)
+                actions[key] = action
+            return actions
+
+        self.spacing_actions = choices('&Widths', {'time': ('By &duration', 'time'), 'index': ('&Equal', 'index')},
+                                       state.set_spacing, 'By duration: the horizontal axis is time. Equal: it is '
+                                                          'the index.')
+        self.names_actions = choices('&Names', {label: (f"&{label}", names) for label, names in NAME_SETS.items()},
+                                     state.set_names)
+        self.labels_actions = choices('&Labels', {key: (f"&{label}", key) for key, label in LABEL_MODES.items()},
+                                      state.set_labels, 'Names (rotated in tall cells) and/or dots: 4 for Satya, '
+                                                        '3 Treta, 2 Dvapara, 1 Kali')
+        self.borders_action = QAction('&Borders', self, checkable=True)
+        self.borders_action.setShortcut(QKeySequence('Ctrl+Shift+B'))
+        self.borders_action.setToolTip('A border round every cell')
+        self.borders_action.toggled.connect(state.set_borders)
+        menu.addAction(self.borders_action)
+        self.criteria_action = QAction('Compare the division &criteria', self, checkable=True)
+        self.criteria_action.setShortcut(QKeySequence('Ctrl+Shift+C'))
+        self.criteria_action.setToolTip(
+            'Compare the two criteria for dividing the cycle, 4:3:2:1 of the precession arc and 4:3:2:1 of the '
+            'years:\nwhere the one that is not the model\'s division puts the boundaries (dashed), with the gap '
+            'shaded.\nThe tooltip of a subcycle gives the dates. Needs a cycle model.')
+        self.criteria_action.toggled.connect(state.set_compare_criteria)
+        menu.addAction(self.criteria_action)
+        self._sync_toolbar()
 
     def _build_menus(self) -> None:
         file_menu = self.menuBar().addMenu('&File')
@@ -481,6 +485,8 @@ class MainWindow(QMainWindow):
         whole.setShortcut(QKeySequence('Ctrl+Home'))
         whole.triggered.connect(lambda: self.state.set_focus(()))
         view_menu.addAction(whole)
+        view_menu.addSeparator()
+        self._build_view_options(view_menu)
         view_menu.addSeparator()
         bookmark = QAction('&Bookmark the selection', self)
         bookmark.setShortcut(QKeySequence('Ctrl+B'))

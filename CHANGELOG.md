@@ -72,6 +72,9 @@ Planetary events and significance tests.
   time map and the ayanamsa are interpolated on a fine grid (`cycle_analysis.dense_years`, `dense_ayanamsa`; well
   under a day), and the inspector computes the measures of the sky for the selected subcycle alone. The group
   explorer lists up to S_8.
+- **A tidier toolbar**: one row, grouped by topic with separators (the cycle model; the coloring; the levels; the
+  highlight and the query). The drawing options set once moved to the *View* menu as checkable items: *Widths*,
+  *Names*, *Labels*, *Borders* (`Ctrl+Shift+B`) and *Compare the division criteria* (`Ctrl+Shift+C`).
 - **Tests in parallel**: `pytest-xdist` in the `test` extra; `pytest -n 8` runs the suite in under a minute instead
   of nine.
 - **README**: a short introduction with installation, a quick start, the chapters of the documentation and the

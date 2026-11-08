@@ -33,7 +33,7 @@ def test_the_years_criterion_divides_the_years_4_3_2_1(window):
 def test_the_navigator_draws_the_other_criterion(window, spin):
     state = window.state
     navigator = window.navigator
-    window.criteria_box.setChecked(True)
+    window.criteria_action.setChecked(True)
     assert state.compare_criteria
     state.set_focus((3,))
     spin()
@@ -42,7 +42,7 @@ def test_the_navigator_draws_the_other_criterion(window, spin):
     assert navigator._criteria_shown == ['time']        # the default model divides by angle
     text = navigator.criteria_text((3, 2))
     assert text.startswith('\nBy 4:3:2:1 of the years: starts') and 'years)' in text
-    window.criteria_box.setChecked(False)
+    window.criteria_action.setChecked(False)
     spin()
     navigator.repaint()
     assert navigator._criteria_shown == [] and navigator.criteria_text((3, 2)) == ''

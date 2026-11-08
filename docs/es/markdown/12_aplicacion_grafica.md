@@ -36,8 +36,8 @@ criterio, y sus marcadores.
 
 ### La barra de herramientas
 
-La barra tiene dos filas: la primera elige el modelo y cómo se dibuja el ciclo; la segunda, qué se resalta (con la
-consulta) y la comparación de los criterios.
+La barra agrupa sus controles por tema, separados por líneas finas: el modelo de ciclo, el coloreado, los niveles
+y el resaltado.
 
 | Control | Qué elige |
 |---|---|
@@ -46,17 +46,26 @@ consulta) y la comparación de los criterios.
 | *Landscape* | abre el panel *Model landscape* |
 | *Color* y *Parameters…* | el coloreado (los veintiséis de `COLOR_KEYS`, en cuatro grupos: de la dirección, de las medidas, del modelo de ciclo y del cielo, con la descripción de cada uno al pasar por encima; los del modelo, en gris sin modelo, y los del cielo, también sin la efeméride del panel *Sky*) y sus parámetros (12.14) |
 | *Levels* | cuántas filas se dibujan bajo el zoom (1 a 6) |
+| *Highlight* | alrededor de la selección, los subciclos de su profundidad con la misma duración, la misma composición o su órbita bajo ⟨σ⟩ (con su imagen por σ en púrpura discontinuo); o, en todas las profundidades, los que cumplen la **consulta** (*Matching the query*, abajo); los demás se atenúan en el navegador y los resaltados se rodean en los gráficos |
+| consulta | la condición del resaltado *Matching the query*, y cuántos subciclos la cumplen |
+
+### El menú *View*
+
+Las opciones de dibujo que se fijan una vez están en el menú *View*, con una marca en la elegida:
+
+| Opción | Qué elige |
+|---|---|
 | *Widths* | anchura por duración (el eje es el tiempo) o igual para todos (el eje es el índice) |
 | *Names* | yugas (Satya…) o edades (Golden…) |
 | *Labels* | nombres (verticales en celdas altas y estrechas), puntos (4 Satya, 3 Treta, 2 Dvapara, 1 Kali), ambos o ninguno |
-| *Borders* | borde en cada celda |
-| *Highlight* (segunda fila) | alrededor de la selección, los subciclos de su profundidad con la misma duración, la misma composición o su órbita bajo ⟨σ⟩ (con su imagen por σ en púrpura discontinuo); o, en todas las profundidades, los que cumplen la **consulta** (*Matching the query*, abajo); los demás se atenúan en el navegador y los resaltados se rodean en los gráficos |
-| consulta (segunda fila) | la condición del resaltado *Matching the query*, y cuántos subciclos la cumplen |
-| *Criteria* (segunda fila) | dibuja dónde pondría las fronteras el criterio que no es la división del modelo (4:3:2:1 del arco o de los años): discontinuas, con el hueco hasta la frontera propia sombreado, en las filas cuyas celdas tienen unos píxeles de ancho (capítulo 8) |
+| *Borders* (`Ctrl+Mayús+B`) | borde en cada celda |
+| *Compare the division criteria* (`Ctrl+Mayús+C`) | dibuja dónde pondría las fronteras el criterio que no es la división del modelo (4:3:2:1 del arco o de los años): discontinuas, con el hueco hasta la frontera propia sombreado, en las filas cuyas celdas tienen unos píxeles de ancho (capítulo 8) |
+
+El mismo menú tiene *Zoom out* (`Ctrl+↑`), *Whole cycle* (`Ctrl+Inicio`) y *Bookmark the selection* (`Ctrl+B`).
 
 ### Resaltar con una consulta
 
-El campo de la segunda fila de la barra admite una **condición** sobre los subciclos, como
+El campo de consulta de la barra admite una **condición** sobre los subciclos, como
 `trend > 0.3 and dharma < 0.5`. Con Intro se aplica y el resaltado pasa a *Matching the query*: en cada fila
 del navegador quedan vivos los subciclos que la cumplen y los demás se atenúan; en los paneles *Measures* y *Color
 space* se rodean, a la profundidad que muestren. Al lado se lee cuántos la cumplen a la profundidad de la
@@ -416,6 +425,7 @@ modelo y los colores que se ven), y muestra su salida. *Open plots folder* abre 
 | `Ctrl+D` | dosier del subciclo |
 | `Ctrl+T` | estudios |
 | `Ctrl+B` | marcar la selección |
+| `Ctrl+Mayús+B` / `Ctrl+Mayús+C` | bordes de las celdas / comparar los criterios de división |
 | `Ctrl+↑` / `Ctrl+Inicio` | reducir el zoom / todo el ciclo |
 | `Alt+1` … `Alt+9`, `Alt+0` | mostrar u ocultar cada panel |
 | `Ctrl+Alt+T/S/V/G/B` | disposiciones: pestañas, lado a lado, apilados, rejilla, debajo |
