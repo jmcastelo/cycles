@@ -2,17 +2,18 @@
 
 ## 3.1 La acción
 
-Una permutación σ de las *m* posiciones de los dígitos actúa sobre las direcciones reordenando sus dígitos.
+Una permutación $\sigma$ de las $m$ posiciones de los dígitos actúa sobre las direcciones reordenando sus dígitos.
 Como la duración solo depende de la composición (capítulo 1), **toda permutación de posiciones conserva las
 duraciones**: mueve cada subciclo a otro lugar del ciclo con la misma duración (y la misma composición).
 
 La convención es la de `SymmetricGroup.operation` (paquete `symmetry-math`), que siguen el código y el
 explorador:
 
-```
-(a ∘ b)[i] = a[b[i]]                         composición de permutaciones
-dirección a ↦ a ∘ σ:   (a ∘ σ)[i] = a[σ[i]]   el dígito i de la imagen es el dígito σ[i] del original
-```
+$$
+(a \circ b)_i = a_{b_i} \quad\text{(composición)}, \qquad a \mapsto a \circ \sigma, \quad (a \circ \sigma)_i = a_{\sigma_i}
+$$
+
+es decir, el dígito $i$ de la imagen es el dígito $\sigma_i$ del original.
 
 Ejemplo: con el desplazamiento cíclico σ = (1 2 0) (en notación de una línea: la posición 0 toma el dígito de
 la 1, la 1 el de la 2 y la 2 el de la 0), Kali › Treta › Dvapara = (3, 1, 2) va a (1, 2, 3) = Treta ›
@@ -40,9 +41,9 @@ Kali › Dvapara › Treta. La posición 0 de σ es siempre el primer dígito so
 El índice de la imagen se calcula para todos los subciclos a la vez: si la cola tiene dígitos *a_j*, la imagen
 de σ ocupa el lugar
 
-```
-lugar = Σ_j a_j · 4^(m − 1 − σ⁻¹(j))
-```
+$$
+\operatorname{lugar} = \sum_j a_j\, 4^{\,m - 1 - \sigma^{-1}(j)}
+$$
 
 así que, para un bloque de permutaciones, los lugares son un solo producto de matrices (lo usa el explorador
 de grupo). `permutation_matrix(σ, lcoords)` construye la matriz de permutación de la acción sobre un nivel:
@@ -56,14 +57,14 @@ dibuja los recorridos en el panel de permutaciones.
 
 ![Las potencias del desplazamiento cíclico (0 1 2) sobre los 64 subciclos de profundidad 3, en todo el ciclo; en naranja, el recorrido del subciclo del momento del cielo](figuras/permutacion_potencias.png)
 
-**Puntos fijos.** σ deja fijo un subciclo si sus dígitos son constantes en cada ciclo de σ: hay 4^c, siendo *c*
-el número de ciclos de σ (puntos fijos incluidos).
+**Puntos fijos.** $\sigma$ deja fijo un subciclo si sus dígitos son constantes en cada ciclo de $\sigma$: hay $4^{c(\sigma)}$,
+siendo $c(\sigma)$ el número de ciclos de $\sigma$ (puntos fijos incluidos).
 
 **Número de órbitas (lema de Burnside).** Es la media de los puntos fijos de las potencias:
 
-```
-órbitas de ⟨σ⟩ = (1/orden) · Σ_{r=0}^{orden−1} 4^c(σ^r)
-```
+$$
+\#\text{órbitas de } \langle\sigma\rangle = \frac{1}{\operatorname{ord}\sigma} \sum_{r=0}^{\operatorname{ord}\sigma - 1} 4^{\,c(\sigma^r)}
+$$
 
 | σ (sobre *m* dígitos) | Orden | Fijos | Órbitas |
 |---|---|---|---|
@@ -72,8 +73,8 @@ el número de ciclos de σ (puntos fijos incluidos).
 | (0 3)(1 2), inversión, *m* = 4 | 2 | 16 | (256 + 16)/2 = 136 |
 | (0 1), *m* = 4 | 2 | 64 | (256 + 64)/2 = 160 |
 
-Con todo el grupo simétrico S_m, la media de los puntos fijos de sus *m*! elementos es el número de órbitas de
-S_m, es decir, el de **composiciones**: C(*m* + 3, 3) (35 para *m* = 4). Es la misma cuenta del capítulo 1 vista
+Con todo el grupo simétrico $S_m$, la media de los puntos fijos de sus $m!$ elementos es el número de órbitas de
+$S_m$, es decir, el de **composiciones**: $\binom{m+3}{3}$ (35 para $m = 4$). Es la misma cuenta del capítulo 1 vista
 desde las permutaciones: dos direcciones son ordenaciones una de otra si y solo si tienen la misma composición.
 
 ## 3.5 Lo que cambia y lo que no
@@ -105,5 +106,5 @@ pureza. Se puede ordenar y filtrar, y elegir un elemento lo carga en el panel.
 
 - σ reordena los dígitos de la cola de cada dirección: a ↦ a ∘ σ.
 - Conserva duraciones y composiciones; mueve lugares, colores y medidas.
-- Fijos: 4^(ciclos de σ). Órbitas de ⟨σ⟩: media de los fijos de sus potencias (Burnside).
-- Las órbitas de todo S_m son las composiciones: C(*m* + 3, 3).
+- Fijos: $4^{c(\sigma)}$. Órbitas de $\langle\sigma\rangle$: media de los fijos de sus potencias (Burnside).
+- Las órbitas de todo $S_m$ son las composiciones: $\binom{m+3}{3}$.

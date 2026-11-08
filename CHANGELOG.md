@@ -8,6 +8,34 @@ current one: `tests/test_version.py` checks it, and the docs' LaTeX converter re
 When releasing a version: describe it here, raise `__version__`, update the docs (and their version line), and tag
 the commit `vX.Y.Z`.
 
+## 0.3.0 — 2026-11-08
+
+Planetary events and significance tests.
+
+- **Planetary events and significance tests** (`cycles.functions.events`, `cycles.functions.significance`,
+  `sandbox/study_of_events.py`): exact conjunctions over the whole cycle from the ephemeris, grouped into series;
+  the trigon (element) changes of the great conjunctions in the sidereal and the tropical zodiac; the planets
+  around a point of the zodiac; tests against rigid rotations of the subcycle boundaries, with Holm's correction.
+  Three hypotheses: the Sūrya Siddhānta gathering at 0° Aries, the great conjunctions and their trigon changes,
+  the outer-planet conjunctions.
+- **Events panel** in the explorer: each test interactively (catalogue, depth, whole cycle or the zoom,
+  rotations), the null distribution with the observed value, the events of the zoomed span (click one to show
+  its sky) and a layer of event marks in the navigator. Sessions and dossiers include it.
+- **Significance over all the models** (look-elsewhere): `cycle_analysis.boundary_grid` gives the boundaries of a
+  grid of models (anchor × arc, dividing the arc), `significance.scan_models` the distance of each to the events and
+  a global p from rigid shifts of the event catalogue (the best model of each shift); `expected_distance` gives the
+  distance of a random moment exactly. In the study (`model_map`) and in the Events panel (view *Over the models*:
+  the map, the closest models, a double click places the cycle there). With the default ranges no model comes
+  closer than chance once the search is taken into account.
+- **H1 with the mean planets** the Sūrya Siddhānta speaks of (`events.mean_longitudes`, from the mean elements of
+  Simon et al. 1994; `surya_siddhanta_longitudes`, from the text's revolutions per Mahāyuga): the study
+  `mean_planets` (five boundaries, without the anchor, Treta and Kali where the text's even revolutions conjoin
+  them, Treta alone) and the drift of the text's mean motions from the sky (closest around AD 1172, more than 20°
+  off at its own epoch); two more tests in the Events panel. Still nothing significant after Holm (37 tests).
+- **Docs**: the formulas are LaTeX in the Markdown (`$…$`, `$$…$$`, as GitHub renders them), typeset in the PDF
+  with `unicode-math` and Libertinus Math.
+- The panel arrangements put Events with the sky panels; the eleventh panel has no `Alt` shortcut.
+
 ## 0.2.0 — 2026-11-07
 
 The graphical explorer, the cycle model and the research tools.

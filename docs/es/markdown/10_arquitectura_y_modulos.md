@@ -46,6 +46,8 @@ tienen docstrings (`help(compute_level)`).
 | `timescale.py` | `TimeMap` (lineal, por fronteras de edades, por funciones), `address_label`, nombres de las edades |
 | `cycle_model.py` | `CycleModel`, presets y su fichero, `mean_rate` (capítulo 8) |
 | `cycle_analysis.py` | cuotas de tiempo, desviaciones, `mismatch_by_depth`, `mismatch_grid`, `fit_anchor`, `precession_rate` |
+| `events.py` | acontecimientos planetarios: conjunciones exactas y sus series, signos y elementos en ambos zodiacos, cambios de trígono, cuerpos alrededor de un punto (capítulo 15) |
+| `significance.py` | contrastes: distancia al acontecimiento más cercano, rotaciones rígidas, valores p, corrección de Holm |
 | `astro_dates.py` | calendarios, día juliano, año decimal, ΔT, UT ↔ TDB (capítulo 5) |
 | `nbody_ephemeris.py` | construir y consultar la efeméride, escalar y vectorizado (capítulo 6) |
 | `sound.py` | tonos y síntesis por ondículas a partir de los colores; escalogramas (`compute_scalogram`, `plot_scalogram`) |
@@ -143,7 +145,7 @@ de color actuales.
 | `state.py` | estado compartido, caché de niveles, utilidades (fechas, clases, órbitas, desglose de medidas) |
 | `navigator.py` | navegador: franja del ciclo, filas de subdivisiones, marcadores, criterios, marcadores de usuario |
 | `inspector.py`, `datepanel.py`, `notes.py` | paneles de texto: subciclo, fecha, notas y marcadores |
-| `sky.py`, `skycompare.py` | cielo de un instante; comparación de cielos |
+| `sky.py`, `skycompare.py`, `eventspanel.py` | cielo de un instante; comparación de cielos; acontecimientos planetarios y su significación |
 | `measures.py`, `colorspace.py`, `permutations.py`, `groupexplorer.py`, `compositions.py`, `landscape.py` | paneles de gráficos |
 | `modeldialog.py`, `colordialog.py`, `export.py`, `studies.py`, `dossier.py` | diálogos: modelo, colores, guardar gráfico, estudios, dosier |
 | `session.py`, `layouts.py` | sesiones; colocación de los paneles |
@@ -173,6 +175,7 @@ línea de versión, regenerar el LaTeX y etiquetar el commit `vX.Y.Z`. Con una i
 
 | Versión | Fecha | Contenido |
 |---|---|---|
+| 0.3.0 | 2026-11-08 | acontecimientos planetarios y contrastes de significación: cálculo, estudio y panel *Events*; mapa sobre todos los modelos; H1 con los planetas medios; fórmulas en LaTeX |
 | 0.2.0 | 2026-11-07 | el explorador, el modelo de ciclo, sesiones, marcadores, dosier, disposición de paneles, consultas vectorizadas, pruebas, esta documentación |
 | 0.1.0 | 2026-11-05 | la biblioteca de cálculo y los estudios del sandbox |
 

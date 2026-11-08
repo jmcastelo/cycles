@@ -39,9 +39,9 @@ criterio, y sus marcadores.
 | Control | Qué elige |
 |---|---|
 | *Cycle* | el modelo de ciclo (un preset, uno modificado, o tiempo normalizado) |
-| *Model…* | el editor del modelo (12.12) |
+| *Model…* | el editor del modelo (12.13) |
 | *Landscape* | abre el panel *Model landscape* |
-| *Color* y *Parameters…* | el coloreado (los diez de `COLOR_KEYS`) y sus parámetros (12.13) |
+| *Color* y *Parameters…* | el coloreado (los diez de `COLOR_KEYS`) y sus parámetros (12.14) |
 | *Levels* | cuántas filas se dibujan bajo el zoom (1 a 6) |
 | *Widths* | anchura por duración (el eje es el tiempo) o igual para todos (el eje es el índice) |
 | *Names* | yugas (Satya…) o edades (Golden…) |
@@ -201,7 +201,36 @@ doble clic en una etiqueta o una nota para editarla, en un subciclo para ir a é
 una esquina verde en el navegador, una marca en la franja del ciclo y su etiqueta y nota en la descripción
 emergente.
 
-## 12.12 El modelo de ciclo
+## 12.12 *Events*
+
+![El panel Events: distancia media de las 17 fronteras de profundidad 2 a las conjunciones de Júpiter y Saturno, frente a 5000 rotaciones de esas fronteras; debajo, las conjunciones del tramo](figuras/panel_eventos.png)
+
+Acontecimientos planetarios frente a las fronteras de los subciclos, con un contraste de significación (capítulo 15).
+Se elige la prueba:
+
+- conjunciones de Júpiter y Saturno, de Urano y Neptuno o de Neptuno y Plutón;
+- cambios de trígono de las grandes conjunciones, en el zodiaco sidéreo o en el trópico;
+- los planetas del Sol a Saturno en 0° de Aries, sidéreo (la afirmación del Sūrya Siddhānta) o trópico (el punto
+  vernal), verdaderos o medios (capítulo 15.5).
+
+Y la **vista**: *This model* (las fronteras del modelo actual frente a rotaciones de ellas) u *Over the models*
+(el mapa de todos los modelos, ancla × arco, con el p global que tiene en cuenta la búsqueda; capítulo 15.9: un
+doble clic en el mapa, o en una fila de la lista de los mejores, coloca allí el ciclo). También la profundidad de
+las fronteras (1 a 6), si se prueban en todo el ciclo o solo dentro del zoom, y el
+número de rotaciones. El gráfico muestra la distribución del estadístico para las rotaciones rígidas de las
+fronteras (gris), su media (discontinua) y el valor de las fronteras (rojo), con el valor p; el encabezado lo
+resume. La tabla lista los acontecimientos del tramo ampliado con su fecha (UT) y su posición en ambos zodiacos
+(como mucho 2000; con más, se indica que conviene ampliar); para la prueba de 0° de Aries, las fronteras con el
+ángulo medio de los planetas y el arco que los contiene. Pulsar una fila lleva allí el momento del cielo y
+selecciona el subciclo de esa profundidad que lo contiene.
+
+Con *Show in navigator*, los acontecimientos aparecen en el navegador como marcas rosas justo encima de la primera
+fila (translúcidas cuando son tantas que forman una banda), con su nombre y su número en un extremo de la banda de
+etiquetas. Los catálogos se calculan una vez con la efeméride del panel *Sky* y se guardan en disco
+(`sandbox/data/events/`), compartidos con `study_of_events.py`; el resultado es una sola prueba, y el estudio
+corrige la familia completa.
+
+## 12.13 El modelo de ciclo
 
 ![El editor del modelo de ciclo](figuras/dialogo_modelo.png)
 
@@ -211,7 +240,7 @@ los inicios de los yugas (UT), sus años, cuotas de tiempo y de arco, vueltas, a
 desviación de las cuotas. *Apply* lo aplica; *Save preset* y *Delete preset* gestionan los presets del usuario;
 *Best fit* busca el ancla y/o el arco que mejor cumplen ambos criterios (capítulo 8) y carga el resultado.
 
-## 12.13 Los parámetros de color
+## 12.14 Los parámetros de color
 
 ![El diálogo de parámetros de color](figuras/dialogo_colores.png)
 
@@ -221,7 +250,7 @@ no se aplican y se explica por qué. A la derecha, para una profundidad, cuánto
 se distinguen en una pantalla (redondeados a 256 niveles por canal). Los cambios se aplican al momento;
 *Revert* vuelve a los valores con que se abrió y *Defaults* a los de por defecto.
 
-## 12.14 Guardar gráficos
+## 12.15 Guardar gráficos
 
 ![El diálogo para guardar gráficos](figuras/dialogo_guardar.png)
 
@@ -231,7 +260,7 @@ Tabloid; vertical o apaisado), al tamaño de la pantalla o a medida (mm, cm, pul
 opcional; en PNG o JPEG a una resolución elegida, o en PDF, SVG o EPS (vectoriales; EPS solo para los paneles),
 con fondo blanco o transparente. El navegador se dibuja para la página con una paleta clara.
 
-## 12.15 Sesiones
+## 12.16 Sesiones
 
 Una **sesión** es todo lo que muestra el explorador, guardado en un fichero JSON (`*.cycles.json`; el proyecto los
 guarda en `sandbox/sessions/`, fuera del control de versiones):
@@ -260,7 +289,7 @@ fichero y sus cambios pendientes, así que no se pregunta nada al salir. Si la c
 no existe en este equipo se conserva la actual, y las partes que ya no encajan se avisan en la barra de estado.
 Un fichero que no es una sesión, o de una versión posterior, se rechaza sin cambiar nada.
 
-## 12.16 El dosier de un subciclo
+## 12.17 El dosier de un subciclo
 
 ![El diálogo del dosier](figuras/dialogo_dosier.png)
 
@@ -271,25 +300,25 @@ Letter, Legal, Tabloid; vertical o apaisado) con márgenes a elegir. Secciones (
    el código de que procede;
 2. **Navegador** alrededor del subciclo (con el zoom en su padre, sin mover el del explorador);
 3. **Cielo** en su inicio, centro y final (con efeméride);
-4. los gráficos de **Measures, Color space, Compositions, Permutations, Sky comparison y Model landscape** tal como
-   están configurados, recompuestos para la página;
+4. los gráficos de **Measures, Color space, Compositions, Permutations, Sky comparison, Model landscape y Events** tal
+   como están configurados, recompuestos para la página;
 5. **Notas y marcadores** de la sesión.
 
 El pie de cada página lleva el subciclo, la sesión, la fecha y la versión del programa. Texto y navegador son vectoriales; los gráficos también, o imágenes a una resolución elegida (más ligeras con
 muchos puntos). Las opciones se recuerdan; *Open it when written* lo abre al terminar. Con todo, en A4 son unas
 11 páginas, en unos 2 s.
 
-## 12.17 Disposición de los paneles
+## 12.18 Disposición de los paneles
 
 ![Disposición «alrededor del navegador»: información a la izquierda, cielo a la derecha, gráficos debajo](figuras/disposicion_alrededor.png)
 
-Los diez paneles pueden estar abiertos a la vez. El menú *Panels*:
+Los once paneles pueden estar abiertos a la vez. El menú *Panels*:
 
-- muestra u oculta cada uno (`Alt+1` a `Alt+9` y `Alt+0`);
+- muestra u oculta cada uno (`Alt+1` a `Alt+9` y `Alt+0`; el undécimo, *Events*, sin atajo);
 - los ordena en pestañas (`Ctrl+Alt+T`), lado a lado (`Ctrl+Alt+S`), apilados (`Ctrl+Alt+V`), en rejilla 2 × 2
   (`Ctrl+Alt+G`) o lado a lado bajo el navegador (`Ctrl+Alt+B`);
 - **Arrange around the navigator**: cada tipo de panel en su lado, en pestañas (información = Subcycle, Date,
-  Notes; cielo = Sky, Sky comparison; gráficos = el resto): *Left and right* (`Ctrl+Alt+L`), *Around the
+  Notes; cielo = Sky, Sky comparison, Events; gráficos = el resto): *Left and right* (`Ctrl+Alt+L`), *Around the
   navigator* (`Ctrl+Alt+A`, información a la izquierda, cielo a la derecha, gráficos debajo), *Left and below*
   (`Ctrl+Alt+D`). Los paneles cerrados siguen cerrados, pero colocados en su lado;
 - **Move a panel** (también con clic derecho en la barra de título o en la pestaña de un panel): a la izquierda, la
@@ -302,7 +331,7 @@ Los diez paneles pueden estar abiertos a la vez. El menú *Panels*:
 Los paneles también se pueden arrastrar (un grupo de pestañas, entero, por su barra de título). El navegador
 conserva siempre un mínimo de espacio. La disposición se guarda con la sesión y entre ejecuciones.
 
-## 12.18 El lanzador de estudios
+## 12.19 El lanzador de estudios
 
 ![El lanzador de estudios](figuras/lanzador_estudios.png)
 
@@ -311,7 +340,7 @@ marcados. Ejecuta los marcados (o uno con doble clic) como en la línea de órde
 *Save figures* (`--save`), *Show figures* (sin `--no-show`) y *With the explorer's session* (`--session` con el
 modelo y los colores que se ven), y muestra su salida. *Open plots folder* abre `sandbox/plots/`.
 
-## 12.19 Atajos de teclado
+## 12.20 Atajos de teclado
 
 | Atajo | Acción |
 |---|---|

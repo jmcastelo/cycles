@@ -96,4 +96,11 @@ if 'model' in WHICH:
     w.show_color_dialog(); end = time.time() + 3.0
     while time.time() < end: app.processEvents()
     w.color_dialog.grab().save(f"{OUT}/dialogo_colores.png")
+if 'events' in WHICH:
+    s.set_focus((3,)); s.select((3, 1)); spin()
+    w.show_panel('events'); spin()
+    ep = w.events_panel; dock = w.docks['events']; dock.setFloating(True); dock.resize(900, 760); spin(60)
+    ep.kind.setCurrentIndex(ep.kind.findData('great')); ep.depth.setValue(2); ep.render(); ep.canvas.draw(); spin(30)
+    dock.widget().grab().save(f"{OUT}/panel_eventos.png")
+    dock.setFloating(False); spin()
 print('ok')

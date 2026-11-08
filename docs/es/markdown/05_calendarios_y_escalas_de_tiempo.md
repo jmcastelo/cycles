@@ -36,9 +36,9 @@ medianoche es el **JD 588 465,5**. El día juliano es siempre exacto; la fecha e
 
 ## 5.4 El año decimal
 
-```
-año = 2000 + (JD − 2 451 545,0) / 365,25
-```
+$$
+\text{año} = 2000 + \frac{\mathrm{JD} - 2\,451\,545{,}0}{365{,}25}
+$$
 
 Son **años julianos** de 365,25 días anclados en J2000.0: la unidad de la tasa de precesión y la variable de
 las funciones de precesión, de los mapas de tiempo y del explorador. Un año decimal entero **no cae en el 1 de
@@ -55,7 +55,7 @@ febrero de 3102 a. C. (juliano) es el año decimal −3100,834.
 | **TT** | tiempo terrestre, uniforme |
 | **TDB** | tiempo dinámico baricéntrico, la variable de las efemérides; difiere de TT en a lo sumo 1,7 ms |
 
-**TT = UT + ΔT**, y TDB ≈ TT. Las efemérides y las coordenadas eclípticas trabajan en **TDB**; las fechas civiles
+$\mathrm{TT} = \mathrm{UT} + \Delta T$, y $\mathrm{TDB} \approx \mathrm{TT}$. Las efemérides y las coordenadas eclípticas trabajan en **TDB**; las fechas civiles
 (textos, calendarios, el ancla de un modelo de ciclo) están en **UT**. El explorador trabaja en UT y convierte a
 TDB al calcular el cielo (`time_scale="UT"`). ΔT crece hacia el pasado: unos 2 minutos hacia 1600, 2,9 horas en
 el año 0 y unas **21,5 horas** hacia 3100 a. C.; un día de error mueve el Sol casi 1°.

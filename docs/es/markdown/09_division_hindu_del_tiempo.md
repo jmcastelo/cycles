@@ -27,11 +27,11 @@ textos. Es el objeto de estudio del proyecto, no una afirmación sobre las fuent
 ## 9.2 ¿Es fractal?
 
 En sentido estricto, **no**: el intervalo se divide en piezas cuyas razones de semejanza suman 1, y la dimensión
-de similitud *s* de la **ecuación de Moran** `Σ rᵢ^s = 1` es exactamente **1**: la estructura rellena el
+de similitud $s$ de la **ecuación de Moran**, $\sum_i r_i^{\,s} = 1$, es exactamente **1**: la estructura rellena el
 intervalo. Aparecen fractales al retener solo algunas piezas en cada nivel, o al usar una medida distinta de la
 longitud:
 
-| Piezas retenidas en cada nivel | Dimensión *s* |
+| Piezas retenidas en cada nivel | Dimensión $s$ |
 |---|---:|
 | las cuatro | 1,0000 |
 | sin el Kali (0,4; 0,3; 0,2) | 0,9099 |
@@ -91,6 +91,13 @@ que el Kali empezara en 3104 a. C. Es uno de los presets del modelo de ciclo.
 (conjunciones, oposiciones, trígonos…) hay un evento aproximadamente **cada 0,6 años**: encontrar *alguna*
 configuración notable en una fecha dada no tiene valor probatorio. El panel *Sky comparison* del explorador
 (capítulo 12) hace este tipo de contraste de forma sistemática, comparando con instantes al azar.
+
+**Los planetas medios del propio texto** (capítulo 15.5): el Sūrya Siddhānta pone sus planetas medios en 0° de
+Aries al inicio del Kali. Los planetas medios reales estaban entonces a 22° de media de ese punto (todos dentro de
+64°): una reunión, pero no la conjunción exacta. Los movimientos medios del texto coinciden con el cielo hacia el
+año 1172 y se alejan más de 20° en su propia época, de modo que la conjunción del Kali es un cálculo hacia atrás con
+parámetros muy posteriores; y la otra conjunción que implican (al inicio del Treta, porque todas sus revoluciones
+por Mahāyuga son pares) no está en el cielo real.
 
 ## 9.5 Pasajes puránicos sobre el cambio de yuga
 

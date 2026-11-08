@@ -16,6 +16,7 @@ from cycles.gui.compositions import CompositionsPanel
 from cycles.gui.skycompare import SkyComparisonPanel
 from cycles.gui.landscape import LandscapePanel
 from cycles.gui.notes import NotesPanel
+from cycles.gui.eventspanel import EventsPanel
 from cycles.gui.layouts import AROUND, PanelPlacement, set_corners
 from cycles.gui.session import SessionManager
 from cycles.gui.permutations import PermutationsPanel
@@ -31,7 +32,7 @@ from cycles.gui.state import HIGHLIGHTS, LABEL_MODES, MAX_DEPTH, NAME_SETS, Cycl
 
 
 # Version of the saved panel layout (increase when the panels change)
-LAYOUT_VERSION = 7
+LAYOUT_VERSION = 8
 
 
 class MainWindow(QMainWindow):
@@ -68,6 +69,7 @@ class MainWindow(QMainWindow):
         self.skycompare_panel = SkyComparisonPanel(self.sky_panel, self.state)
         self.landscape_panel = LandscapePanel(self.state)
         self.notes_panel = NotesPanel(self.state)
+        self.events_panel = EventsPanel(self.sky_panel, self.state)
         self.docks = {
             'inspector': self._make_dock('Subcycle', 'inspector', self.inspector),
             'date': self._make_dock('Date', 'date', self.date_panel),
@@ -79,6 +81,7 @@ class MainWindow(QMainWindow):
             'skycompare': self._make_dock('Sky comparison', 'skycompare', self.skycompare_panel),
             'landscape': self._make_dock('Model landscape', 'landscape', self.landscape_panel),
             'notes': self._make_dock('Notes', 'notes', self.notes_panel),
+            'events': self._make_dock('Events', 'events', self.events_panel),
         }
         self.launcher: StudyLauncher | None = None
         self.model_dialog: CycleModelDialog | None = None
@@ -87,7 +90,7 @@ class MainWindow(QMainWindow):
         for key, panel in (('sky', self.sky_panel), ('measures', self.measures_panel),
                            ('colorspace', self.colorspace_panel), ('permutations', self.permutations_panel),
                            ('compositions', self.compositions_panel), ('skycompare', self.skycompare_panel),
-                           ('landscape', self.landscape_panel)):
+                           ('landscape', self.landscape_panel), ('events', self.events_panel)):
             panel.saveRequested.connect(lambda key=key: self.save_graph(key))
         self.sky_panel.compareRequested.connect(lambda: self.show_panel('skycompare'))
 
@@ -417,7 +420,8 @@ class MainWindow(QMainWindow):
         panels_menu = self.menuBar().addMenu('&Panels')
         for k, dock in enumerate(self.docks.values(), 1):
             action = dock.toggleViewAction()
-            action.setShortcut(QKeySequence(f'Alt+{k % 10}'))      # the tenth: Alt+0
+            if k <= 10:
+                action.setShortcut(QKeySequence(f'Alt+{k % 10}'))  # the tenth: Alt+0
             panels_menu.addAction(action)
         panels_menu.addSeparator()
         for label, layout, key in (('Arrange as &tabs', 'tabs', 'Ctrl+Alt+T'),
@@ -559,6 +563,7 @@ class MainWindow(QMainWindow):
                           self.skycompare_panel.fit_charts),
             figure_source('landscape', 'Model landscape', self.landscape_panel, self.landscape_panel.title,
                           self.landscape_panel.finish),
+            figure_source('events', 'Events', self.events_panel, self.events_panel.title),
         ]
 
     def save_graph(self, key: str | None = None) -> None:
@@ -568,7 +573,7 @@ class MainWindow(QMainWindow):
             key = next((name for name, dock in self.docks.items()
                         if focus is not None and dock.isAncestorOf(focus) and name in
                         ('sky', 'measures', 'colorspace', 'permutations', 'compositions', 'skycompare',
-                                                       'landscape')),
+                                                       'landscape', 'events')),
                        'navigator')
         if self.export_dialog is None:
             self.export_dialog = ExportDialog(self.graph_sources(), key, self)

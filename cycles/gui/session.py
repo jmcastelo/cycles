@@ -48,6 +48,7 @@ PANEL_WIDGETS = {
     'permutations_panel': ('view', 'acts', 'depth', 'lines', 'preset', 'element'),
     'compositions_panel': ('depth', 'inside', 'color_by', 'lines', 'labels', 'view'),
     'landscape_panel': ('depth', 'measure', 'resolution', 'anchor_from', 'anchor_to', 'turns_from', 'turns_to'),
+    'events_panel': ('kind', 'view', 'depth', 'inside', 'rotations', 'show_marks'),
 }
 CAMERA_PANELS = ('measures_panel', 'colorspace_panel', 'compositions_panel')
 

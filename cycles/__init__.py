@@ -7,4 +7,4 @@ and dossiers record it, and the Spanish docs (``docs/es``) state the version the
 one (``tests/test_version.py``). Each version is described in ``CHANGELOG.md``.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

@@ -29,9 +29,9 @@ las estrellas; el **sidéreo** (doce signos fijos respecto a las estrellas) no. 
 
 ### Modelo lineal (`lahiri_ayanamsa`)
 
-```
-A(año) = 23,853° + (año − 2000) × 50,29″ / 3600
-```
+$$
+A(\text{año}) = 23{,}853^\circ + (\text{año} - 2000) \times \frac{50{,}29''}{3600}
+$$
 
 Una vuelta son 1 296 000″ / 50,29″/año = **25 770,5 años**. No tiene validez física más allá de unos pocos
 milenios: la tasa de precesión varía. Los esquemas lo advierten cuando el año está a más de 6000 años de J2000.
@@ -46,9 +46,9 @@ transcribieron de la biblioteca ERFA (derivada de SOFA, de la IAU) y se contrast
 2. Con ellos se calcula la **longitud eclíptica de la fecha** de una dirección fija de referencia (Spica).
 3. Se acumula el cambio continuo desde J2000.0, desenrollando la longitud para no perder vueltas:
 
-```
-A(año) = 23,853° + [λ_Spica(año) − λ_Spica(2000)]
-```
+$$
+A(\text{año}) = 23{,}853^\circ + \left[\lambda_{\text{Spica}}(\text{año}) - \lambda_{\text{Spica}}(2000)\right]
+$$
 
 La dirección de referencia es **fija** (sin movimiento propio de Spica). Coincide con la precesión IAU 2006 en
 J2000.0; según ERFA, su exactitud es de segundos de arco en el periodo histórico y de décimas de grado en los

@@ -211,6 +211,8 @@ cycles/
     timescale.py            normalized time <-> physical time (TimeMap)
     cycle_model.py          the yuga cycle in history: anchor, scale, division, presets
     cycle_analysis.py       agreement of the time and angle criteria; mismatch grid, best-fit anchor and arc
+    events.py               planetary events over long spans: conjunctions, trigon changes, planets around a point
+    significance.py         significance tests: rigid rotations of the boundaries, p-values, Holm's correction
     astro_dates.py          calendar dates <-> Julian Day <-> decimal year, UT <-> TDB
     nbody_ephemeris.py      long-term planetary ephemeris by N-body integration (one moment or many)
     view.py                 3D camera angles for matplotlib
@@ -241,6 +243,7 @@ cycles/
     groupexplorer.py        group explorer: every element of S_m in a sortable table
     compositions.py         Compositions panel: the tetrahedron of compositions
     landscape.py            Model landscape panel: the criteria mismatch over anchor × arc
+    eventspanel.py          Events panel: planetary events against the boundaries, with a significance test
     notes.py                Notes panel: the notes and bookmarks of the session
     layouts.py              placing the panels around the navigator: moves, arrangements, corners, named layouts
     session.py              sessions: saving and opening everything shown, restoring the last one
@@ -261,6 +264,7 @@ sandbox/                  study scripts, one per topic
   study_of_permutations.py  permutations of the digit positions
   study_of_precession.py    the yugas against the precession, with the sky at their boundaries
   study_of_sound.py         sounds synthesised from subcycles
+  study_of_events.py        planetary events against the boundaries, with significance tests
   data/, plots/, docs/      ephemeris tables, saved figures, reference papers (not in the repository)
 docs/es/                  documentation in Spanish: the project, the astronomy, the code and the explorer
   markdown/                 the chapters (00 index and glossary to 14 results and open questions) and figuras/
@@ -274,6 +278,7 @@ tests/                    pytest tests (see Tests)
   test_color.py             color parameter ranges that keep each level's colors unique
   test_cycle_model.py       the presets, their time maps and boundaries
   test_landscape.py         the mismatch over anchor × arc, its period, the Model landscape panel
+  test_events.py            conjunctions and trigon changes against known dates; the significance tests
   test_gui_panels.py        dock arrangements and reopening closed panels
   test_gui_layouts.py       panels around the navigator: moves, arrangements, corners, named layouts
   test_gui_navigator.py     tag band, dragging the tags, Shift+click
@@ -285,6 +290,7 @@ tests/                    pytest tests (see Tests)
   test_gui_criteria_skycompare.py  criteria overlay and Sky comparison panel
   test_gui_session.py       sessions, restoring the last one, bookmarks, the launcher's session
   test_gui_dossier.py       the dossier: summary, paper, sections, dialog
+  test_gui_events.py        the Events panel: the test, the zoom, the navigator layer, sessions
   test_session_studies.py   studies run with a session (--session)
   test_version.py           the version: pyproject, changelog, docs and explorer in step
 pyproject.toml            package metadata, dependencies, the cycles-gui command, pytest settings
@@ -361,6 +367,30 @@ and a batch run that saves every figure. They use the interpreter in `.venv`.
 | `study_of_fill_partitions.py`| covering a time span with subcycles                       |
 | `study_of_sound.py`          | tones, wavelets and scalograms                            |
 | `study_of_precession.py`     | yugas against precession; charts at subcycle starts       |
+| `study_of_events.py`         | planetary events (conjunctions, trigon changes, the planets at 0° Aries) against the boundaries, with significance tests |
+
+`study_of_events.py` asks whether the subcycle boundaries fall on planetary
+events more than chance would place them, in the sidereal (Lahiri) and the
+tropical zodiac: the Sūrya Siddhānta claim that the planets stand together at
+0° Aries at the yuga boundaries (with the true planets, and with the mean
+planets the text speaks of: `mean_planets` also shows that the text's mean
+motions fit the sky around AD 1172 and are more than 20° off at its own epoch,
+the start of Kali), the Jupiter–Saturn great conjunctions and the
+changes of their trigon (element, counted when the conjunctions settle in it:
+every 200 years in the tropical zodiac, as in the Persian doctrine of world
+ages), and the Uranus–Neptune and Neptune–Pluto conjunctions. Each test
+compares the boundaries with rigid rotations of them (same spacing, placed
+anywhere in the cycle), which keeps the periodicity of the events out of the
+result, and `summary` corrects the whole family with Holm's method. The event
+catalogues are computed once (in seconds, from the ephemeris) and cached in
+`sandbox/data/events/`. With the default model, no test is significant after
+the correction; the planets do gather near 0° sidereal Aries at the traditional
+start of Kali, but that is the model's anchor, and the other yuga boundaries do
+not share it. `model_map` asks the same of every model (anchor × arc, dividing
+the arc): the distance of each model's boundaries to the events, the closest
+model, and a global p from rigid shifts of the event catalogue (the best model
+found each time), which takes the search over the models into account; with the
+default ranges, none comes closer than chance.
 
 New studies are plain functions marked with `@study` (see
 `sandbox/runner.py`); shared paths and default parameters are in
@@ -574,14 +604,29 @@ name it; double-click a label or a note to edit it, and a subcycle to go to
 it. Bookmarked subcycles have a green corner in the navigator and a tick on
 the overview strip, and their label and note in its tooltip.
 
-The ten panels (Subcycle, Date, Sky, Measures, Color space, Permutations, Compositions, Sky comparison,
-Model landscape, Notes) can be open at the same
+The *Events* tab tests whether the subcycle boundaries fall on planetary
+events more than chance would place them (see `study_of_events.py` below):
+Jupiter–Saturn, Uranus–Neptune or Neptune–Pluto conjunctions, the trigon
+changes of the great conjunctions in the sidereal or the tropical zodiac, or
+the planets Sun to Saturn at 0° Aries (sidereal, the Sūrya Siddhānta claim, or
+tropical). For the boundaries of a chosen depth, over the whole cycle or inside
+the zoom, it draws the distribution of the statistic for rigid rotations of the
+boundaries with the observed value and its p, lists the events of the zoomed
+span (clicking one shows its sky and selects its subcycle), and marks them in
+the navigator, just above the first row. The view *Over the models* maps every
+model (anchor × arc) with the global p of the search; double-clicking the map,
+or a row of the closest models, places the cycle there. The catalogues are computed once from
+the Sky tab's ephemeris and kept in `sandbox/data/events/`, shared with the
+study; each result is a single test, and the study corrects the whole family.
+
+The eleven panels (Subcycle, Date, Sky, Measures, Color space, Permutations, Compositions, Sky comparison,
+Model landscape, Notes, Events) can be open at the same
 time, to compare a chart with a measure plot and the inspector. The
-*Panels* menu shows or hides each one (`Alt+1` to `Alt+9`, and `Alt+0`) and arranges the
+*Panels* menu shows or hides each one (`Alt+1` to `Alt+9`, and `Alt+0`; Events has no shortcut) and arranges the
 open ones as tabs, side by side, stacked, in a 2 × 2 grid, or side by side
 below the navigator. Panels can go on any side of the navigator: *Panels →
 Arrange around the navigator* puts each kind of panel on its side, in tabs
-(information — Subcycle, Date, Notes — on the left; the sky and the graphs on
+(information — Subcycle, Date, Notes — on the left; the sky (with Events) and the graphs on
 the right, or the sky on the right and the graphs below, or the sky on the
 left too and the graphs below), and *Panels → Move a panel*, or a right
 click on a panel's title bar or tab, puts one panel left of, right of, above

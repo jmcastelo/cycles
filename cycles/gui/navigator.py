@@ -18,7 +18,7 @@ from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QSizePolicy, QToolButton, QToolTip, QWidget
 
 from cycles.gui.state import (
-    BOOKMARK_COLOR, MAX_DEPTH, MOMENT_COLOR, PERMUTATION_COLOR, CycleState, address_of, children_range, current_year,
+    BOOKMARK_COLOR, EVENT_COLOR, MAX_DEPTH, MOMENT_COLOR, PERMUTATION_COLOR, CycleState, address_of, children_range, current_year,
     date_text, span_text, tcoord, time_text,
 )
 
@@ -64,6 +64,7 @@ class Navigator(QWidget):
         state.focusChanged.connect(self._changed)
         state.selectionChanged.connect(self.update)
         state.bookmarksChanged.connect(self.update)
+        state.eventsChanged.connect(self.update)
         state.viewChanged.connect(self._changed)
         state.dateChanged.connect(self.update)
         state.skyTimeChanged.connect(self.update)
@@ -219,6 +220,7 @@ class Navigator(QWidget):
                                  Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, f"d{depth}")
         self._draw_axis(painter, cells)
         self._draw_markers(painter, cells)
+        self._draw_events(painter, cells)           # after the tags, to keep its label clear of them
         self._draw_criteria_key(painter)
         painter.end()
 
@@ -247,6 +249,59 @@ class Navigator(QWidget):
             x = strip.left() + float(level.starts[tcoord(address)]) * strip.width()
             painter.drawLine(QPointF(x, strip.top()), QPointF(x, strip.top() + strip.height() * 0.35))
         painter.restore()
+
+    def _draw_events(self, painter: QPainter, cells) -> None:
+        """
+        The planetary events of the Events panel: a short tick just above the first row at each event in the
+        zoomed span (at most one per pixel; dense events read as a band), and their name and number at an end
+        of the tag band that no tag covers.
+        """
+        state = self.state
+        if state.event_marks is None or state.time_map is None or not cells:
+            return
+        years, label = state.event_marks
+        start, end = self._focus_extent()
+        u = np.asarray(state.time_map.to_normalized(years[(years >= state.time_map.start)
+                                                          & (years <= state.time_map.end)]), dtype=float)
+        u = u[(u >= start) & (u <= end)]
+        first_depth = min(depth for _, _, depth, _ in cells)
+        row = [(rect, index) for rect, _, depth, index in cells if depth == first_depth]
+        level = state.cache.level(first_depth)
+        band = self._tag_band()
+        color = QColor(EVENT_COLOR)
+        tick = QColor(color)
+        span_pixels = max(1.0, sum(rect.width() for rect, _ in row))
+        if len(u) > span_pixels / 4:            # crowded: a translucent band that shows the density
+            tick.setAlphaF(0.35)
+        painter.save()
+        painter.setPen(QPen(tick, 1.5))
+        drawn = set()
+        for value in u:
+            for rect, index in row:
+                c_start, c_duration = float(level.starts[index]), float(level.durations[index])
+                if c_start <= value <= c_start + c_duration:
+                    x = rect.left() + (value - c_start) / c_duration * rect.width()
+                    if round(x) not in drawn:
+                        drawn.add(round(x))
+                        painter.drawLine(QPointF(x, rect.top() - 6), QPointF(x, rect.top() + 3))
+                    break
+        if label:
+            font = QFont(painter.font())
+            font.setPointSizeF(font.pointSizeF() * 0.85)
+            painter.setFont(font)
+            text = f"{label}: {len(u)} in view"
+            width = painter.fontMetrics().horizontalAdvance(text) + 6
+            height = painter.fontMetrics().height()
+            top = band.bottom() - height
+            tags = list(getattr(self, '_tags', {}).values())
+            for left in (band.right() - width, band.left()):
+                place = QRectF(left, top, width, height)
+                if not any(place.intersects(tag) for tag in tags):
+                    painter.setPen(color)
+                    painter.drawText(place, Qt.AlignmentFlag.AlignCenter, text)
+                    break
+        painter.restore()
+        self._events_shown = len(u)
 
     def bookmark_text(self, address: tuple) -> str:
         lines = []

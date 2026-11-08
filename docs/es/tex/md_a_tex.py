@@ -8,7 +8,8 @@ Comprueba que la versión que declara 00_indice_y_glosario.md es la de cycles/__
 
 Solo entiende el subconjunto de Markdown que usan estos documentos: títulos #, ## y ###, párrafos, listas con
 «- » y «1. », tablas con barras, bloques de código con ```, figuras ![pie](figuras/x.png) en su propia línea,
-**negrita**, *cursiva*, `código`, ~~tachado~~, enlaces y superíndices a^b o a^(…).
+**negrita**, *cursiva*, `código`, ~~tachado~~, enlaces, superíndices a^b o a^(…), y fórmulas en LaTeX: $…$ en línea
+y $$…$$ en sus propias líneas (como las muestra GitHub).
 """
 
 import re
@@ -28,8 +29,9 @@ CHAPTERS = {
     '04': ('Precesion', None), '05': ('Fechas', None), '06': ('Nbody', None), '07': ('Validacion', None),
     '08': ('Modelo', None), '09': ('Hindu', None), '10': ('Modulos', None), '11': ('Estudios', None),
     '12': ('Aplicacion', None), '13': ('Pruebas', None), '14': ('Resultados', None),
+    '15': ('Eventos', None),
 }
-PARTS = {'01': 'La estructura', '04': 'Astronomía y tiempo', '10': 'El software'}
+PARTS = {'01': 'La estructura', '04': 'Astronomía y tiempo', '10': 'El software', '15': 'Contrastes'}
 LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 _KEPT: list[str] = []      # trozos ya convertidos, sustituidos por marcas mientras se procesa el resto
 
@@ -60,6 +62,9 @@ def inline(text: str) -> str:
         return f"\x00{len(keep) - 1}\x00"
 
     text = re.sub(r'`([^`]+)`', lambda m: hold(code(m.group(1))), text)
+    # maths in $…$ goes to LaTeX as it is (as GitHub renders it)
+    text = re.sub(r'(?<![\\$\w])\$([^\s$](?:[^$\n]*?[^\s$])?)\$(?![\w$])', lambda m: hold('$' + m.group(1) + '$'),
+                  text)
 
     def link(m):
         label, url = m.group(1), m.group(2)
@@ -145,6 +150,16 @@ def convert_body(lines: list[str]) -> list[str]:
         if not line.strip():
             i += 1
             continue
+        if line.strip().startswith('$$'):
+            # display maths: $$ … $$ on its own line(s)
+            j = i
+            body = line.strip()[2:]
+            while not body.rstrip().endswith('$$') or (j == i and len(line.strip()) == 2):
+                j += 1
+                body += '\n' + lines[j].strip()
+            out.append('\\[\n' + body.rstrip()[:-2].strip() + '\n\\]')
+            i = j + 1
+            continue
         if line.startswith('```'):
             j = i + 1
             while j < len(lines) and not lines[j].startswith('```'):
@@ -181,7 +196,7 @@ def convert_body(lines: list[str]) -> list[str]:
                                    rf'\end{{{kind}}}']))
             continue
         paragraph = []
-        while i < len(lines) and lines[i].strip() and not re.match(r'^(```|\||!\[|- |\d+\. )', lines[i]):
+        while i < len(lines) and lines[i].strip() and not re.match(r'^(```|\||!\[|- |\d+\. |\$\$)', lines[i]):
             paragraph.append(lines[i].strip())
             i += 1
         out.append(inline(' '.join(paragraph)))
@@ -259,6 +274,9 @@ PREAMBLE = r"""% !TEX program = lualatex
   \setmainfont{Noto Serif}[RawFeature={fallback=simbolos}]}
 \IfFontExistsTF{DejaVu Sans Mono}{\setmonofont{DejaVu Sans Mono}[Scale=MatchLowercase,RawFeature={fallback=simbolos}]}{%
   \setmonofont{JetBrains Mono}[Scale=MatchLowercase,RawFeature={fallback=simbolos}]}
+\usepackage{amsmath}
+\usepackage{unicode-math}           % fórmulas: la fuente matemática de Libertinus, con los símbolos Unicode
+\IfFontExistsTF{Libertinus Math}{\setmathfont{Libertinus Math}}{}
 \IfFileExists{spanish.ldf}{%
   \usepackage[spanish,es-noshorthands,es-nodecimaldot,es-tabla,es-nolists]{babel}}{%
   \usepackage[main=spanish,provide=*]{babel}}
@@ -379,6 +397,9 @@ selección} del preámbulo.
 \item Por defecto se conserva la numeración de los capítulos Markdown (capítulo 8, sección 8.5…) aunque se omitan
   bloques; \verb|\renumerar| numera de forma consecutiva.
 \item \verb|\figdir| indica la carpeta de las figuras; si falta una imagen, se dibuja un marco con su nombre.
+\item Las fórmulas se escriben en LaTeX en los propios Markdown (\verb|$…$| en línea y \verb|$$…$$| en sus propias
+  líneas, como las muestra GitHub) y pasan tal cual; se componen con \texttt{unicode-math} y la fuente
+  matemática Libertinus Math. En las fórmulas, la coma decimal se escribe \verb|{,}|.
 \item Compilar con \texttt{lualatex} (dos pasadas, para el índice). Los símbolos que no tiene la fuente
   principal (signos del zodiaco, planetas, subíndices) se toman de las fuentes DejaVu y Noto.
 \end{itemize}

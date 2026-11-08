@@ -1,6 +1,6 @@
 # Ciclos: documentación del proyecto
 
-Versión del programa documentada: **0.2.0** (ver `CHANGELOG.md` en la raíz del proyecto y el capítulo 10, «Versiones»).
+Versión del programa documentada: **0.3.0** (ver `CHANGELOG.md` en la raíz del proyecto y el capítulo 10, «Versiones»).
 
 Este conjunto de documentos describe con detalle el proyecto **cycles**: el análisis matemático de un ciclo
 dividido fractalmente en cuatro edades en razón 4 : 3 : 2 : 1 (Satya, Treta, Dvapara y Kali), su colocación en la
@@ -26,9 +26,11 @@ explorador gráfico. Incorpora, revisados y actualizados, los documentos de `efe
 | **III. El software** | |
 | [`10_arquitectura_y_modulos.md`](10_arquitectura_y_modulos.md) | organización del código, instalación, guía de los módulos de cálculo, figuras y explorador, y versiones |
 | [`11_estudios_del_sandbox.md`](11_estudios_del_sandbox.md) | el ejecutor de estudios, sus opciones (`--session`) y cada estudio |
-| [`12_aplicacion_grafica.md`](12_aplicacion_grafica.md) | el explorador: navegador, paneles, modelo, colores, gráficos, sesiones, dosier, disposición, atajos |
+| [`12_aplicacion_grafica.md`](12_aplicacion_grafica.md) | el explorador: navegador, los once paneles, modelo, colores, gráficos, sesiones, dosier, disposición, atajos |
 | [`13_pruebas.md`](13_pruebas.md) | cómo se ejecutan las pruebas y qué comprueban |
 | [`14_resultados_y_preguntas_abiertas.md`](14_resultados_y_preguntas_abiertas.md) | resultados obtenidos y trabajo pendiente |
+| **IV. Contrastes** | |
+| [`15_eventos_y_significacion.md`](15_eventos_y_significacion.md) | catálogos de acontecimientos planetarios (conjunciones, cambios de trígono), contrastes de significación con rotaciones rígidas, tres hipótesis (Sūrya Siddhānta, grandes conjunciones, planetas exteriores) en los zodiacos sidéreo y trópico, y el panel *Events* |
 
 Estos documentos están en `docs/es/` del repositorio: los capítulos en `markdown/`, con sus figuras en
 `markdown/figuras/`; la versión LaTeX, que reúne todos los capítulos en un solo documento, se genera en `tex/` con
@@ -37,8 +39,8 @@ regeneran las figuras, en `generar_figuras/`.
 
 ## Resultados principales
 
-1. **Hay (*d* + 1)² duraciones distintas a profundidad *d***, y las composiciones de igual duración difieren en
-   múltiplos de (1, 0, −2, 1), porque 0,4 · 0,1 = 0,2².
+1. **Hay $(d + 1)^2$ duraciones distintas a profundidad $d$**, y las composiciones de igual duración difieren en
+   múltiplos de $(1, 0, -2, 1)$, porque $0{,}4 \cdot 0{,}1 = 0{,}2^2$.
 2. **Las permutaciones de las posiciones conservan las duraciones**; las órbitas de todo el grupo simétrico son las
    composiciones (lema de Burnside).
 3. **Con 2,5 vueltas de precesión**, el Satya es una vuelta y los yugas ocupan 1, ¾, ½ y ¼ de vuelta. Con la tasa
@@ -49,7 +51,12 @@ regeneran las figuras, en `generar_figuras/`.
    rectificada.
 5. **El cielo en los inicios de los subciclos** no se parece al de la selección más que el de instantes al azar: los
    parecidos vienen de los periodos de los planetas.
-6. **La efeméride propia** cubre ±70 000 años; coincide con DE421 a decenas de km y con Moshier a 10″ o menos hasta
+6. **Ninguna de las 37 pruebas de acontecimientos planetarios** (Sūrya Siddhānta con los planetas verdaderos y los
+   medios, grandes conjunciones y sus
+   cambios de trígono, conjunciones de los planetas exteriores) es significativa tras la corrección de Holm; la
+   reunión de planetas en 0° de Aries sidéreo al inicio del Kali es la del ancla del modelo. Tampoco **ningún otro
+   modelo** (ancla × arco) se acerca a los acontecimientos más de lo que permite el azar, tenida en cuenta la búsqueda.
+7. **La efeméride propia** cubre ±70 000 años; coincide con DE421 a decenas de km y con Moshier a 10″ o menos hasta
    −3000, salvo Marte (discrepancia abierta). Más allá de −3000 no hay referencia independiente.
 
 ## Convenciones
@@ -151,4 +158,9 @@ al azar.
 - Abhyankar, K. D. (1993). Artículo sobre dos sellos de Mohenjo-daro. Bull. Astr. Soc. India 21, 475–479 (copia en
   `sandbox/docs/papers/`).
 - ERFA (Essential Routines for Fundamental Astronomy), derivada de SOFA (IAU).
+- Simon, J. L. et al. (1994). *Numerical expressions for precession formulae and mean elements for the Moon and
+  the planets.* A&A 282, 663; los elementos medios, como en Meeus, J. (1998), *Astronomical Algorithms*, 2.ª ed.,
+  tabla 31.A.
+- Burgess, E. (1860). *Translation of the Sûrya-Siddhânta.* Journal of the American Oriental Society 6.
+- Billard, R. (1971). *L'astronomie indienne.* École française d'Extrême-Orient.
 - Guénon, R. *Formes traditionnelles et cycles cosmiques*; Hani, J. (sobre la subdivisión de los ciclos).
