@@ -10,6 +10,10 @@ from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
 from cycles.gui.state import PERMUTATION_COLOR
 
+# Curvature of the orbit's arrows (arc3 radius: the bulge over the length of the step), enough to tell a step from
+# its way back
+CURVATURE = 0.08
+
 
 def draw_links(ax, links, positions: dict, points: np.ndarray) -> list:
     """
@@ -36,7 +40,7 @@ def draw_links(ax, links, positions: dict, points: np.ndarray) -> list:
         else:
             ax.add_collection(collection)
         return [collection]
-    # the orbit: one arrow per step, curved a little so that a step and its way back (a swap) both show
+    # the orbit: one arrow per step, curved a little (CURVATURE) so that a step and its way back (a swap) both show
     if three_d:
         segments = np.stack([starts, ends], axis=1)
         collection = Line3DCollection(segments, colors=PERMUTATION_COLOR, linewidths=1.4, alpha=0.9, zorder=3)
@@ -45,8 +49,12 @@ def draw_links(ax, links, positions: dict, points: np.ndarray) -> list:
         heads = starts + 0.8 * (ends - starts)
         dots = ax.scatter(heads[:, 0], heads[:, 1], heads[:, 2], s=26, color=PERMUTATION_COLOR, depthshade=False)
         return [collection, dots]
-    return [ax.annotate('', xy=tuple(b), xytext=tuple(a),
-                        arrowprops=dict(arrowstyle='-|>', color=PERMUTATION_COLOR, lw=1.3, alpha=0.9,
-                                        shrinkA=4, shrinkB=4, mutation_scale=10,
-                                        connectionstyle='arc3,rad=0.15'), zorder=3)
-            for a, b in zip(starts, ends)]
+    arrows = []
+    for a, b in zip(starts, ends):
+        arrow = ax.annotate('', xy=tuple(b), xytext=tuple(a),
+                            arrowprops=dict(arrowstyle='-|>', color=PERMUTATION_COLOR, lw=1.3, alpha=0.9,
+                                            shrinkA=4, shrinkB=4, mutation_scale=10,
+                                            connectionstyle=f"arc3,rad={CURVATURE}"), zorder=3)
+        arrow.arrow_patch.set_clip_path(ax.patch)          # never outside the plot
+        arrows.append(arrow)
+    return arrows

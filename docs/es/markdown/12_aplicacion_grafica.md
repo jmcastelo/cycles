@@ -139,7 +139,7 @@ tienden a descender y los malos a ascender.
 Con *Join* (activo por defecto), los subciclos resaltados se **unen**:
 
 - con el resaltado *⟨σ⟩ orbit*, los pasos de la órbita de la selección en orden (la selección, su imagen por σ,
-  la de σ², … y vuelta), con flechas púrpura algo curvadas, para que se vean un paso y su vuelta;
+  la de σ², … y vuelta), con flechas púrpura apenas curvadas, para que se distingan un paso y su vuelta;
 - con *Same composition*, las ordenaciones de sus edades que difieren en el **intercambio de dos dígitos
   vecinos**, con líneas grises finas (más tenues cuantas más hay).
 
