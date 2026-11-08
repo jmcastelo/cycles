@@ -14,8 +14,8 @@ from typing import NamedTuple
 
 from cycles.functions.conversion import tcoord_to_lcoords
 from cycles.functions.color import (
-    cmyk_to_rgb, duration_class_colors, lcoords_to_cmyk, lcoords_to_lrgb, lcoords_to_rgb_tetrahedron,
-    level_rgb_oklab_tetrahedron,
+    DEFAULT_COLOR_MAPS, cmyk_to_rgb, duration_class_colors, lcoords_to_cmyk, lcoords_to_lrgb,
+    lcoords_to_rgb_tetrahedron, level_rgb_oklab_tetrahedron, measure_colors,
 )
 from cycles.functions.duration import count_digits
 from cycles.functions.measure import dharma_measure, purity_measure
@@ -44,11 +44,12 @@ DEFAULT_SCALES = [1 / 2, 2 / 3, 0.5]
 # Vertex colors of the tetrahedron coloring: Golden, Silver, Bronze, Iron
 TETRAHEDRON_COLORS = np.array([[1, 1, 0], [0, 1, 1], [1, 0, 1], [0, 0, 0]])
 
-# The colorings. level_colors gives those of a Level alone (the RGB variants and four more); the measures of
-# MEASURE_COLOR_KEYS also need the weights (gui.state.LevelCache), and those of MODEL_COLOR_KEYS the cycle model
-# (gui.state.CycleState.colors).
-LEVEL_COLOR_KEYS = RGB_KEYS + ('lrgb', 'dharma', 'purity', 'duration_class')
-MEASURE_COLOR_KEYS = ('mixture', 'tension', 'trend', 'roughness', 'contrast', 'balance')
+# The colorings. level_colors gives those of a Level alone (the RGB variants and two more, and dharma and purity);
+# the other measures of MEASURE_COLOR_KEYS also need the weights (gui.state.LevelCache), and those of
+# MODEL_COLOR_KEYS the cycle model (gui.state.CycleState.colors). The measures take the sequential or the diverging
+# color map of color.DEFAULT_COLOR_MAPS, or of the parameters.
+LEVEL_COLOR_KEYS = RGB_KEYS + ('lrgb', 'duration_class')
+MEASURE_COLOR_KEYS = ('dharma', 'purity', 'mixture', 'tension', 'trend', 'roughness', 'contrast', 'balance')
 MODEL_COLOR_KEYS = ('density', 'vernal_sign', 'vernal_element')
 COLOR_KEYS = LEVEL_COLOR_KEYS + MEASURE_COLOR_KEYS + MODEL_COLOR_KEYS
 COLOR_DESCRIPTIONS = {
@@ -61,24 +62,24 @@ COLOR_DESCRIPTIONS = {
     'tetrahedron': 'chaos game towards the four vertex colors, in RGB: a Sierpinski tetrahedron',
     'tetrahedron_oklab': 'the same chaos game in OKLab, a perceptual space: equal steps look equal',
     'lrgb': 'the ink of the innermost age',
-    'dharma': 'gray level of dharma',
-    'purity': 'gray level of purity',
     'duration_class': 'one color per class of equal duration',
-    'mixture': 'mixture (entropy of the age shares), viridis',
-    'tension': 'tension (spread of the virtues), viridis',
-    'trend': 'trend (inner levels better or worse), blue − to red +',
-    'roughness': 'roughness (jumps between levels), viridis',
-    'contrast': 'contrast (the jump of dharma from the previous subcycle), blue − to red +',
-    'balance': 'balance (running sum of dharma above its mean), blue − to red +',
-    'density': 'angular density (needs a cycle model): blue slower, red faster precession than the mean',
+    'dharma': 'dharma (weighted mean virtue), on the sequential map',
+    'purity': 'purity (largest share of an age minus the smallest), on the sequential map',
+    'mixture': 'mixture (entropy of the age shares), on the sequential map',
+    'tension': 'tension (spread of the virtues), on the sequential map',
+    'trend': 'trend (inner levels better or worse), on the diverging map: 0 in the middle',
+    'roughness': 'roughness (jumps between levels), on the sequential map',
+    'contrast': 'contrast (the jump of dharma from the previous subcycle), on the diverging map',
+    'balance': 'balance (running sum of dharma above its mean), on the diverging map',
+    'density': 'angular density (needs a cycle model), on the diverging map: 1, the mean rate, in the middle',
     'vernal_sign': 'the sidereal sign of the vernal point at the start (needs a cycle model)',
     'vernal_element': 'the element of that sign: fire red, earth green, air yellow, water blue (needs a model)',
 }
 
-# Colorings (names of level_colors) that each parameter of compute_level changes;
-# cmyk_composition and lrgb depend on none. The color base also changes the
-# dharma values and the measures of measure.MEASURES built on the virtues, and the purity base the purity and
-# mixture values.
+# Colorings (and measures, of the same names) that each color parameter changes; cmyk_composition and lrgb depend
+# on none. The color base also changes the dharma values and the measures of measure.MEASURES built on the
+# virtues, and the purity base the purity and mixture values; the two color maps only the colorings of the
+# measures (CycleState.measure_parameters_of leaves them out).
 COLOR_PARAMETER_EFFECTS = {
     'color_base': ('cmyk', 'cmyk_normalised', 'cmyk_scaled', 'cmyk_kscaled', 'wcmy', 'dharma',    # bases[1]
                    'tension', 'trend', 'roughness', 'contrast', 'balance'),
@@ -87,6 +88,8 @@ COLOR_PARAMETER_EFFECTS = {
     'black_scale': ('cmyk_kscaled',),                                                           # scales[1]
     'tetrahedron_step': ('tetrahedron', 'tetrahedron_oklab'),                                   # scales[2]
     'tetrahedron_colors': ('tetrahedron', 'tetrahedron_oklab'),                                 # colors
+    'sequential_map': ('dharma', 'purity', 'mixture', 'tension', 'roughness'),                  # maps[0]
+    'diverging_map': ('trend', 'contrast', 'balance', 'density'),                               # maps[1]
 }
 
 
@@ -117,17 +120,17 @@ class Level(NamedTuple):
         return Level(*(field[index] for field in self))
 
 
-def level_colors(level: Level) -> dict[str, np.ndarray]:
+def level_colors(level: Level, maps=DEFAULT_COLOR_MAPS) -> dict[str, np.ndarray]:
     """
     RGB color of every subcycle of ``level`` for each name in ``LEVEL_COLOR_KEYS``:
-    the Level's RGB variants, ``lrgb`` (pure ink of the innermost age),
-    ``dharma`` / ``purity`` as gray levels, and ``duration_class`` (one color per
-    class of equal duration).
+    the Level's RGB variants, ``lrgb`` (pure ink of the innermost age) and
+    ``duration_class`` (one color per class of equal duration); and ``dharma``
+    and ``purity`` on the sequential map of ``maps`` (``color.measure_colors``).
     """
     colors = {key: level.rgb(key) for key in RGB_KEYS}
     colors['lrgb'] = np.array([lcoords_to_lrgb(lcoords)[-1] for lcoords in level.lcoords])
-    colors['dharma'] = np.repeat(level.dharmas[:, None], 3, axis=1)
-    colors['purity'] = np.repeat(level.purities[:, None], 3, axis=1)
+    colors['dharma'] = measure_colors(level.dharmas, 'dharma', maps)[0]
+    colors['purity'] = measure_colors(level.purities, 'purity', maps)[0]
     colors['duration_class'] = duration_class_colors(level.durations)
     return colors
 

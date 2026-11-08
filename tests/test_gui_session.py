@@ -12,8 +12,9 @@ def _change_everything(window, spin):
     """Move away from the defaults in every part a session keeps."""
     state = window.state
     state.set_model(state.model.replace(anchor_date='3000 BC-01-01', anchor_time='06:00', turns=2.25))
-    bases, scales, colors = state.color_parameters
-    state.set_color_parameters(bases[:1] + (3,) + bases[2:], scales, colors)    # as the color dialog does
+    bases, scales, colors, _ = state.color_parameters
+    state.set_color_parameters(bases[:1] + (3,) + bases[2:], scales, colors,     # as the color dialog does
+                               ('magma', 'PuOr_r'))
     window.color_box.setCurrentIndex((window.color_box.currentIndex() + 1) % window.color_box.count())
     window.rows_box.setValue(4)
     window.spacing_box.setCurrentIndex(window.spacing_box.findData('index'))

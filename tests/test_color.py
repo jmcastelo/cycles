@@ -9,7 +9,7 @@ from cycles.functions.division import (
 )
 
 # colorings not meant to give each subcycle its own color
-SHARED = {'cmyk_composition', 'lrgb', 'dharma', 'purity', 'duration_class'}
+SHARED = {'cmyk_composition', 'lrgb', 'duration_class'}
 UNIQUE = [key for key in LEVEL_COLOR_KEYS if key not in SHARED]
 
 

@@ -259,7 +259,7 @@ class MeasuresPanel(QWidget):
             colors = state.colors(depth, state.color_key)[indices]
         else:
             colors, mappable = measure_colors(np.asarray(state.measure_values(depth, coloring), dtype=float)[indices],
-                                              coloring)
+                                              coloring, state.cache.maps)
         three_d = kind.startswith('3d')
         sizes = self.point_sizes(part.durations, scatter=kind == 'scatter' or three_d)
         if kind in ('time', 'index', '3d_time', '3d_index'):

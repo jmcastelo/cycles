@@ -22,7 +22,7 @@ fig.tight_layout(); fig.savefig(f"{OUT}/division_niveles.png", dpi=170); plt.clo
 # 2. color variants, depth 3
 keys = LEVEL_COLOR_KEYS
 lv = compute_level(3); cols = level_colors(lv)
-fig, ax = plt.subplots(figsize=(9, 4.8))
+fig, ax = plt.subplots(figsize=(9, 4.2))
 for r, key in enumerate(keys):
     for k in range(len(lv.starts)):
         ax.barh(-r, lv.durations[k], left=lv.starts[k], height=0.85, color=np.clip(cols[key][k], 0, 1), linewidth=0)
@@ -46,7 +46,7 @@ for k in ('vernal_sign', 'vernal_element'):
     cols[k] = vernal_colors(model.ayanamsa(y0), k.split('_')[1])
 cols['duration_class'] = level_colors(lv)['duration_class']
 keys = ('duration_class',) + MEASURE_COLOR_KEYS + MODEL_COLOR_KEYS
-fig, ax = plt.subplots(figsize=(9, 4.2))
+fig, ax = plt.subplots(figsize=(9, 4.9))
 for r, key in enumerate(keys):
     ax.barh(-r, y1 - y0, left=y0, height=0.85, color=np.clip(cols[key], 0, 1), linewidth=0)
 ax.set_yticks([-r for r in range(len(keys))], keys); ax.set_xlim(y0[0], y1[-1])

@@ -19,7 +19,7 @@ from cycles.functions.division import (
     CMYK_KEYS, COLOR_KEYS, MEASURE_COLOR_KEYS, MODEL_COLOR_KEYS, DEFAULT_BASES, DEFAULT_COLOR_KEY, DEFAULT_SCALES, TETRAHEDRON_COLORS, Level, compute_level,
     level_colors,
 )
-from cycles.functions.color import color_parameter_problems
+from cycles.functions.color import DEFAULT_COLOR_MAPS, color_parameter_problems
 from cycles.functions.division import COLOR_PARAMETER_EFFECTS
 from cycles.functions.astro_dates import (
     date_time_to_julian_day, date_to_year, julian_day_to_year, parse_date, year_to_date,
@@ -125,9 +125,11 @@ def children_range(address: tuple, depth: int) -> range:
 class LevelCache:
     """Levels and their colors, computed with the given parameters (see ``compute_level``) on first use."""
 
-    def __init__(self, bases=DEFAULT_BASES, scales=DEFAULT_SCALES, colors=TETRAHEDRON_COLORS):
+    def __init__(self, bases=DEFAULT_BASES, scales=DEFAULT_SCALES, colors=TETRAHEDRON_COLORS,
+                 maps=DEFAULT_COLOR_MAPS):
         self.bases, self.scales = list(bases), list(scales)
         self.vertices = np.asarray(colors, dtype=float)    # of the tetrahedron coloring
+        self.maps = tuple(maps)                             # color maps of the measures: (sequential, diverging)
         self._levels: dict[int, Level] = {}
         self._colors: dict[int, dict[str, np.ndarray]] = {}
         self._measures: dict[int, dict[str, np.ndarray]] = {}
@@ -146,12 +148,19 @@ class LevelCache:
         and ``MEASURE_COLOR_KEYS``; the cycle model's are in ``CycleState.colors``).
         """
         if depth not in self._colors:
-            self._colors[depth] = level_colors(self.level(depth))
+            self._colors[depth] = level_colors(self.level(depth), self.maps)
         colors = self._colors[depth]
         if key not in colors and key in MEASURE_COLOR_KEYS:
             from cycles.functions.color import measure_colors
-            colors[key] = measure_colors(self.measure(depth, key), key)[0]
+            colors[key] = measure_colors(self.measure(depth, key), key, self.maps)[0]
         return colors[key]
+
+    def set_maps(self, maps) -> None:
+        """Use other color maps for the measures: only their colors are made again, not the levels."""
+        self.maps = tuple(maps)
+        for colors in self._colors.values():
+            for key in MEASURE_COLOR_KEYS:
+                colors.pop(key, None)
 
     def measure(self, depth: int, key: str) -> np.ndarray:
         """Values (N,) of the measure ``key`` of ``measure.ADDRESS_MEASURES`` for the subcycles of ``depth``."""
@@ -421,7 +430,7 @@ class CycleState(QObject):
         if cached not in self._criteria:
             from cycles.functions.color import measure_colors, vernal_colors
             if key == 'density':
-                colors = measure_colors(self.measure_values(depth, 'density'), 'density')[0]
+                colors = measure_colors(self.measure_values(depth, 'density'), 'density', self.cache.maps)[0]
             else:
                 starts = np.asarray(self.time_map.to_physical(self.cache.level(depth).starts), dtype=float)
                 colors = vernal_colors(self.model.ayanamsa(starts), key.split('_')[1])
@@ -519,39 +528,57 @@ class CycleState(QObject):
 
     @property
     def color_parameters(self) -> tuple:
-        """``(bases, scales, tetrahedron colors)`` of the colorings and measures, as tuples."""
-        return (tuple(self.cache.bases), tuple(self.cache.scales),
-                tuple(tuple(float(c) for c in row) for row in self.cache.vertices))
-
-    def set_color_parameters(self, bases, scales, colors=None) -> None:
         """
-        Use new bases, scales and tetrahedron vertex colors (the current ones
-        if not given) for the colorings and measures. ``ValueError`` if they
-        could give repeated colors (see ``color_parameter_problems``).
+        ``(bases, scales, tetrahedron colors, color maps)`` of the colorings and measures, as tuples; the maps
+        are those of the measures, ``(sequential, diverging)``.
+        """
+        return (tuple(self.cache.bases), tuple(self.cache.scales),
+                tuple(tuple(float(c) for c in row) for row in self.cache.vertices), tuple(self.cache.maps))
+
+    def set_color_parameters(self, bases, scales, colors=None, maps=None) -> None:
+        """
+        Use new bases, scales, tetrahedron vertex colors and color maps of the
+        measures (the current ones if not given) for the colorings and measures.
+        ``ValueError`` if they could give repeated colors, or the maps are not
+        known (see ``color_parameter_problems``). Other maps alone recolor the
+        measures without computing the levels again.
         """
         colors = self.cache.vertices if colors is None else np.asarray(colors, dtype=float)
-        problems = color_parameter_problems(bases, scales, colors)
+        maps = self.cache.maps if maps is None else tuple(maps)
+        problems = color_parameter_problems(bases, scales, colors, maps)
         if problems:
             raise ValueError('; '.join(problems))
-        new = (tuple(bases), tuple(scales), tuple(tuple(float(c) for c in row) for row in colors))
+        new = (tuple(bases), tuple(scales), tuple(tuple(float(c) for c in row) for row in colors), tuple(maps))
         old = self.color_parameters
         if new == old:
             return
         changed = self._named_parameters(*old).items() ^ self._named_parameters(*new).items()
         affected = frozenset(key for name, _ in changed for key in COLOR_PARAMETER_EFFECTS[name])
-        self.cache = LevelCache(bases, scales, colors)     # levels are recomputed when next needed
+        if new[:3] == old[:3]:
+            self.cache.set_maps(maps)
+        else:
+            self.cache = LevelCache(bases, scales, colors, maps)     # levels are recomputed when next needed
+        for cached in [k for k in self._criteria if k[0] == 'colors']:
+            del self._criteria[cached]                                # the colorings of the model
         self.colorParametersChanged.emit(affected)
 
     @staticmethod
-    def _named_parameters(bases, scales, colors) -> dict:
+    def _named_parameters(bases, scales, colors, maps=DEFAULT_COLOR_MAPS) -> dict:
         """The parameters by the names of ``COLOR_PARAMETER_EFFECTS``."""
         return {'color_base': bases[1], 'purity_base': bases[2], 'cmyk_scale': scales[0],
-                'black_scale': scales[1], 'tetrahedron_step': scales[2], 'tetrahedron_colors': tuple(colors)}
+                'black_scale': scales[1], 'tetrahedron_step': scales[2], 'tetrahedron_colors': tuple(colors),
+                'sequential_map': maps[0], 'diverging_map': maps[1]}
 
     def parameters_of(self, key: str) -> tuple:
-        """Values of the parameters that the coloring (or measure) ``key`` depends on."""
+        """Values of the parameters that the coloring (or measure) ``key`` depends on, color maps included."""
         named = self._named_parameters(*self.color_parameters)
         return tuple(value for name, value in named.items() if key in COLOR_PARAMETER_EFFECTS[name])
+
+    def measure_parameters_of(self, key: str) -> tuple:
+        """Values of the parameters that the values of the measure ``key`` depend on (not the color maps)."""
+        named = self._named_parameters(*self.color_parameters)
+        return tuple(value for name, value in named.items()
+                     if key in COLOR_PARAMETER_EFFECTS[name] and not name.endswith('_map'))
 
     def set_borders(self, on: bool) -> None:
         self._set('borders', bool(on))

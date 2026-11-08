@@ -49,9 +49,12 @@ Planetary events and significance tests.
   game of the tetrahedron coloring in OKLab, a perceptual color space (the regions of the four ages look equally
   large; the vertices are shrunk to keep every color in the sRGB gamut; screens tell fewer of its colors apart, so
   it is an alternative, not a replacement); `duration_class`, one color per class of equal duration; the
-  measures (mixture, tension, trend, roughness, contrast, balance) with viridis or a diverging map; and, with a
-  cycle model, the angular density and the sign and element of the vernal point at the start of each subcycle.
-  `CycleState.colors` gives every coloring to the panels.
+  measures (dharma, purity, mixture, tension, trend, roughness, contrast, balance), all alike on a sequential or
+  a diverging color map chosen in *Parameters…* (viridis, cividis, magma, plasma, inferno or gray; blue–red,
+  coolwarm, orange–purple or brown–teal), kept in sessions, and changing them only recolors; and, with a cycle
+  model, the angular density and the sign and element of the vernal point at the start of each subcycle.
+  `CycleState.colors` gives every coloring to the panels. Dharma and purity are no longer gray by default (the
+  gray map shows them as before).
 - **README**: a short introduction with installation, a quick start, the chapters of the documentation and the
   references; everything else lives in `docs/es` (the VS Code tasks are now described in chapter 11).
 - The panel arrangements put Events with the sky panels; the eleventh panel has no `Alt` shortcut.

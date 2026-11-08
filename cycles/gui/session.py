@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QAbstractButton, QAbstractSpinBox, QComboBox, QDoubleSpinBox, QFileDialog, QLineEdit, QSpinBox,
 )
 
+from cycles.functions.color import DEFAULT_COLOR_MAPS
 from cycles.functions.cycle_model import CycleModel
 from cycles.gui.state import NAME_SETS
 
@@ -140,7 +141,7 @@ def capture(window, layout: bool = True) -> dict:
     from cycles.gui.app import LAYOUT_VERSION
     state = window.state
     model = state.model
-    bases, scales, colors = state.color_parameters
+    bases, scales, colors, maps = state.color_parameters
     names = next((key for key, value in NAME_SETS.items() if tuple(value) == tuple(state.names)),
                  list(state.names))
     panels = {}
@@ -163,7 +164,8 @@ def capture(window, layout: bool = True) -> dict:
         'state': {
             'model': model.to_dict() if model is not None else None,
             'preset': model.name if model is not None and state.presets.get(model.name) == model else None,
-            'color_parameters': {'bases': list(bases), 'scales': list(scales), 'colors': [list(c) for c in colors]},
+            'color_parameters': {'bases': list(bases), 'scales': list(scales), 'colors': [list(c) for c in colors],
+                                 'maps': {'sequential': maps[0], 'diverging': maps[1]}},
             'color_key': state.color_key,
             'rows': state.rows,
             'spacing': state.spacing,
@@ -218,7 +220,10 @@ def apply(window, data: dict, layout: bool = True) -> list[str]:
             CycleModel.from_dict(saved['model']) if saved['model'] is not None else None))
     if 'color_parameters' in saved:
         c = saved['color_parameters']
-        attempt('color parameters', lambda: state.set_color_parameters(c['bases'], c['scales'], c['colors']))
+        maps = c.get('maps') or {}
+        attempt('color parameters', lambda: state.set_color_parameters(
+            c['bases'], c['scales'], c['colors'],
+            (maps.get('sequential', DEFAULT_COLOR_MAPS[0]), maps.get('diverging', DEFAULT_COLOR_MAPS[1]))))
     if 'names' in saved:
         names = saved['names']
         attempt('names', lambda: state.set_names(tuple(NAME_SETS[names] if isinstance(names, str) else names)))

@@ -2,8 +2,10 @@
 
 from pathlib import Path
 
+from cycles.functions.color import DEFAULT_COLOR_MAPS
 from cycles.functions.division import (
-    COLOR_KEYS, DEFAULT_BASES, DEFAULT_SCALES, TETRAHEDRON_COLORS, Level, compute_level, level_colors,
+    COLOR_KEYS, LEVEL_COLOR_KEYS, DEFAULT_BASES, DEFAULT_SCALES, TETRAHEDRON_COLORS, Level, compute_level,
+    level_colors as _level_colors,
 )
 
 SANDBOX_DIR = Path(__file__).resolve().parent
@@ -14,11 +16,12 @@ SOUNDS_DIR = SANDBOX_DIR / "sounds"
 # Default parameters (see cycles.functions.division); a session given to the runner (--session) replaces them
 BASES = DEFAULT_BASES
 SCALES = DEFAULT_SCALES
+COLOR_MAPS = DEFAULT_COLOR_MAPS     # (sequential, diverging) color maps of the measures
 MODEL = None        # the cycle model of a session, if one was given (else each study chooses its own)
 SESSION = None      # the whole session (a dict), if one was given
 
 __all__ = ['SANDBOX_DIR', 'PLOTS_DIR', 'DATA_DIR', 'SOUNDS_DIR', 'BASES', 'SCALES', 'TETRAHEDRON_COLORS',
-           'COLOR_KEYS', 'MODEL', 'SESSION', 'compute_levels', 'level_colors', 'save_figure', 'fig_data',
+           'COLOR_KEYS', 'LEVEL_COLOR_KEYS', 'COLOR_MAPS', 'MODEL', 'SESSION', 'compute_levels', 'level_colors', 'save_figure', 'fig_data',
            'apply_session']
 
 
@@ -30,6 +33,11 @@ def compute_levels(max_depth: int, bases=None, scales=None, colors=None) -> list
     return [compute_level(depth, bases, scales, colors) for depth in range(1, max_depth + 1)]
 
 
+def level_colors(level: Level) -> dict:
+    """The colorings of ``level`` (``division.level_colors``) with the current color maps of the measures."""
+    return _level_colors(level, COLOR_MAPS)
+
+
 def apply_session(data: dict, module=None) -> str:
     """
     Use the cycle model and the color parameters of a session saved by the
@@ -38,7 +46,7 @@ def apply_session(data: dict, module=None) -> str:
     """
     import numpy as np
     from cycles.functions.cycle_model import CycleModel
-    global BASES, SCALES, TETRAHEDRON_COLORS, MODEL, SESSION
+    global BASES, SCALES, TETRAHEDRON_COLORS, COLOR_MAPS, MODEL, SESSION
     if not isinstance(data, dict) or data.get('format') != 'cycles-session':
         raise ValueError('not a cycles session file')
     state = data.get('state', {})
@@ -48,6 +56,9 @@ def apply_session(data: dict, module=None) -> str:
         values['BASES'] = [float(b) if float(b) % 1 else int(b) for b in parameters['bases']]
         values['SCALES'] = [float(x) for x in parameters['scales']]
         values['TETRAHEDRON_COLORS'] = np.asarray(parameters['colors'], dtype=float)
+        maps = parameters.get('maps') or {}
+        values['COLOR_MAPS'] = (maps.get('sequential', DEFAULT_COLOR_MAPS[0]),
+                                maps.get('diverging', DEFAULT_COLOR_MAPS[1]))
     values['MODEL'] = CycleModel.from_dict(state['model']) if state.get('model') else None
     values['SESSION'] = data
     for name, value in values.items():

@@ -159,22 +159,21 @@ negro**. Cada dígito añade su peso a la tinta de su edad, y de esas sumas sale
 | `cmyk_composition` | recuentos de dígitos sin pesos, divididos por la profundidad: depende solo de la composición |
 | `wcmy` | normalizadas y desplazadas una tinta: Satya → blanco, Treta → cian, Dvapara → magenta, Kali → amarillo, sin negro |
 
-Además hay seis coloreados más que solo dependen de la dirección (`division.level_colors`):
+Además hay cuatro coloreados más que solo dependen de la dirección (`division.level_colors`):
 
 | Coloreado | Definición |
 |---|---|
 | `tetrahedron` | «juego del caos» en el espacio RGB (2.6) |
 | `tetrahedron_oklab` | el mismo juego en OKLab, un espacio perceptual (2.6) |
 | `lrgb` | la tinta pura de la edad del último nivel |
-| `dharma`, `purity` | gris con el valor de la medida |
 | `duration_class` | un color por clase de igual duración (2.7) |
 
-Estos doce son `division.LEVEL_COLOR_KEYS`. Con los seis de las medidas y los tres del modelo de ciclo (2.7),
+Estos diez son `division.LEVEL_COLOR_KEYS`. Con los ocho de las medidas y los tres del modelo de ciclo (2.7),
 `COLOR_KEYS` tiene **veintiún** coloreados, con una descripción de cada uno en `division.COLOR_DESCRIPTIONS`.
 Ejemplo, Kali › Treta › Dvapara › Satya: `cmyk` = (0,0625; 0,25; 0,125; 0,5); `cmyk_normalised` = (0,0667;
 0,2667; 0,1333; 0,5333); `cmyk_composition` = (¼, ¼, ¼, ¼).
 
-![Los doce coloreados de la dirección para los 64 subciclos de profundidad 3](figuras/variantes_color.png)
+![Los diez coloreados de la dirección para los 64 subciclos de profundidad 3](figuras/variantes_color.png)
 
 ## 2.6 El tetraedro de Sierpinski
 
@@ -218,27 +217,37 @@ del ciclo, `tetrahedron_oklab`.
 
 ## 2.7 Coloreados por clase, por medida y por el punto vernal
 
-Otros diez coloreados miran más allá de la dirección: el nivel entero, los pesos de las medidas o el modelo de
-ciclo.
+Otros doce coloreados miran más allá de la dirección: el nivel entero, las medidas o el modelo de ciclo.
 
 - **`duration_class`**: un color por clase de igual duración (capítulo 1). Las clases, de la más larga a la más
   corta, toman tonos separados por el ángulo áureo (137,5°, cada uno lejos de los anteriores) y tres
   luminosidades alternas, en OKLab para que todos se vean igual de intensos (`color.duration_class_colors`). Los
   subciclos del mismo color son intercambiables en duración; a profundidad *d* hay $(d + 1)^2$ colores.
-- **Las medidas** de 2.4 (`MEASURE_COLOR_KEYS`): `mixture`, `tension`, `trend`, `roughness`, `contrast` y
-  `balance`, con el mapa *viridis* para las medidas de 0 a 1 y uno divergente (azul negativo, blanco 0, rojo
-  positivo) para las que tienen signo, sobre el rango fijo de cada medida (`color.measure_colors`, el mismo del
-  panel *Measures*). El color de un subciclo no depende del zoom: el balance, sin rango fijo, se escala con el
-  nivel entero.
+- **Las medidas** (`MEASURE_COLOR_KEYS`): `dharma`, `purity` y las de 2.4, `mixture`, `tension`, `trend`,
+  `roughness`, `contrast` y `balance`, todas por igual: un mapa de color **secuencial** para las que van de 0 a 1
+  (de 1/4 a 1 el dharma) y uno **divergente** para las que tienen signo (`color.DIVERGING_MEASURES`, con el 0 en
+  el centro), sobre el rango fijo de cada medida (`color.measure_colors`, la misma función del panel
+  *Measures*). El color de un subciclo no depende del zoom: el balance, sin rango fijo, se escala con el nivel
+  entero.
 
 Los tres últimos dependen del **modelo de ciclo** (`MODEL_COLOR_KEYS`) y se ven en gris claro sin él:
 
-- `density`: la densidad angular de 2.4, azul donde la precesión va más despacio que la media y rojo donde va más
-  deprisa;
+- `density`: la densidad angular de 2.4, en el mapa divergente con el 1 (el ritmo medio) en el centro: con el
+  mapa por defecto, azul donde la precesión va más despacio que la media y rojo donde va más deprisa;
 - `vernal_sign`: el signo sidéreo en el que está el **punto vernal** al empezar el subciclo (doce tonos, Aries
   rojo). El punto vernal está en 0° trópico, así que su longitud sidérea es $-\text{ayanāṃśa}$
   (`color.vernal_point_longitude`); hoy, unos 336°: Piscis;
 - `vernal_element`: el elemento de ese signo: fuego rojo, tierra verde, aire amarillo, agua azul.
+
+Los dos mapas se eligen en el diálogo de parámetros de color (capítulo 12) y se guardan con la sesión:
+
+| Mapa | Opciones (`color.SEQUENTIAL_MAPS`, `color.DIVERGING_MAPS`) | Por defecto |
+|---|---|---|
+| secuencial | viridis, cividis (apto para el daltonismo), magma, plasma, inferno, gris | viridis |
+| divergente | azul – rojo, coolwarm, naranja – púrpura, marrón – verde azulado | azul – rojo |
+
+Cambiar un mapa solo recolorea: los niveles y los valores de las medidas no se calculan de nuevo. Con el mapa
+gris, el dharma y la pureza vuelven a verse en tonos de gris, como antes (ahora sobre su rango: el dharma, de 1/4 a 1).
 
 ![Los coloreados de clases, medidas y modelo para los 256 subciclos de profundidad 4, en años del modelo por defecto](figuras/variantes_color_medidas.png)
 
@@ -272,7 +281,8 @@ separar: a profundidad 7, la base 2 da 15 764 colores distinguibles en pantalla 
 Los efectos de cada parámetro sobre los coloreados están en `division.COLOR_PARAMETER_EFFECTS`: la base de
 color cambia las variantes CMYK salvo `cmyk_composition`, el dharma y las medidas hechas de virtudes (tensión,
 tendencia, aspereza, contraste, balance); la de pureza, la pureza y la mezcla; las
-escalas, cada una su variante; paso y vértices, los dos tetraedros.
+escalas, cada una su variante; paso y vértices, los dos tetraedros; y los dos mapas, los coloreados de las
+medidas de su tipo (no sus valores: `CycleState.measure_parameters_of` los deja fuera).
 
 En `tetrahedron_oklab` la unicidad es exacta (la conversión de OKLab a sRGB es biyectiva), pero con pasos cerca de
 1 los colores de la esquina negra quedan a menos de $10^{-10}$ en RGB: las pruebas los comparan en OKLab. Los
@@ -286,7 +296,7 @@ coloreados de clases, medidas y modelo no buscan colores únicos.
   información propia son la tendencia, el contraste y la densidad angular; la mezcla repite casi la pureza y la
   aspereza casi la tensión.
 - Las medidas distinguen las ordenaciones de una composición, que tienen la misma duración.
-- Veintiún coloreados: doce de la dirección (los CMYK asocian cada edad a una tinta, el del tetraedro dibuja un
-  Sierpinski, en RGB o en OKLab), uno por clase de duración, seis de medidas y tres del modelo (la densidad
-  angular y el signo y el elemento del punto vernal).
+- Veintiún coloreados: diez de la dirección (los CMYK asocian cada edad a una tinta, el del tetraedro dibuja un
+  Sierpinski, en RGB o en OKLab; uno por clase de duración), ocho de medidas, en un mapa secuencial o divergente
+  a elegir, y tres del modelo (la densidad angular y el signo y el elemento del punto vernal).
 - Los parámetros tienen rangos que garantizan colores distintos dentro de cada nivel.

@@ -41,7 +41,7 @@ tienen docstrings (`help(compute_level)`).
 | `composition.py` | composiciones, clases de igual duración, enumeración de una composición, `analyse_level` |
 | `duration.py` | `count_digits`, `same_duration`, `duration_quotient`, distancias entre inicios |
 | `measure.py` | `dharma_measure`, `purity_measure`, `dharma_from_cmyk`; las demás medidas (`mixture_measure`, `tension_measure`, `trend_measure`, `roughness_measure`, `contrast_measure`, `balance_measure`), `address_measures` y el registro `MEASURES` |
-| `color.py` | variantes CMYK, CMYK → RGB, `lrgb`, coloreado del tetraedro en RGB y en OKLab (`srgb_to_oklab`, `oklab_to_srgb`, `oklab_tetrahedron`), colores por clase de duración, por medida (`measure_colors`) y por el punto vernal (`vernal_colors`), rangos de los parámetros (`color_parameter_problems`) |
+| `color.py` | variantes CMYK, CMYK → RGB, `lrgb`, coloreado del tetraedro en RGB y en OKLab (`srgb_to_oklab`, `oklab_to_srgb`, `oklab_tetrahedron`), colores por clase de duración, por medida (`measure_colors`, con los mapas de `SEQUENTIAL_MAPS` y `DIVERGING_MAPS`) y por el punto vernal (`vernal_colors`), rangos de los parámetros (`color_parameter_problems`) |
 | `permutation.py` | matriz de una permutación sobre un nivel; composición, potencias, ciclos, orden, signo, tipo, notación, `parse_permutation`, `permute_digits`, `tcoords_of` (capítulo 3) |
 | `timescale.py` | `TimeMap` (lineal, por fronteras de edades, por funciones), `address_label`, nombres de las edades |
 | `cycle_model.py` | `CycleModel`, presets y su fichero, `mean_rate` (capítulo 8) |

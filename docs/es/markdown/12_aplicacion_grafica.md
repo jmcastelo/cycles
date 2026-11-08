@@ -276,8 +276,11 @@ desviación de las cuotas. *Apply* lo aplica; *Save preset* y *Delete preset* ge
 *Parameters…* ajusta las bases y escalas de los coloreados y las medidas, y los cuatro colores del tetraedro,
 dentro de los rangos que mantienen distintos los colores de cada nivel (capítulo 2): los valores fuera de rango
 no se aplican y se explica por qué. A la derecha, para una profundidad, cuántos colores son distintos y cuántos
-se distinguen en una pantalla (redondeados a 256 niveles por canal), para los doce coloreados de la dirección (los de
-medidas y del modelo no buscan colores únicos). Los cambios se aplican al momento;
+se distinguen en una pantalla (redondeados a 256 niveles por canal), para los diez coloreados de la dirección (los de
+medidas y del modelo no buscan colores únicos). *Measure color maps* elige los dos mapas de color de las medidas,
+cada uno con su degradado: el secuencial (de 0 a 1: dharma, pureza, mezcla, tensión, aspereza) y el divergente
+(con signo: tendencia, contraste, balance, y la densidad angular centrada en 1). Valen para los coloreados y para
+*Color by…* del panel *Measures*, y cambiarlos solo recolorea. Los cambios se aplican al momento;
 *Revert* vuelve a los valores con que se abrió y *Defaults* a los de por defecto.
 
 ## 12.15 Guardar gráficos

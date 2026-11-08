@@ -102,3 +102,62 @@ def test_the_colorings_in_the_explorer(window, spin):
         spin()
         window.navigator.repaint()
     assert window.color_box.count() == len(COLOR_KEYS) + 2                 # two separators
+
+
+# -- the color maps of the measures
+
+def test_dharma_and_purity_follow_the_sequential_map():
+    level = compute_level(3)
+    gray = level_colors(level, ('gray', 'RdBu_r'))
+    assert np.allclose(gray['dharma'][:, 0], gray['dharma'][:, 1]) and np.allclose(gray['purity'][:, 1],
+                                                                                 gray['purity'][:, 2])
+    viridis = level_colors(level)['dharma']
+    assert not np.allclose(viridis[:, 0], viridis[:, 1])
+    assert np.allclose(viridis, measure_colors(level.dharmas, 'dharma')[0])
+
+
+def test_unknown_maps_are_refused():
+    from cycles.functions.color import color_parameter_problems
+    from cycles.functions.division import DEFAULT_BASES, DEFAULT_SCALES
+    assert color_parameter_problems(DEFAULT_BASES, DEFAULT_SCALES, TETRAHEDRON_COLORS, ('viridis', 'RdBu_r')) == []
+    assert color_parameter_problems(DEFAULT_BASES, DEFAULT_SCALES, TETRAHEDRON_COLORS, ('RdBu_r', 'viridis'))
+
+
+@pytest.mark.gui
+def test_other_maps_only_recolor_the_measures(window, spin):
+    state = window.state
+    bases, scales, colors, maps = state.color_parameters
+    assert maps == ('viridis', 'RdBu_r')
+    cache, level = state.cache, state.cache.level(3)
+    cmyk, trend, dharma = (state.colors(3, k).copy() for k in ('cmyk_normalised', 'trend', 'dharma'))
+    density = state.colors(3, 'density').copy()
+    changed = []
+    state.colorParametersChanged.connect(changed.append)
+    state.set_color_parameters(bases, scales, colors, ('magma', 'PuOr_r'))
+    assert state.cache is cache and state.cache.level(3) is level           # the levels are kept
+    assert changed[-1] == {'dharma', 'purity', 'mixture', 'tension', 'roughness', 'trend', 'contrast', 'balance',
+                           'density'}
+    assert np.array_equal(state.colors(3, 'cmyk_normalised'), cmyk)
+    for key, before in (('trend', trend), ('dharma', dharma), ('density', density)):
+        assert not np.allclose(state.colors(3, key), before), key
+    assert np.allclose(state.colors(3, 'dharma'), measure_colors(level.dharmas, 'dharma', ('magma', 'PuOr_r'))[0])
+    # the group explorer's measures do not depend on the maps, the colorings do
+    assert state.measure_parameters_of('dharma') == (bases[1],)
+    assert state.parameters_of('dharma') == (bases[1], 'magma')
+
+
+@pytest.mark.gui
+def test_the_dialog_chooses_the_maps(window, spin):
+    from cycles.gui.colordialog import ColorDialog
+    state = window.state
+    dialog = ColorDialog(state, window)
+    dialog.show()
+    spin()
+    dialog.sequential_map.setCurrentIndex(dialog.sequential_map.findData('cividis'))
+    dialog.diverging_map.setCurrentIndex(dialog.diverging_map.findData('coolwarm'))
+    dialog.apply()
+    assert state.color_parameters[3] == ('cividis', 'coolwarm')
+    dialog.load(*dialog._original)
+    dialog.apply()
+    assert state.color_parameters[3] == ('viridis', 'RdBu_r')
+    dialog.close()

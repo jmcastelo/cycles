@@ -114,11 +114,12 @@ def tetrahedron_volume(colors) -> float:
     return abs(np.linalg.det(v[1:] - v[0])) / 6
 
 
-def color_parameter_problems(bases, scales, colors=None) -> list[str]:
+def color_parameter_problems(bases, scales, colors=None, maps=None) -> list[str]:
     """
     Reasons why ``bases``, ``scales`` and the tetrahedron ``colors`` (as in
-    ``division.compute_level``) may give repeated colors within a level; empty
-    if they cannot.
+    ``division.compute_level``) may give repeated colors within a level, or why
+    the color ``maps`` of the measures (sequential, diverging) are not known;
+    empty if there are none.
     """
     problems = []
     if bases[1] < COLOR_BASE_MIN:
@@ -137,6 +138,8 @@ def color_parameter_problems(bases, scales, colors=None) -> list[str]:
             problems.append("the tetrahedron needs four RGB colors with values in [0, 1]")
         elif tetrahedron_volume(colors) < 1e-9 or tetrahedron_volume(srgb_to_oklab(colors)) < 1e-9:
             problems.append("the four tetrahedron colors must not lie in one plane (in RGB or in OKLab)")
+    if maps is not None and (maps[0] not in SEQUENTIAL_MAPS or maps[1] not in DIVERGING_MAPS):
+        problems.append(f"unknown color maps {tuple(maps)}")
     return problems
 
 
@@ -245,11 +248,22 @@ def duration_class_colors(durations) -> np.ndarray:
     return palette[inverse.ravel()]
 
 
-def measure_colors(values, key: str):
+# The color maps of the measures (matplotlib names and labels): a sequential one for the measures from 0 to 1 (or
+# 1/4 to 1, dharma), a diverging one for the signed ones (centred on 0, on 1 for the angular density)
+SEQUENTIAL_MAPS = {'viridis': 'viridis', 'cividis': 'cividis (color-blind safe)', 'magma': 'magma',
+                   'plasma': 'plasma', 'inferno': 'inferno', 'gray': 'gray'}
+DIVERGING_MAPS = {'RdBu_r': 'blue – red', 'coolwarm': 'coolwarm', 'PuOr_r': 'orange – purple',
+                  'BrBG': 'brown – teal'}
+DEFAULT_COLOR_MAPS = ('viridis', 'RdBu_r')                 # (sequential, diverging)
+DIVERGING_MEASURES = ('trend', 'contrast', 'balance', 'density')
+
+
+def measure_colors(values, key: str, maps=DEFAULT_COLOR_MAPS):
     """
     RGB colors (N, 3) of ``values`` of the measure ``key`` (``measure.MEASURES``) and the matplotlib mappable,
-    for a color bar: a diverging map (centred on 0, on 1 for the angular density) for the signed measures, a
-    sequential one otherwise, over the measure's nominal range (the values' own range if it has none).
+    for a color bar: the diverging map of ``maps`` (centred on 0, on 1 for the angular density) for the signed
+    measures (``DIVERGING_MEASURES``), the sequential one otherwise, over the measure's nominal range (the values'
+    own range if it has none).
     """
     from matplotlib import colormaps
     from matplotlib.cm import ScalarMappable
@@ -265,11 +279,11 @@ def measure_colors(values, key: str):
             lo_hi = (-edge, edge)
         elif lo_hi[0] == lo_hi[1]:
             lo_hi = (lo_hi[0] - 0.5, lo_hi[1] + 0.5)
-    diverging = lo_hi[0] < 0 < lo_hi[1] or key == 'density'
+    diverging = key in DIVERGING_MEASURES
     if key == 'density':                          # centre 1, the cycle's mean rate
         edge = max(abs(lo_hi[0] - 1), abs(lo_hi[1] - 1)) or 0.01
         lo_hi = (1 - edge, 1 + edge)
-    mappable = ScalarMappable(Normalize(*lo_hi), colormaps['RdBu_r' if diverging else 'viridis'])
+    mappable = ScalarMappable(Normalize(*lo_hi), colormaps[maps[1] if diverging else maps[0]])
     return mappable.to_rgba(np.nan_to_num(values, nan=lo_hi[0]))[:, :3], mappable
 
 

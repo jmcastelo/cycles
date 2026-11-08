@@ -239,8 +239,8 @@ class GroupExplorer(QDialog):
             return
         state = self.state
         context = self.context()
-        key = (context, state.color_key, state.parameters_of(state.color_key), state.parameters_of('dharma'),
-               state.parameters_of('purity'), state.model if state.color_key in MODEL_COLOR_KEYS else None)
+        key = (context, state.color_key, state.parameters_of(state.color_key), state.measure_parameters_of('dharma'),
+               state.measure_parameters_of('purity'), state.model if state.color_key in MODEL_COLOR_KEYS else None)
         if key != self._context:
             self._context = key
             self._rebuild(context)
