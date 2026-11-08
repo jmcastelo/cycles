@@ -13,8 +13,10 @@ La interfaz está en inglés. Este capítulo describe cada parte con los nombres
 
 El área central muestra las subdivisiones del subciclo ampliado (el **zoom**), una fila por profundidad, cada
 subciclo con su color. Arriba, una franja con el **ciclo completo**, con la parte ampliada enmarcada, la fecha
-marcada y el momento del cielo; pulsar una edad en ella amplía esa edad. Entre la franja y las filas hay una
-**banda de etiquetas** con las de la fecha (*now* o la fecha, en rojo) y el momento del cielo (*sky*, en naranja).
+marcada y el momento del cielo; pulsar una edad en ella amplía esa edad. Las filas empiezan justo debajo. Bajo
+las filas, sobre el eje del tiempo, hay una **banda de etiquetas** con las de la fecha (*now* o la fecha, en rojo) y
+el momento del cielo (*sky*, en naranja), cada una al pie de su línea; la banda tiene una línea por etiqueta (o
+las que necesite la clave de los criterios), y las filas ocupan el resto.
 
 Cada papel tiene un solo color, en el navegador y en todos los gráficos: la **selección** en azul (un borde de
 2 píxeles; sus padres, de 1), el **momento del cielo** en naranja (su línea, su etiqueta y, con *Follow*, los
@@ -301,7 +303,7 @@ resume. La tabla lista los acontecimientos del tramo ampliado con su fecha (UT) 
 ángulo medio de los planetas y el arco que los contiene. Pulsar una fila lleva allí el momento del cielo y
 selecciona el subciclo de esa profundidad que lo contiene.
 
-Con *Show in navigator*, los acontecimientos aparecen en el navegador como marcas rosas justo encima de la primera
+Con *Show in navigator*, los acontecimientos aparecen en el navegador como marcas rosas justo debajo de la última
 fila (translúcidas cuando son tantas que forman una banda), con su nombre y su número en un extremo de la banda de
 etiquetas. Los catálogos se calculan una vez con la efeméride del panel *Sky* y se guardan en disco
 (`sandbox/data/events/`), compartidos con `study_of_events.py`; el resultado es una sola prueba, y el estudio

@@ -29,13 +29,25 @@ def drag(navigator, spin, kind, dx, cancel=False):
     spin()
 
 
-def test_tags_are_in_their_band_between_the_overview_and_the_rows(navigator):
+def test_tags_are_in_their_band_between_the_rows_and_the_axis(window, navigator, spin):
+    from cycles.gui.navigator import AXIS_HEIGHT, ROWS_TOP_GAP
     band = navigator._tag_band()
     rows_top = min(rect.top() for rect, _ in navigator._cells)
-    assert band.top() >= navigator._overview_rect().bottom() and band.bottom() <= rows_top
+    rows_bottom = max(rect.bottom() for rect, _ in navigator._cells)
+    # the rows start just under the overview; the tags are under the rows, above the time axis
+    assert rows_top == navigator._overview_rect().bottom() + ROWS_TOP_GAP
+    assert band.top() >= rows_bottom and band.bottom() <= navigator.height() - AXIS_HEIGHT
     assert set(navigator._tags) == {'date', 'sky'}
     for rect in navigator._tags.values():
         assert band.top() - 0.5 <= rect.top() and rect.bottom() <= band.bottom() + 0.5
+    assert navigator._tags['date'].top() < navigator._tags['sky'].top()     # one line each
+    # with only one tag the band is a single line, and the rows grow into the space
+    lines = navigator._band_lines()
+    window.state.set_date(None)
+    spin()
+    navigator.repaint()
+    assert navigator._band_lines() == lines - 1 == 1 and set(navigator._tags) == {'sky'}
+    assert max(rect.bottom() for rect, _ in navigator._cells) > rows_bottom
 
 
 def test_dragging_the_tags_moves_the_markers(window, navigator, spin):

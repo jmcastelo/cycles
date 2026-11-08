@@ -55,6 +55,10 @@ the commit `vX.Y.Z`.
   the selection blue (a thinner border, 2 px, its parents 1 px), the sky moment orange (its cursor and tag, as the
   Follow boxes already were), the marked date red. The cursors are solid lines, and borders and cursors have a
   light edge so that they stand out over cells of any color.
+- **The navigator's tags below the rows**: the tags of the marked date and the sky moment, the key of the criteria
+  and the label of the planetary events moved from between the overview and the rows to a band under the rows,
+  above the time axis (one line per tag shown), so the rows start right under the overview; the event ticks are
+  under the last row.
 - **Tests in parallel**: `pytest-xdist` in the `test` extra; `pytest -n 8` runs the suite in under a minute instead
   of nine.
 - **README**: a short introduction with installation, a quick start, the chapters of the documentation and the

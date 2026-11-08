@@ -7,7 +7,8 @@ column of dots (4, 3, 2, 1 for Satya, Treta, Dvapara, Kali).
 Mouse: click selects, double-click zooms in, right-click zooms out; a click on
 the overview zooms to that yuga; Shift+click sets the moment of the sky chart.
 The tags of the marked date and of the sky moment, in a band under the
-overview, can be dragged along the rows (Escape cancels a drag).
+rows (above the time axis), can be dragged along the rows (Escape cancels a
+drag).
 Keys: Left/Right previous/next subcycle, Up parent, Down first part,
 Enter zoom into the selection, Backspace/Escape zoom out.
 """
@@ -25,7 +26,8 @@ from cycles.gui.state import (
 LABEL_WIDTH = 44     # left margin, for the depth of each row
 AXIS_HEIGHT = 24     # bottom margin, for the time axis
 OVERVIEW_HEIGHT = 22  # strip of the whole cycle, at the top
-TAG_GAP = 3          # around the band of the marker tags, between the overview and the rows
+TAG_GAP = 3          # around the band of the marker tags, between the rows and the time axis
+ROWS_TOP_GAP = 6     # between the overview and the first row
 ROW_GAP = 2          # between rows
 # the two criteria for dividing the cycle, when the navigator compares them
 CRITERIA_COLORS = {'angle': '#8c564b', 'time': '#17becf'}
@@ -116,17 +118,27 @@ class Navigator(QWidget):
     def _tag_height(self) -> float:
         return self.fontMetrics().height() + 2
 
+    def _band_lines(self) -> int:
+        """Lines of the tag band: one per marker tag shown (date, sky), as many as the key of the criteria needs."""
+        state = self.state
+        tags = int(state.date is not None) + int(state.sky_time is not None)
+        key = 0
+        if state.compare_criteria and state.model is not None:
+            key = 2 if state.model.division == 'hybrid' else 1
+        return max(1, tags, key)
+
     def _tag_band(self) -> QRectF:
-        """Band between the overview and the rows, with a line for each marker tag (date, then sky)."""
-        top = self._overview_rect().bottom() + TAG_GAP
-        return QRectF(LABEL_WIDTH, top, self.width() - LABEL_WIDTH - 8, 2 * self._tag_height() + 2)
+        """Band between the rows and the time axis, with a line for each marker tag (date, then sky)."""
+        height = self._band_lines() * (self._tag_height() + 2)
+        bottom = self.height() - AXIS_HEIGHT - TAG_GAP
+        return QRectF(LABEL_WIDTH, bottom - height, self.width() - LABEL_WIDTH - 8, height)
 
     def _layout(self) -> list[tuple[QRectF, tuple, int, int]]:
         """Cells to draw: (rectangle, address, depth, index)."""
         state = self.state
         rows = self._rows()
-        top = self._tag_band().bottom() + TAG_GAP
-        area = QRectF(LABEL_WIDTH, top, self.width() - LABEL_WIDTH - 8, self.height() - AXIS_HEIGHT - 4 - top)
+        top = self._overview_rect().bottom() + ROWS_TOP_GAP
+        area = QRectF(LABEL_WIDTH, top, self.width() - LABEL_WIDTH - 8, self._tag_band().top() - TAG_GAP - top)
         row_height = area.height() / len(rows)
         focus = state.focus
         if focus:
@@ -274,7 +286,7 @@ class Navigator(QWidget):
 
     def _draw_events(self, painter: QPainter, cells) -> None:
         """
-        The planetary events of the Events panel: a short tick just above the first row at each event in the
+        The planetary events of the Events panel: a short tick just under the last row at each event in the
         zoomed span (at most one per pixel; dense events read as a band), and their name and number at an end
         of the tag band that no tag covers.
         """
@@ -286,9 +298,9 @@ class Navigator(QWidget):
         u = np.asarray(state.time_map.to_normalized(years[(years >= state.time_map.start)
                                                           & (years <= state.time_map.end)]), dtype=float)
         u = u[(u >= start) & (u <= end)]
-        first_depth = min(depth for _, _, depth, _ in cells)
-        row = [(rect, index) for rect, _, depth, index in cells if depth == first_depth]
-        level = state.cache.level(first_depth)
+        last_depth = max(depth for _, _, depth, _ in cells)
+        row = [(rect, index) for rect, _, depth, index in cells if depth == last_depth]
+        level = state.cache.level(last_depth)
         band = self._tag_band()
         color = QColor(EVENT_COLOR)
         tick = QColor(color)
@@ -305,7 +317,7 @@ class Navigator(QWidget):
                     x = rect.left() + (value - c_start) / c_duration * rect.width()
                     if round(x) not in drawn:
                         drawn.add(round(x))
-                        painter.drawLine(QPointF(x, rect.top() - 6), QPointF(x, rect.top() + 3))
+                        painter.drawLine(QPointF(x, rect.bottom() - 3), QPointF(x, rect.bottom() + TAG_GAP + 3))
                     break
         if label:
             font = QFont(painter.font())
@@ -548,7 +560,7 @@ class Navigator(QWidget):
         start, end = self._focus_extent()
         time_map = state.time_map
         span = (time_map.to_physical(end) - time_map.to_physical(start)) if time_map else 0.0
-        bottom = max(rect.bottom() for rect, *_ in cells)
+        bottom = self._tag_band().bottom() + TAG_GAP
         metrics = painter.fontMetrics()
         ticks = [(rect.left(), float(level.starts[tcoord(address)])) for rect, address in children]
         ticks.append((children[-1][0].right(), end))
@@ -576,12 +588,12 @@ class Navigator(QWidget):
         self._draw_marker(painter, cells, 'date', state.date, QColor(DATE_COLOR), date_label, 0)
         if state.sky_time is not None:
             self._draw_marker(painter, cells, 'sky', state.sky_time, QColor(MOMENT_COLOR),
-                              date_text(state.sky_time) if dragged == 'sky' else 'sky', 1)
+                              date_text(state.sky_time) if dragged == 'sky' else 'sky', int(state.date is not None))
 
     def _draw_marker(self, painter: QPainter, cells, kind: str, year, color: QColor, label, line: int) -> None:
         """
         Line at ``year`` through every row (also with equal widths), with its tag on line ``line``
-        of the tag band, joined to the line in the first row.
+        of the tag band under the rows, joined to the line in the last row.
         """
         state = self.state
         u = state.position(year)
@@ -590,7 +602,7 @@ class Navigator(QWidget):
         start, end = self._focus_extent()
         if not start <= u <= end:
             return
-        top = None
+        last = None                             # (depth, x, bottom) in the deepest row
         for rect, address, depth, index in cells:
             # the cell of each row that contains the time
             level = state.cache.level(depth)
@@ -599,17 +611,19 @@ class Navigator(QWidget):
                 x = rect.left() + (u - c_start) / c_duration * rect.width()
                 stroke(painter, color, CURSOR_WIDTH,
                        lambda x=x, r=rect: painter.drawLine(QPointF(x, r.top()), QPointF(x, r.bottom())))
-                top = x if top is None else top
-        if top is not None and label:
+                if last is None or depth > last[0]:
+                    last = (depth, x, rect.bottom())
+        if last is not None and label:
+            _, x, rows_bottom = last
             metrics = painter.fontMetrics()
             band = self._tag_band()
             height = self._tag_height()
             y = band.top() + line * (height + 2)
-            # the line goes on up through the band to the tag
+            # the line goes on down from the last row to the tag
             stroke(painter, color, CURSOR_WIDTH,
-                   lambda: painter.drawLine(QPointF(top, y + height / 2), QPointF(top, band.bottom() + TAG_GAP)))
+                   lambda: painter.drawLine(QPointF(x, rows_bottom), QPointF(x, y + height / 2)))
             width = metrics.horizontalAdvance(label) + 8
-            left = top if top + width < self.width() - 8 else top - width
+            left = x if x + width < self.width() - 8 else x - width
             tag = QRectF(left, y, width, height)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
             painter.setPen(Qt.PenStyle.NoPen)
