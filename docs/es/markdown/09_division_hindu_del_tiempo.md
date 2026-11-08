@@ -27,11 +27,11 @@ textos. Es el objeto de estudio del proyecto, no una afirmación sobre las fuent
 ## 9.2 ¿Es fractal?
 
 En sentido estricto, **no**: el intervalo se divide en piezas cuyas razones de semejanza suman 1, y la dimensión
-de similitud *s* de la **ecuación de Moran** `Σ rᵢ^s = 1` es exactamente **1**: la estructura rellena el
+de similitud $s$ de la **ecuación de Moran**, $\sum_i r_i^{\,s} = 1$, es exactamente **1**: la estructura rellena el
 intervalo. Aparecen fractales al retener solo algunas piezas en cada nivel, o al usar una medida distinta de la
 longitud:
 
-| Piezas retenidas en cada nivel | Dimensión *s* |
+| Piezas retenidas en cada nivel | Dimensión $s$ |
 |---|---:|
 | las cuatro | 1,0000 |
 | sin el Kali (0,4; 0,3; 0,2) | 0,9099 |

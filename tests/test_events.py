@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from cycles.functions.significance import holm, nearest_distance, proximity_test, rotations, value_test
+from cycles.functions.significance import holm, nearest_distance, proximity_test, rotations, scan_models, value_test
 
 
 # -- significance
@@ -97,3 +97,35 @@ def test_the_planets_around_a_point(tables):
     tropical = around_point(tables, [kali], CLASSICAL, 0.0, 'tropical')
     assert np.isclose(tropical['spread'][0], sidereal['spread'][0])            # the arc does not depend on the zodiac
     assert tropical['mean_distance'][0] > 45
+
+
+# -- the map over the models
+
+def test_the_boundary_grid_is_the_models_division():
+    from cycles.functions.cycle_analysis import boundary_grid
+    from cycles.functions.cycle_model import BUILTIN_PRESETS, DEFAULT_PRESET
+    model = BUILTIN_PRESETS[DEFAULT_PRESET]
+    solution = model.solve()
+    grid = boundary_grid(model, [solution['anchor'], solution['anchor'] + 5000], [solution['turns'], 3.0], 1)
+    assert grid.shape == (2, 2, 5)
+    assert np.allclose(grid[0, 0], model.boundaries(), atol=1e-6)
+    far = boundary_grid(model, [2000.0 - 300000], [2.5], 1)          # outside the long-term precession model
+    assert np.isnan(far).all()
+
+
+def test_scan_models_finds_a_planted_model_and_corrects_for_the_search():
+    rng = np.random.default_rng(4)
+    span = (0.0, 100_000.0)
+    models = np.sort(rng.uniform(5_000, 95_000, (40, 30, 9)), axis=-1)          # 1200 models of 9 boundaries
+    planted = models[17, 5]
+    events = np.sort(np.concatenate([planted + rng.normal(0, 0.5, planted.shape),
+                                     rng.uniform(0, 100_000, 2000)]))
+    found = scan_models(models, events, span, 200)
+    assert found['best'] == (17, 5) and found['p_global'] < 0.05 and found['ratio'][17, 5] < 0.2
+    unrelated = scan_models(models, np.sort(rng.uniform(0, 100_000, 2000)), span, 200)
+    assert unrelated['p_global'] > 0.05
+    # a model that leaves the span, or cannot be placed, is left out
+    models[0, 0, 0] = -10.0
+    models[1, 1, 3] = np.nan
+    left_out = scan_models(models, events, span, 10)
+    assert not left_out['valid'][0, 0] and not left_out['valid'][1, 1] and left_out['valid'].sum() == 1198

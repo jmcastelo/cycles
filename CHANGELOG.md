@@ -8,6 +8,17 @@ current one: `tests/test_version.py` checks it, and the docs' LaTeX converter re
 When releasing a version: describe it here, raise `__version__`, update the docs (and their version line), and tag
 the commit `vX.Y.Z`.
 
+## Unreleased
+
+- **Significance over all the models** (look-elsewhere): `cycle_analysis.boundary_grid` gives the boundaries of a
+  grid of models (anchor × arc, dividing the arc), `significance.scan_models` the distance of each to the events and
+  a global p from rigid shifts of the event catalogue (the best model of each shift); `expected_distance` gives the
+  distance of a random moment exactly. In the study (`model_map`) and in the Events panel (view *Over the models*:
+  the map, the closest models, a double click places the cycle there). With the default ranges no model comes
+  closer than chance once the search is taken into account.
+- **Docs**: the formulas are LaTeX in the Markdown (`$…$`, `$$…$$`, as GitHub renders them), typeset in the PDF
+  with `unicode-math` and Libertinus Math.
+
 ## 0.3.0 — 2026-11-08
 
 Planetary events and significance tests.

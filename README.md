@@ -383,7 +383,11 @@ catalogues are computed once (in seconds, from the ephemeris) and cached in
 `sandbox/data/events/`. With the default model, no test is significant after
 the correction; the planets do gather near 0° sidereal Aries at the traditional
 start of Kali, but that is the model's anchor, and the other yuga boundaries do
-not share it.
+not share it. `model_map` asks the same of every model (anchor × arc, dividing
+the arc): the distance of each model's boundaries to the events, the closest
+model, and a global p from rigid shifts of the event catalogue (the best model
+found each time), which takes the search over the models into account; with the
+default ranges, none comes closer than chance.
 
 New studies are plain functions marked with `@study` (see
 `sandbox/runner.py`); shared paths and default parameters are in
@@ -606,7 +610,9 @@ tropical). For the boundaries of a chosen depth, over the whole cycle or inside
 the zoom, it draws the distribution of the statistic for rigid rotations of the
 boundaries with the observed value and its p, lists the events of the zoomed
 span (clicking one shows its sky and selects its subcycle), and marks them in
-the navigator, just above the first row. The catalogues are computed once from
+the navigator, just above the first row. The view *Over the models* maps every
+model (anchor × arc) with the global p of the search; double-clicking the map,
+or a row of the closest models, places the cycle there. The catalogues are computed once from
 the Sky tab's ephemeris and kept in `sandbox/data/events/`, shared with the
 study; each result is a single test, and the study corrects the whole family.
 

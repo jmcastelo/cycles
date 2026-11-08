@@ -57,12 +57,20 @@ Calcular los tres lleva unos 30 s; `study_of_events.py` los guarda en `sandbox/d
   coincidencia con la división. En los histogramas de la figura 15.2 se ve: para Júpiter y Saturno, la
   distribución nula es bimodal a partir de la profundidad 2, por la interacción del periodo de las conjunciones
   con el espaciado de las fronteras.
-- **Valor p** unilateral: (1 + nº de rotaciones con estadístico ≤ observado) / (1 + nº de rotaciones), con 5000
-  rotaciones.
+- **Valor p** unilateral, con $N = 5000$ rotaciones y $S_r$ el estadístico de cada una:
+  $p = \left(1 + \#\{r : S_r \le S_{\text{obs}}\}\right) / (1 + N)$.
 - **Corrección de Holm** sobre toda la familia de pruebas: con muchas pruebas, alguna sale «significativa» por azar
   (con 29 pruebas se esperan unas 1,5 con p < 0,05).
 
 Las fronteras son las de profundidad 1 a 5 del modelo (de 5 a 1025), convertidas de UT a TDB como en el explorador.
+
+Como referencia, la distancia media de un instante al azar al acontecimiento más cercano se calcula exactamente a
+partir de los huecos $g_i$ entre acontecimientos consecutivos de un tramo de longitud $L$ (`expected_distance`; los
+extremos $h$ y $h'$, del inicio al primero y del último al final):
+
+$$
+\bar d = \frac{1}{L}\left(\sum_i \frac{g_i^2}{4} + \frac{h^2 + h'^2}{2}\right)
+$$
 
 ## 15.4 H1: el Sūrya Siddhānta, los planetas en 0° de Aries
 
@@ -117,13 +125,50 @@ ancla.
 
 Matices:
 
-- El resultado es **condicional al modelo** (ancla y arco); el mapa de significación sobre el paisaje del modelo
-  (capítulo 8) está pendiente.
+- El resultado es **condicional al modelo** (ancla y arco); la sección 15.8 lo extiende a todos los modelos.
 - Antes de −3000 la efeméride no tiene referencia independiente; los planetas lentos, los de H2 y H3, son los más
   robustos.
 - H1 mide los planetas **verdaderos**; la afirmación del Sūrya Siddhānta es sobre los **medios**.
 
-## 15.8 Cómo se ejecuta
+## 15.8 Todos los modelos a la vez
+
+Los resultados anteriores son de un modelo. ¿Hay **alguna** colocación del ciclo (ancla y arco) cuyas fronteras
+caigan sobre los acontecimientos más de lo que permite el azar? Comparar muchos modelos y quedarse con el mejor es
+una búsqueda: el mejor parecerá siempre especial. El contraste tiene que tenerlo en cuenta («look-elsewhere»):
+
+1. `boundary_grid` da las fronteras de todos los modelos de una rejilla (ancla $\pm 30\,000$ años alrededor de la
+   del modelo, cada 1000; arco de 1 a 4 vueltas, cada 0,25), dividiendo el arco. Los que salen del alcance de la
+   efeméride (unos $-68\,000$ a $+72\,000$) se descartan: quedan 474.
+2. Para cada modelo, la razón $\rho$ entre la distancia media de sus fronteras al acontecimiento más cercano y la de
+   un instante al azar, $\bar d$ ($\rho < 1$: más cerca que el azar).
+3. **Valor p global** (`scan_models`): se desplaza rígidamente el catálogo de acontecimientos (con su ritmo) una
+   cantidad al azar, $N = 1000$ veces, y cada vez se busca el mejor modelo. El valor p global es la proporción de
+   desplazamientos cuyo mejor modelo se acerca tanto como el mejor real:
+   $p_{\text{global}} = \left(1 + \#\{k : \min_m S_m^{(k)} \le \min_m S_m\}\right) / (1 + N)$.
+
+Con los cinco catálogos y las profundidades 1 a 3 (15 pruebas), **ninguna es significativa tras Holm**: la menor
+es Urano–Neptuno a profundidad 1, $p_{\text{global}} = 0{,}032$ (0,48 corregido). El modelo por defecto no destaca:
+según la prueba, entre el 4 % y el 75 % de los modelos se acercan tanto como él.
+
+| Prueba | Prof. | Este modelo: $\rho$; % de modelos tan cerca | Mejor modelo: ancla, arco, $\rho$ | $p_{\text{global}}$ |
+|---|---:|---|---|---:|
+| Júpiter–Saturno | 1 | 0,63; 8 % | 4899, 1,5; 0,30 | 0,51 |
+| Júpiter–Saturno | 2 | 0,84; 14 % | −9101, 1,5; 0,51 | 0,25 |
+| Trígono sidéreo | 1 | 1,15; 68 % | 2899, 2,25; 0,34 | 0,88 |
+| Trígono trópico | 1 | 0,53; 4 % | 26899, 4; 0,30 | 0,59 |
+| Urano–Neptuno | 1 | 1,19; 75 % | 10899, 3; 0,19 | 0,032 |
+| Neptuno–Plutón | 1 | 0,87; 32 % | −101, 1,5; 0,43 | 0,95 |
+| Neptuno–Plutón | 3 | 0,91; 7 % | 9899, 3,25; 0,82 | 0,45 |
+
+(Selección; `study_of_events.py model_map` da las 15.)
+
+![Todos los modelos: razón entre la distancia de las fronteras a los acontecimientos y la de un instante al azar (azul: más cerca), por ancla y arco, para cada catálogo y profundidad; círculo: el modelo por defecto; estrella: el mejor](figuras/eventos_mapa_modelos.png)
+
+A profundidad 1 el mapa parece ruido: mover el ancla 1000 años desplaza cada frontera un número distinto de veces
+el ritmo de los acontecimientos (20 años para Júpiter y Saturno). El contraste global es válido para la rejilla
+explorada; una rejilla más fina sería simplemente una búsqueda mayor.
+
+## 15.9 Cómo se ejecuta
 
 ```bash
 python sandbox/study_of_events.py --list
@@ -132,20 +177,23 @@ python sandbox/study_of_events.py surya_siddhanta        # H1
 python sandbox/study_of_events.py great_conjunctions     # H2
 python sandbox/study_of_events.py outer_conjunctions     # H3
 python sandbox/study_of_events.py summary --save         # las 29 pruebas con Holm; guarda summary.csv
+python sandbox/study_of_events.py model_map --save       # todos los modelos (ancla × arco) y el p global
 python sandbox/study_of_events.py --all --session sandbox/sessions/otro_modelo.cycles.json
 ```
 
-## 15.9 En el explorador
+## 15.10 En el explorador
 
 El panel *Events* (capítulo 12) hace cada una de estas pruebas de forma interactiva: elige el catálogo, la
 profundidad, todo el ciclo o solo el zoom y el número de rotaciones; dibuja la distribución nula con el valor
 observado, lista los acontecimientos del tramo (y lleva el momento del cielo a cualquiera de ellos) y los marca en
-el navegador. Usa los mismos catálogos guardados que el estudio. Cada resultado del panel es una sola prueba: la
+el navegador. Con la vista *Over the models* dibuja el mapa de la sección 15.8 para la prueba y la profundidad
+elegidas, con el modelo actual, el mejor y el p global; un doble clic en el mapa, o en una fila de la lista de los
+mejores modelos, coloca allí el ciclo. Usa los mismos catálogos guardados que el estudio. Cada resultado del panel es una sola prueba: la
 corrección de la familia está en `summary`.
 
-## 15.10 Pendiente
+## 15.11 Pendiente
 
 Otras familias de acontecimientos (aspectos, ingresos en signos y nakṣatras, estaciones, reuniones de planetas, el
 punto vernal entrando en un signo), el Sol y Júpiter en Puṣya al final del Kali, el modelo nulo de las
-permutaciones de dígitos, el mapa de significación sobre el paisaje del modelo y los acontecimientos históricos
+permutaciones de dígitos, H1 con los planetas medios del propio Sūrya Siddhānta y los acontecimientos históricos
 con fecha (los mismos contrastes con otro catálogo).

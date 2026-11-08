@@ -213,7 +213,10 @@ Se elige la prueba:
 - los planetas del Sol a Saturno en 0° de Aries, sidéreo (la afirmación del Sūrya Siddhānta) o trópico (el punto
   vernal).
 
-Y también la profundidad de las fronteras (1 a 6), si se prueban en todo el ciclo o solo dentro del zoom, y el
+Y la **vista**: *This model* (las fronteras del modelo actual frente a rotaciones de ellas) u *Over the models*
+(el mapa de todos los modelos, ancla × arco, con el p global que tiene en cuenta la búsqueda; capítulo 15.8: un
+doble clic en el mapa, o en una fila de la lista de los mejores, coloca allí el ciclo). También la profundidad de
+las fronteras (1 a 6), si se prueban en todo el ciclo o solo dentro del zoom, y el
 número de rotaciones. El gráfico muestra la distribución del estadístico para las rotaciones rígidas de las
 fronteras (gris), su media (discontinua) y el valor de las fronteras (rojo), con el valor p; el encabezado lo
 resume. La tabla lista los acontecimientos del tramo ampliado con su fecha (UT) y su posición en ambos zodiacos

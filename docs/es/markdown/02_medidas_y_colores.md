@@ -1,12 +1,12 @@
 # 2. Medidas y colores
 
 Cada subciclo recibe, a partir de su dirección, dos **medidas** escalares (dharma y pureza) y varios **colores**.
-Ambos usan **pesos por posición**: el dígito del nivel *k* pesa `b^−k`, de modo que los niveles exteriores
-cuentan más que los interiores.
+Ambos usan **pesos por posición**: el dígito del nivel $k$ pesa $b^{-k}$, de modo que los niveles exteriores
+cuentan más que los interiores (`division.weights`):
 
-```
-pesos(b, d) = (b⁻¹, b⁻², …, b⁻ᵈ)            division.weights
-```
+$$
+w(b, d) = \left(b^{-1},\ b^{-2},\ \dots,\ b^{-d}\right)
+$$
 
 Las bases son parámetros (`compute_level(d, bases, scales, colors)`):
 
@@ -22,12 +22,13 @@ Las bases son parámetros (`compute_level(d, bases, scales, colors)`):
 
 ## 2.1 Dharma
 
-Cada edad tiene una **virtud**: Satya 1, Treta 3/4, Dvapara 1/2, Kali 1/4 (es decir, (4 − a)/4). El **dharma**
-de un subciclo es la media de las virtudes de sus dígitos, ponderada con los pesos de base `bases[1]`:
+Cada edad tiene una **virtud**: Satya 1, Treta 3/4, Dvapara 1/2, Kali 1/4 (es decir, $(4 - a)/4$). El **dharma**
+de un subciclo es la media de las virtudes de sus dígitos, ponderada con los pesos de base `bases[1]`
+(`measure.dharma_measure`):
 
-```
-dharma(a) = Σ_k w_k · (4 − a_k)/4  /  Σ_k w_k            measure.dharma_measure
-```
+$$
+\operatorname{dharma}(a) = \frac{\sum_k w_k\, (4 - a_k)/4}{\sum_k w_k}
+$$
 
 Vale 1 para una dirección toda Satya y 1/4 para una toda Kali. Ejemplo, Kali › Treta › Dvapara › Satya con base
 2: pesos normalizados (0,5333; 0,2667; 0,1333; 0,0667), virtudes (1/4; 3/4; 1/2; 1), aportaciones (0,1333;
@@ -42,10 +43,12 @@ La **pureza** mide cuánto domina una sola edad. Se calcula la **cuota** pondera
 pesos, de base `bases[2]`, de sus dígitos, dividida por la suma de todos los pesos) y se toma la mayor menos la
 menor:
 
-```
-cuota_e(a) = Σ_{k: a_k = e} w_k / Σ_k w_k
-pureza(a)  = máx_e cuota_e − mín_e cuota_e              measure.purity_measure
-```
+$$
+\operatorname{cuota}_e(a) = \frac{\sum_{k:\, a_k = e} w_k}{\sum_k w_k}, \qquad
+\operatorname{pureza}(a) = \max_e \operatorname{cuota}_e - \min_e \operatorname{cuota}_e
+$$
+
+(`measure.purity_measure`).
 
 Vale 1 si todos los dígitos son de la misma edad y 0 si las cuatro edades pesan lo mismo. En el ejemplo, las
 cuotas son Satya 0,0667, Treta 0,2667, Dvapara 0,1333 y Kali 0,5333: pureza = Kali − Satya = **0,4667**.
@@ -71,7 +74,7 @@ dharma y solo 9 de pureza.
 
 Cada edad se asocia a una tinta de imprenta: **Satya → cian, Treta → magenta, Dvapara → amarillo, Kali →
 negro**. Cada dígito añade su peso a la tinta de su edad, y de esas sumas salen las variantes CMYK
-(`color.lcoords_to_cmyk`), convertidas a RGB con `RGB = (1 − CMY) · (1 − K)`:
+(`color.lcoords_to_cmyk`), convertidas a RGB con $\mathrm{RGB} = (1 - \mathrm{CMY})\,(1 - \mathrm{K})$:
 
 | Variante | Definición |
 |---|---|
@@ -101,11 +104,12 @@ El coloreado `tetrahedron` coloca las cuatro edades en cuatro colores-vértice (
 magenta y negro, el mayor tetraedro que cabe en el cubo RGB, de volumen 1/3) y parte del centroide; cada
 dígito acerca el punto una fracción `scales[2]` hacia el vértice de su edad:
 
-```
-c₀ = centroide de los vértices;   c_k = c_(k−1) + s · (vértice[a_k] − centroide)      color.lcoords_to_rgb_tetrahedron
-```
+$$
+c_0 = \bar v = \tfrac14 \sum_e v_e, \qquad c_k = c_{k-1} + s\,\left(v_{a_k} - \bar v\right)
+$$
 
-Con *s* = 1/2, los colores de todas las direcciones llenan un **tetraedro de Sierpinski**.
+(`color.lcoords_to_rgb_tetrahedron`, con $v_e$ los colores-vértice). Con $s = 1/2$, los colores de todas las
+direcciones llenan un **tetraedro de Sierpinski**.
 
 ![Colores `tetrahedron` de los 4 096 subciclos de profundidad 6 en el cubo RGB: un tetraedro de Sierpinski](figuras/sierpinski_tetraedro.png)
 

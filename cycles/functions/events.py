@@ -152,6 +152,15 @@ def around_point(tables, years, bodies=CLASSICAL, point: float = 0.0, zodiac: st
 
 # -- time scales and the cache
 
+def table_span(tables) -> tuple[float, float]:
+    """TDB years covered by the ephemeris ``tables`` together (from the earliest to the latest moment)."""
+    ends = []
+    for table in ([tables] if isinstance(tables, dict) else tables):
+        reach = min(float(t[-1]) for t in table['times'].values())
+        ends += [2000.0, 2000.0 + table['sign'] * reach / DAYS_PER_YEAR + (table['jd0'] - 2451545.0) / DAYS_PER_YEAR]
+    return min(ends), max(ends)
+
+
 def tdb_years(years_ut) -> np.ndarray:
     """Decimal years in UT to TDB (with the DeltaT of ``astro_dates``; its warnings far from the present silenced)."""
     from cycles.plotting.equinoctial_precession import _tdb_year

@@ -112,3 +112,27 @@ def test_without_the_ephemeris(window, panel):
         assert panel.result is None and 'ephemeris' in panel.heading.text()
     finally:
         window.sky_panel.tables = tables
+
+
+def test_the_map_over_the_models(window, panel, spin):
+    state = window.state
+    choose(panel, 'great')
+    panel.view.setCurrentIndex(panel.view.findData('models'))
+    panel.depth.setValue(1)
+    panel.render()
+    r = panel.result
+    scan = r['map']
+    assert scan['ratio'].shape == (len(r['anchors']), len(r['turns'])) and scan['valid'].sum() > 100
+    assert 0 < scan['p_global'] <= 1 and 0 <= r['own_rank'] <= 1
+    assert 'global p' in panel.heading.text() and panel.table.rowCount() == 20
+    ratios = [float(panel.table.item(k, 2).text()) for k in range(20)]
+    assert ratios == sorted(ratios)
+    # a row places the cycle there
+    anchor, turns = panel._map_rows[0]
+    panel.go_to(0)
+    spin()
+    solution = state.model.solve()
+    assert abs(solution['anchor'] - anchor) < 0.01 and np.isclose(solution['turns'], turns)
+    choose(panel, 'aries_sidereal')
+    panel.render()
+    assert panel.result is None and 'this model only' in panel.heading.text()

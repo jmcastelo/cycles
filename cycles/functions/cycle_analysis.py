@@ -72,21 +72,18 @@ def precession_rate(model: CycleModel, years) -> np.ndarray:
 MEASURES = {'max': 'Largest deviation', 'rms': 'RMS deviation'}
 
 
-def mismatch_grid(model: CycleModel, anchors: np.ndarray, turns: np.ndarray, depth: int,
-                  measure: str = 'max') -> np.ndarray:
+def boundary_grid(model: CycleModel, anchors: np.ndarray, turns: np.ndarray, depth: int) -> np.ndarray:
     """
-    Deviation of the time shares from 4:3:2:1 when dividing by angle (the
-    largest, or the RMS with ``measure='rms'``, over the parts of all
-    subcycles at ``depth``), for every anchor year of the
-    model's anchor point (rows) and arc in turns (columns); ``inf`` where the
-    cycle leaves the range of the precession model.
+    Years (UT, as the model's) of the boundaries of the subcycles of ``depth`` (their starts and the end, in time
+    order) when dividing by angle, for every anchor year of the model's anchor point (axis 0) and arc in turns
+    (axis 1): shape ``(anchors, turns, 4^depth + 1)``; NaN where the cycle leaves the range of the precession model.
     """
-    if measure not in MEASURES:
-        raise ValueError(f"measure must be one of {list(MEASURES)}")
     from cycles.plotting.equinoctial_precession import year_from_ayanamsa
+    anchors = np.asarray(anchors, dtype=float)
+    turns = np.asarray(turns, dtype=float)
     u = boundary_fractions(depth) - ANCHOR_POINTS[model.anchor_point]
     options = model._precession_options()
-    result = np.full((len(anchors), len(turns)), np.inf)
+    result = np.full((len(anchors), len(turns), len(u)), np.nan)
     inside = np.abs(anchors - 2000.0) < LONG_TERM_SPAN
     if not inside.any():
         return result
@@ -100,11 +97,27 @@ def mismatch_grid(model: CycleModel, anchors: np.ndarray, turns: np.ndarray, dep
             rows = rows[valid]
             if not len(rows):
                 continue
-        years = year_from_ayanamsa(u[None, :] * n, unit='turns', reference_year=anchors[rows, None], **options)
-        deviations = time_shares(years) - proportions
-        result[rows, j] = (np.abs(deviations).max(axis=(-2, -1)) if measure == 'max'
-                           else np.sqrt(np.mean(deviations ** 2, axis=(-2, -1))))
+        result[rows, j] = year_from_ayanamsa(u[None, :] * n, unit='turns', reference_year=anchors[rows, None],
+                                             **options)
     return result
+
+
+def mismatch_grid(model: CycleModel, anchors: np.ndarray, turns: np.ndarray, depth: int,
+                  measure: str = 'max') -> np.ndarray:
+    """
+    Deviation of the time shares from 4:3:2:1 when dividing by angle (the
+    largest, or the RMS with ``measure='rms'``, over the parts of all
+    subcycles at ``depth``), for every anchor year of the
+    model's anchor point (rows) and arc in turns (columns); ``inf`` where the
+    cycle leaves the range of the precession model.
+    """
+    if measure not in MEASURES:
+        raise ValueError(f"measure must be one of {list(MEASURES)}")
+    years = boundary_grid(model, anchors, turns, depth)
+    deviations = time_shares(years) - proportions
+    result = (np.abs(deviations).max(axis=(-2, -1)) if measure == 'max'
+              else np.sqrt(np.mean(deviations ** 2, axis=(-2, -1))))
+    return np.where(np.isfinite(result), result, np.inf)
 
 
 _mismatch_grid = mismatch_grid

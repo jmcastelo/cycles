@@ -17,13 +17,13 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QToolButton, QVBoxLayout, QWidget,
 )
 
-from cycles.functions.cycle_analysis import boundary_fractions
+from cycles.functions.cycle_analysis import anchor_fields, boundary_fractions, boundary_grid
 from cycles.functions.events import (
     CLASSICAL, ELEMENTS, SIGN_NAMES, ZODIACS, around_point, cached_conjunctions, element_of, first_of_series,
-    sign_of, tdb_years, trigon_changes, ut_years,
+    sign_of, table_span, tdb_years, trigon_changes, ut_years,
 )
-from cycles.functions.significance import proximity_test, value_test
-from cycles.gui.state import MAX_DEPTH, CycleState, children_range, datetime_text, tcoord
+from cycles.functions.significance import proximity_test, scan_models, value_test
+from cycles.gui.state import MAX_DEPTH, CycleState, children_range, date_text, datetime_text, tcoord
 
 # Tests: key -> (label, kind, pair or zodiac)
 TESTS = {
@@ -38,6 +38,10 @@ TESTS = {
 MARGIN = 200.0                     # years of events beyond the cycle (as in study_of_events)
 MAX_POSITIONS = 400_000            # boundaries × rotations whose sky is computed in a test of the planets at 0° Aries
 MAX_ROWS = 2000                    # events listed
+VIEWS = {'model': 'This model', 'models': 'Over the models'}
+MAP_ANCHORS = (30000.0, 1000.0)    # the map: anchors around the model's (half-width, step, years)
+MAP_TURNS = (1.0, 4.0, 0.25)       # arcs (from, to, step, turns)
+MAP_ROWS = 20                      # closest models listed
 AUTO_RENDER = True                 # draw when shown (the tests turn it off: offscreen, hidden tabs count as shown)
 
 
@@ -73,7 +77,13 @@ class EventsPanel(QWidget):
         save_button.setText('Save…')
         save_button.setToolTip('Save this graph to a file (page size, resolution, format…)')
         save_button.clicked.connect(self.saveRequested)
+        self.view = QComboBox()
+        for key, label in VIEWS.items():
+            self.view.addItem(label, key)
+        self.view.setToolTip('This model: its boundaries against rotations of them.\nOver the models: every '
+                             'anchor × arc (dividing the arc), with a global p that takes the search into account')
         row.addWidget(self.kind, 1)
+        row.addWidget(self.view)
         row.addWidget(QLabel('Depth'))
         row.addWidget(self.depth)
         row.addWidget(save_button)
@@ -112,6 +122,7 @@ class EventsPanel(QWidget):
             header.setSectionResizeMode(col, QHeaderView.ResizeMode.ResizeToContents)
         header.setStretchLastSection(True)
         self.table.cellClicked.connect(lambda r, _: self.go_to(r))
+        self.canvas.mpl_connect('button_press_event', self._map_clicked)
         splitter.addWidget(self.table)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 2)
@@ -126,6 +137,7 @@ class EventsPanel(QWidget):
         self.render_timer.setInterval(100)
         self.render_timer.timeout.connect(self.render)
         self.kind.currentIndexChanged.connect(self._schedule)
+        self.view.currentIndexChanged.connect(self._schedule)
         for box in (self.depth, self.rotations):
             box.valueChanged.connect(self._schedule)
         self.inside.toggled.connect(self._schedule)
@@ -152,7 +164,8 @@ class EventsPanel(QWidget):
         self._schedule()
 
     def title(self) -> str:
-        return f"{self.kind.currentText()}, depth {self.depth.value()}"
+        over = ', over the models' if self.view.currentData() == 'models' else ''
+        return f"{self.kind.currentText()}, depth {self.depth.value()}{over}"
 
     # -- data
 
@@ -235,6 +248,11 @@ class EventsPanel(QWidget):
         if state.time_map is None or not self.sky_panel.tables:
             self._message('Needs a cycle model and the ephemeris tables (see the Sky panel).')
             return
+        if self.view.currentData() == 'models':
+            self.table.setHorizontalHeaderLabels(['Anchor (UT)', 'Arc', 'Distance / random', 'Rank'])
+            self._render_map()
+            return
+        self.table.setHorizontalHeaderLabels(['When (UT)', 'Event', 'Sidereal', 'Tropical'])
         boundaries = self.boundaries_ut()
         if boundaries is None:
             self._message('Choose a depth below the zoom, or test the whole cycle.')
@@ -354,10 +372,160 @@ class EventsPanel(QWidget):
         self.canvas.draw_idle()
         self.state.set_event_marks(None)
 
+    # -- over the models
+
+    def map_grid(self):
+        solution = self.state.model.solve()
+        half, step = MAP_ANCHORS
+        anchors = np.arange(solution['anchor'] - half, solution['anchor'] + half + 1, step)
+        turns = np.arange(MAP_TURNS[0], MAP_TURNS[1] + 1e-9, MAP_TURNS[2])
+        return anchors, turns, solution
+
+    def wide_events(self):
+        """The chosen events over the whole span of the ephemeris (TDB), for models placed anywhere in it."""
+        label, kind, what = TESTS[self.kind.currentData()]
+        start, end = table_span(self.sky_panel.tables)
+        pair = what if kind == 'conjunctions' else ('jupiter', 'saturn')
+        key = ('wide',) + tuple(pair)
+        if key not in self._catalogs:
+            window = self.window()
+            if hasattr(window, 'statusBar'):
+                window.statusBar().showMessage(f"Computing the {pair[0]}–{pair[1]} conjunctions over the whole "
+                                               f"ephemeris (once; then kept on disk)…")
+                window.statusBar().repaint()
+            self._catalogs[key] = cached_conjunctions(self.sky_panel.tables, self.sky_panel.ephemeris_path,
+                                                      pair[0], pair[1], start + 1, end - 1)
+            if hasattr(window, 'statusBar'):
+                window.statusBar().clearMessage()
+        data = self._catalogs[key]
+        events = data['times'][first_of_series(data)] if kind == 'conjunctions' else trigon_changes(data, what)
+        return events, (start, end)
+
+    def _render_map(self) -> None:
+        state = self.state
+        if TESTS[self.kind.currentData()][1] == 'aries':
+            self._message('The map over the models is for events (conjunctions, trigon changes); the planets at '
+                          '0° Aries are tested on this model only.')
+            return
+        key = ('map', self.kind.currentData(), self.depth.value(), self.rotations.value(), state.model,
+               str(self.sky_panel.ephemeris_path))
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            if key != self._result_key:
+                anchors, turns, solution = self.map_grid()
+                events, span = self.wide_events()
+                grid = boundary_grid(state.model, anchors, turns, self.depth.value())
+                finite = np.isfinite(grid)
+                tdb = np.full(grid.shape, np.nan)
+                tdb[finite] = tdb_years(grid[finite])
+                scan = scan_models(tdb, events, span, self.rotations.value())
+                own = tdb_years(boundary_grid(state.model, [solution['anchor']], [solution['turns']],
+                                              self.depth.value())[0, 0])
+                own_scan = scan_models(own[None, :], events, span, 0)
+                observed = scan['observed'][np.isfinite(scan['observed'])]
+                self.result = {'map': scan, 'anchors': anchors, 'turns': turns, 'solution': solution,
+                               'own_ratio': float(own_scan['ratio'][0]),
+                               'own_rank': float(np.mean(observed <= own_scan['observed'][0])),
+                               'shifts': self.rotations.value()}
+                self._result_key = key
+        finally:
+            QApplication.restoreOverrideCursor()
+        self._draw_map()
+        self._fill_map_table()
+        self._update_marks()
+
+    def _draw_map(self) -> None:
+        r = self.result
+        scan, anchors, turns, solution = r['map'], r['anchors'], r['turns'], r['solution']
+        ax = self.figure.add_subplot(111)
+        da, dt = MAP_ANCHORS[1] / 2, MAP_TURNS[2] / 2
+        image = ax.imshow(scan['ratio'].T, origin='lower', aspect='auto', cmap='RdBu_r', vmin=0.5, vmax=1.5,
+                          extent=(anchors[0] - da, anchors[-1] + da, turns[0] - dt, turns[-1] + dt))
+        ax.scatter([solution['anchor']], [solution['turns']], s=60, facecolors='white', edgecolors='black',
+                   zorder=3, label='this model')
+        if scan['best'] is not None:
+            i, j = scan['best']
+            ax.scatter([anchors[i]], [turns[j]], marker='*', s=110, color='yellow', edgecolors='black', zorder=3,
+                       label='closest')
+        bar = self.figure.colorbar(image, ax=ax)
+        bar.set_label('mean distance to the events / that of a random moment', fontsize=7)
+        bar.ax.tick_params(labelsize=7)
+        point = self.state.model.anchor_point
+        ax.set_xlabel(f"start of {point} (year)" if point != 'end' else 'end of the cycle (year)', fontsize=8)
+        ax.set_ylabel('arc (turns)', fontsize=8)
+        ax.set_title(f"{self.kind.currentText()}, depth {self.depth.value()}: global p = {scan['p_global']:.3f}",
+                     fontsize=9)
+        ax.tick_params(labelsize=7)
+        ax.legend(fontsize=7, loc='upper left')
+        self._map_axes = ax
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            self.figure.tight_layout()
+        self.canvas.draw_idle()
+        models = int(np.sum(scan['valid']))
+        best = ''
+        if scan['best'] is not None:
+            i, j = scan['best']
+            best = (f" The closest: {date_text(anchors[i])}, {turns[j]:g} turns (ratio "
+                    f"{scan['ratio'][i, j]:.2f}).")
+        verdict = ('some model comes closer than chance would allow' if scan['p_global'] < 0.05
+                   else 'no model comes closer than chance would allow')
+        self.heading.setText(f"{models} models (anchor × arc) within the ephemeris: {verdict} "
+                             f"(global p = {scan['p_global']:.3f}).{best} This model: ratio {r['own_ratio']:.2f}, "
+                             f"{100 * r['own_rank']:.0f} % of the models come as close.")
+        self.note.setText(
+            'Each model divides the arc of precession from its anchor; blue: its boundaries come closer to the '
+            f"events than random moments would, red: farther. The global p comes from {r['shifts']} rigid shifts "
+            'of the events (their rhythm kept): how often the best model then comes as close as the real best, '
+            'which takes the search over all the models into account. Double-click the map, or click a row, to '
+            'place the cycle there.')
+
+    def _fill_map_table(self) -> None:
+        r = self.result
+        scan = r['map']
+        ratio = scan['ratio']
+        order = np.argsort(np.where(np.isfinite(ratio), ratio, np.inf), axis=None)[:MAP_ROWS]
+        finite = ratio[np.isfinite(ratio)]
+        rows = []
+        for flat in order:
+            i, j = np.unravel_index(flat, ratio.shape)
+            if not np.isfinite(ratio[i, j]):
+                break
+            rows.append((r['anchors'][i], r['turns'][j], ratio[i, j], np.mean(finite <= ratio[i, j])))
+        self.table.setRowCount(len(rows))
+        for k, (anchor, turns, value, rank) in enumerate(rows):
+            for c, text in enumerate((date_text(anchor), f"{turns:g} turns", f"{value:.2f}",
+                                      f"{100 * rank:.1f} %")):
+                self.table.setItem(k, c, QTableWidgetItem(text))
+        self._map_rows = [(a, t) for a, t, _, _ in rows]
+        self._rows = []
+
+    def _map_clicked(self, event) -> None:
+        if (self.view.currentData() != 'models' or not event.dblclick or event.button != 1
+                or event.inaxes is not getattr(self, '_map_axes', None) or event.xdata is None):
+            return
+        self.move_model(event.xdata, event.ydata)
+
+    def move_model(self, anchor: float, turns: float) -> None:
+        """Place the cycle with its anchor point at ``anchor`` (UT) and an arc of ``turns`` (as the landscape)."""
+        model = self.state.model
+        date, time = anchor_fields(float(anchor))
+        try:
+            self.state.set_model(model.replace(anchor_date=date, anchor_time=time, anchor_longitude=0.0,
+                                               anchor_ayanamsa=None, turns=round(float(turns), 4), years=None))
+        except ValueError as error:
+            self.heading.setText(f"Cannot place the cycle there: {error}")
+
     # -- interaction
 
     def go_to(self, row: int) -> None:
         """Move the sky moment to an event and select the subcycle of the panel's depth that contains it."""
+        if self.view.currentData() == 'models':
+            rows = getattr(self, '_map_rows', [])
+            if 0 <= row < len(rows):
+                self.move_model(*rows[row])
+            return
         if not 0 <= row < len(self._rows):
             return
         year = self._rows[row]

@@ -21,12 +21,13 @@ import matplotlib.pyplot as plt
 from runner import study, run
 from common import DATA_DIR, PLOTS_DIR, save_figure
 
-from cycles.functions.cycle_analysis import boundary_fractions
+from cycles.functions.cycle_analysis import boundary_fractions, boundary_grid
 from cycles.functions.cycle_model import DEFAULT_PRESET, load_presets
 from cycles.functions.events import (
-    CLASSICAL, ZODIACS, around_point, cached_conjunctions, first_of_series, tdb_years, trigon_changes,
+    CLASSICAL, ZODIACS, around_point, cached_conjunctions, first_of_series, table_span, tdb_years,
+    trigon_changes,
 )
-from cycles.functions.significance import holm, proximity_test, rotations, value_test
+from cycles.functions.significance import holm, proximity_test, rotations, scan_models, value_test
 
 BASE_DIR = PLOTS_DIR / "study_of_events"
 CACHE_DIR = DATA_DIR / "events"
@@ -37,6 +38,11 @@ ROTATIONS = 5000                  # rigid rotations of the boundaries in each te
 PAIRS = {'great': ('jupiter', 'saturn'), 'uranus_neptune': ('uranus', 'neptune'),
          'neptune_pluto': ('neptune', 'pluto')}
 MARGIN = 200.0                    # years of events beyond the cycle, so that the nearest one exists at the ends
+# The map over the models: anchors around the model's, arcs in turns, depths, event shifts
+MAP_ANCHORS = 30000.0, 1000.0     # half-width and step (years)
+MAP_TURNS = (1.0, 4.0, 0.25)
+MAP_DEPTHS = (1, 2, 3)
+MAP_SHIFTS = 1000
 YUGA_LABELS = ('start of Satya', 'start of Treta', 'start of Dvapara', 'start of Kali', 'end')
 
 
@@ -251,6 +257,112 @@ def summary(ctx, opts):
                 f.write(f"{r['hypothesis']},{r['test']},{r['zodiac']},{r['depth']},{r['observed']:.4f},"
                         f"{r['expected']:.4f},{r['ratio']:.4f},{r['p']:.5f},{p_adj:.5f}\n")
         print(f"Saved {BASE_DIR / 'summary.csv'}")
+
+
+# -- the map over the models (look-elsewhere)
+
+def wide_catalog(ctx, name: str) -> dict:
+    """The conjunctions of a pair over the whole span of the ephemeris (for models placed anywhere in it)."""
+    key = 'wide_' + name
+    if key not in ctx.catalogs:
+        a, b = PAIRS[name]
+        start, end = table_span(ctx.tables)
+        print(f"{a}–{b} conjunctions over the whole ephemeris, {start:.0f} to {end:.0f}…", flush=True)
+        ctx.catalogs[key] = cached_conjunctions(ctx.tables, TABLE, a, b, start + 1, end - 1, CACHE_DIR)
+    return ctx.catalogs[key]
+
+
+MAP_TESTS = {
+    'Jupiter–Saturn conjunctions': lambda ctx: series_times(wide_catalog(ctx, 'great')),
+    'trigon changes (sidereal)': lambda ctx: trigon_changes(wide_catalog(ctx, 'great'), 'sidereal'),
+    'trigon changes (tropical)': lambda ctx: trigon_changes(wide_catalog(ctx, 'great'), 'tropical'),
+    'Uranus–Neptune conjunctions': lambda ctx: series_times(wide_catalog(ctx, 'uranus_neptune')),
+    'Neptune–Pluto conjunctions': lambda ctx: series_times(wide_catalog(ctx, 'neptune_pluto')),
+}
+
+
+def map_grid(ctx):
+    solution = ctx.model.solve()
+    half, step = MAP_ANCHORS
+    anchors = np.arange(solution['anchor'] - half, solution['anchor'] + half + 1, step)
+    turns = np.arange(MAP_TURNS[0], MAP_TURNS[1] + 1e-9, MAP_TURNS[2])
+    return anchors, turns, solution
+
+
+def map_rows(ctx) -> list[dict]:
+    """For each test and depth: the scan of the models, the default model's place in it, and the global p."""
+    if 'map' in ctx.results:
+        return ctx.results['map']
+    anchors, turns, solution = map_grid(ctx)
+    span = table_span(ctx.tables)
+    rows = []
+    for depth in MAP_DEPTHS:
+        grid = boundary_grid(ctx.model, anchors, turns, depth)
+        finite = np.isfinite(grid)
+        tdb = np.full(grid.shape, np.nan)
+        tdb[finite] = tdb_years(grid[finite])
+        own = tdb_years(boundary_grid(ctx.model, [solution['anchor']], [solution['turns']], depth)[0, 0])
+        for test, events in MAP_TESTS.items():
+            ev = events(ctx)
+            scan = scan_models(tdb, ev, span, MAP_SHIFTS, seed=depth)
+            own_scan = scan_models(own[None, :], ev, span, 0)
+            observed = scan['observed'][np.isfinite(scan['observed'])]
+            local = proximity_test(own, ev, own[0], own[-1], ROTATIONS, seed=depth)
+            best = scan['best']
+            rows.append({'test': test, 'depth': depth, 'scan': scan, 'anchors': anchors, 'turns': turns,
+                         'own_ratio': float(own_scan['ratio'][0]),
+                         'own_rank': float(np.mean(observed <= own_scan['observed'][0])),
+                         'own_p': local['p'],
+                         'best_anchor': float(anchors[best[0]]) if best else np.nan,
+                         'best_turns': float(turns[best[1]]) if best else np.nan,
+                         'best_ratio': float(scan['ratio'][best]) if best else np.nan,
+                         'p_global': scan['p_global'], 'models': int(np.sum(scan['valid']))})
+    ctx.results['map'] = rows
+    return rows
+
+
+@study(default=False)
+def model_map(ctx, opts):
+    """Every model (anchor × arc, dividing the arc): which comes closest to the events, and is that chance?"""
+    from cycles.gui.state import date_text
+    rows = map_rows(ctx)
+    anchors, turns, solution = map_grid(ctx)
+    adjusted = holm([r['p_global'] for r in rows])
+    print(f"Models: start of {ctx.model.anchor_point} from {anchors[0]:.0f} to {anchors[-1]:.0f} every "
+          f"{MAP_ANCHORS[1]:.0f} years × arcs {turns[0]:g} to {turns[-1]:g} turns every {MAP_TURNS[2]:g}; "
+          f"{MAP_SHIFTS} shifts of the events for the global p.\n")
+    print(f"  {'test':30s} {'depth':>5s} {'models':>6s} {'this model: ratio, rank, p':>28s}   "
+          f"{'best model: anchor, turns, ratio':>40s} {'global p':>9s} {'Holm':>6s}")
+    for r, p_adj in zip(rows, adjusted):
+        best = (f"{date_text(r['best_anchor']):>16s}, {r['best_turns']:4.2f}, {r['best_ratio']:.2f}"
+                if np.isfinite(r['best_anchor']) else '—')                       # the grid is in UT years
+        print(f"  {r['test']:30s} {r['depth']:5d} {r['models']:6d}   {r['own_ratio']:5.2f}, "
+              f"{100 * r['own_rank']:5.1f} %, {r['own_p']:.3f}   {best:>40s} {r['p_global']:9.3f} {p_adj:6.3f}")
+    print("\nratio: mean distance of the boundaries to the nearest event over that of a random moment (below 1: "
+          "closer). rank: share of the models that come as close or closer. global p: how often shifted events "
+          "give a best model as close as the real best (the search over the models taken into account).")
+    tests = list(MAP_TESTS)
+    fig, axes = plt.subplots(len(MAP_DEPTHS), len(tests), figsize=(17, 3.6 * len(MAP_DEPTHS)), squeeze=False)
+    fig.subplots_adjust(hspace=0.55, wspace=0.3, top=0.9)
+    for r in rows:
+        ax = axes[MAP_DEPTHS.index(r['depth']), tests.index(r['test'])]
+        da, dt = MAP_ANCHORS[1] / 2, MAP_TURNS[2] / 2
+        image = ax.imshow(r['scan']['ratio'].T, origin='lower', aspect='auto', cmap='RdBu_r', vmin=0.5, vmax=1.5,
+                          extent=(anchors[0] - da, anchors[-1] + da, turns[0] - dt, turns[-1] + dt))
+        ax.scatter([solution['anchor']], [solution['turns']], s=50, facecolors='white', edgecolors='black', zorder=3)
+        if np.isfinite(r['best_anchor']):
+            ax.scatter([r['best_anchor']], [r['best_turns']], marker='*', s=90, color='yellow', edgecolors='black',
+                       zorder=3)
+        ax.set_title(f"{r['test']}\ndepth {r['depth']}: global p = {r['p_global']:.3f}", fontsize=8)
+        ax.tick_params(labelsize=6)
+        if tests.index(r['test']) == 0:
+            ax.set_ylabel('arc (turns)', fontsize=7)
+        if r['depth'] == MAP_DEPTHS[-1]:
+            ax.set_xlabel(f"start of {ctx.model.anchor_point} (year)", fontsize=7)
+    fig.colorbar(image, ax=axes, shrink=0.6, label='mean distance to the events / that of a random moment')
+    fig.suptitle('Every model of the cycle against the events (blue: closer than chance); circle: this model; '
+                 'star: the closest', fontsize=10)
+    finish(fig, opts, 'model_map.png')
 
 
 def finish(fig, opts, name: str) -> None:

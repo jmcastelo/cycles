@@ -13,7 +13,7 @@ subciclo (`interval`) o el subciclo que contiene una fecha (`subcycle_at`):
 | `precession_time_map(inicio, vueltas)` | el **ángulo de precesión** | toda frontera de subciclo es una frontera de precesión |
 
 El tercero se construye con `TimeMap.from_functions` a partir de una función creciente y su inversa: el tiempo
-normalizado *u* corresponde al instante en que el punto vernal ha recorrido la fracción *u* del arco total, que
+normalizado $u$ corresponde al instante en que el punto vernal ha recorrido la fracción $u$ del arco total, que
 se obtiene invirtiendo el ayanāṃśa (`year_from_ayanamsa`, capítulo 4).
 
 ## 8.2 Las elecciones de un modelo
@@ -51,8 +51,8 @@ El Satya es exactamente una vuelta del punto vernal alrededor del zodiaco:
 | Kali | ¼ de vuelta | 90° | 0,25 / 2,5 = 0,1 |
 
 La división se repite en cada nivel: el arco de un subciclo es el total por el producto de las cuotas de su
-dirección. Kali › Kali es 2,5 · 0,1 · 0,1 = 0,025 vueltas (9°); Satya › Kali, 2,5 · 0,4 · 0,1 = 0,1 vueltas
-(36°). Por eso el preset de tasa constante da al Satya un periodo de precesión (25 772 años).
+dirección. Kali › Kali es $2{,}5 \cdot 0{,}1 \cdot 0{,}1 = 0{,}025$ vueltas (9°); Satya › Kali,
+$2{,}5 \cdot 0{,}4 \cdot 0{,}1 = 0{,}1$ vueltas (36°). Por eso el preset de tasa constante da al Satya un periodo de precesión (25 772 años).
 
 ## 8.4 Los presets
 
@@ -75,17 +75,19 @@ modelo de precesión: la tasa cuenta en cada instante, no mediante promedios). C
 tiempo de un yuga es su cuota de arco por la tasa media del ciclo entre la tasa media del yuga (tasa media =
 arco ÷ tiempo, una **identidad exacta**, no una aproximación):
 
-```
-Δt_yuga / Δt_ciclo = (Δθ_yuga / Δθ_ciclo) · (ω̄_ciclo / ω̄_yuga),     ω̄ = Δθ / Δt = (1/Δt) ∫ ω(t) dt
-```
+$$
+\frac{\Delta t_{\text{yuga}}}{\Delta t_{\text{ciclo}}} = \frac{\Delta\theta_{\text{yuga}}}{\Delta\theta_{\text{ciclo}}}
+\cdot \frac{\bar\omega_{\text{ciclo}}}{\bar\omega_{\text{yuga}}}, \qquad
+\bar\omega = \frac{\Delta\theta}{\Delta t} = \frac{1}{\Delta t}\int \omega(t)\, dt
+$$
 
 Usar la tasa *en* un instante (por ejemplo, en el centro de cada yuga) sería una aproximación peor: la tasa
-cambia unos 4″/año a lo largo de un yuga. La forma exacta es Δt = ∫ dθ / ω(θ), que es justo lo que calcula la
-inversión del ayanāṃśa.
+cambia unos 4″/año a lo largo de un yuga. La forma exacta es $\Delta t = \int d\theta / \omega(\theta)$, que es justo lo
+que calcula la inversión del ayanāṃśa.
 
 Con el modelo por defecto (tasas medias en ″/año: ciclo 50,201; Satya 49,722; Treta 51,666; Dvapara 49,213;
-Kali 49,889), los yugas ocupan **0,4039, 0,2915, 0,2040 y 0,1006** del tiempo: por ejemplo, 0,4 · 50,201 /
-49,722 = 0,4039.
+Kali 49,889), los yugas ocupan **0,4039, 0,2915, 0,2040 y 0,1006** del tiempo: por ejemplo,
+$0{,}4 \cdot 50{,}201 / 49{,}722 = 0{,}4039$.
 
 Dividir los **años** en lugar del arco (mismo ancla y mismo arco total) mueve las fronteras: el Treta empezaría
 en −35 370,6 en lugar de −35 081,4 (**289 años antes**), el Dvapara en −16 008,7 en lugar de −16 268,2. El modo

@@ -76,3 +76,60 @@ def holm(pvalues) -> np.ndarray:
         running = max(running, min(1.0, (m - rank) * p[i]))
         adjusted[i] = running
     return adjusted
+
+
+def expected_distance(events, start: float, end: float) -> float:
+    """
+    Mean distance from a random moment of [start, end] to the nearest event: Σ g² / (4 L) over the gaps g between
+    consecutive events (the ends of the span closing the first and last gaps), L = end − start.
+    """
+    events = np.sort(np.asarray(events, dtype=float))
+    events = events[(events >= start) & (events <= end)]
+    if not len(events):
+        return np.nan
+    inner = np.diff(events)
+    # the ends: a moment before the first event (or after the last) is at its whole distance from it
+    head, tail = events[0] - start, end - events[-1]
+    return float((np.sum(inner ** 2) / 4 + head ** 2 / 2 + tail ** 2 / 2) / (end - start))
+
+
+def scan_models(boundaries, events, span: tuple[float, float], n: int = 1000, seed: int = 0) -> dict:
+    """
+    The boundaries of many models of the cycle (``boundaries``: shape ``(..., K)``, one row of K moments per model,
+    NaN for models that cannot be placed) against ``events`` covering ``span``:
+
+    * ``observed``: mean distance from each model's boundaries to the nearest event (NaN where not placed, or
+      where the boundaries leave the span);
+    * ``ratio``: ``observed`` over the mean distance of a random moment (below 1: closer than chance);
+    * ``best``: index of the model whose boundaries come closest;
+    * ``p_global``: the look-elsewhere test. The events are shifted rigidly by a random offset (wrapping around the
+      span, so their rhythm is kept) ``n`` times, the best model found each time; ``p_global`` is the share of
+      shifts whose best model comes as close as the real best, ``(1 + #{null ≤ best}) / (1 + n)``.
+    """
+    boundaries = np.asarray(boundaries, dtype=float)
+    shape = boundaries.shape[:-1]
+    flat = boundaries.reshape(-1, boundaries.shape[-1])
+    start, end = span
+    valid = np.all(np.isfinite(flat), axis=1) & np.all((flat >= start) & (flat <= end), axis=1)
+    observed = np.full(len(flat), np.nan)
+    events = np.sort(np.asarray(events, dtype=float))
+    events = events[(events >= start) & (events <= end)]
+    observed[valid] = nearest_distance(flat[valid], events).mean(axis=1)
+    expected = expected_distance(events, start, end)
+    result = {'observed': observed.reshape(shape), 'ratio': (observed / expected).reshape(shape),
+              'expected': expected, 'valid': valid.reshape(shape), 'p_global': np.nan, 'null_best': np.zeros(0),
+              'best': None}
+    if not valid.any():
+        return result
+    best = int(np.nanargmin(observed))
+    result['best'] = np.unravel_index(best, shape)
+    length = end - start
+    rng = np.random.default_rng(seed)
+    placed = flat[valid]
+    null = np.empty(n)
+    for k in range(n):
+        shifted = np.sort(start + (events - start + rng.uniform(0, length)) % length)
+        null[k] = nearest_distance(placed, shifted).mean(axis=1).min()
+    result['null_best'] = null
+    result['p_global'] = float((1 + np.count_nonzero(null <= observed[best])) / (1 + n))
+    return result

@@ -39,8 +39,8 @@ regeneran las figuras, en `generar_figuras/`.
 
 ## Resultados principales
 
-1. **Hay (*d* + 1)² duraciones distintas a profundidad *d***, y las composiciones de igual duración difieren en
-   múltiplos de (1, 0, −2, 1), porque 0,4 · 0,1 = 0,2².
+1. **Hay $(d + 1)^2$ duraciones distintas a profundidad $d$**, y las composiciones de igual duración difieren en
+   múltiplos de $(1, 0, -2, 1)$, porque $0{,}4 \cdot 0{,}1 = 0{,}2^2$.
 2. **Las permutaciones de las posiciones conservan las duraciones**; las órbitas de todo el grupo simétrico son las
    composiciones (lema de Burnside).
 3. **Con 2,5 vueltas de precesión**, el Satya es una vuelta y los yugas ocupan 1, ¾, ½ y ¼ de vuelta. Con la tasa
@@ -53,7 +53,8 @@ regeneran las figuras, en `generar_figuras/`.
    parecidos vienen de los periodos de los planetas.
 6. **Ninguna de las 29 pruebas de acontecimientos planetarios** (Sūrya Siddhānta, grandes conjunciones y sus
    cambios de trígono, conjunciones de los planetas exteriores) es significativa tras la corrección de Holm; la
-   reunión de planetas en 0° de Aries sidéreo al inicio del Kali es la del ancla del modelo.
+   reunión de planetas en 0° de Aries sidéreo al inicio del Kali es la del ancla del modelo. Tampoco **ningún otro
+   modelo** (ancla × arco) se acerca a los acontecimientos más de lo que permite el azar, tenida en cuenta la búsqueda.
 7. **La efeméride propia** cubre ±70 000 años; coincide con DE421 a decenas de km y con Moshier a 10″ o menos hasta
    −3000, salvo Marte (discrepancia abierta). Más allá de −3000 no hay referencia independiente.
 
