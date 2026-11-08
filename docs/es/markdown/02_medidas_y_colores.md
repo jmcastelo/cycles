@@ -1,7 +1,8 @@
 # 2. Medidas y colores
 
-Cada subciclo recibe, a partir de su dirección, dos **medidas** escalares (dharma y pureza) y varios **colores**.
-Ambos usan **pesos por posición**: el dígito del nivel $k$ pesa $b^{-k}$, de modo que los niveles exteriores
+Cada subciclo recibe, a partir de su dirección, dos **medidas** escalares principales (dharma y pureza), otras
+seis derivadas de ellas o de la misma dirección (2.4), una que depende del modelo de ciclo, y varios **colores**.
+Medidas y colores usan **pesos por posición**: el dígito del nivel $k$ pesa $b^{-k}$, de modo que los niveles exteriores
 cuentan más que los interiores (`division.weights`):
 
 $$
@@ -70,7 +71,80 @@ Rangos: el dharma va de 1/4 a 1 en todas las profundidades; la pureza mínima ba
 0,571 a profundidad 3, 13/31 ≈ 0,419 a profundidad 5, con base 2). A profundidad 4 hay 46 valores distintos de
 dharma y solo 9 de pureza.
 
-## 2.4 Colores: las edades como tintas
+## 2.4 Más medidas
+
+Dharma y pureza resumen la dirección en dos números: la virtud media y el dominio de una edad. La dirección dice
+más: cuánto se separan las edades mezcladas, en qué orden aparecen, dónde está el subciclo en el tiempo. Con las
+virtudes $v_k = (4 - a_k)/4$, los pesos normalizados $\hat w_k = w_k / \sum_j w_j$ (de `bases[1]` para las
+virtudes y de `bases[2]` para las cuotas, como el dharma y la pureza) y las cuotas $p_e$ de 2.2,
+`cycles.functions.measure` calcula, para un nivel entero y de forma vectorizada:
+
+| Medida | Definición | Qué dice |
+|---|---|---|
+| **Mezcla** (`mixture_measure`) | $-\sum_e p_e \log p_e \,/\, \log 4$ | entropía de las cuotas: ve todas, no solo la mayor y la menor (0 a 1) |
+| **Tensión** (`tension_measure`) | $\sqrt{\sum_k \hat w_k (v_k - \operatorname{dharma})^2}\,/\,\tfrac38$ | lo lejos que están las edades mezcladas: Satya con Kali tensa más que Satya con Treta (0 a 1) |
+| **Tendencia** (`trend_measure`) | $\sum_{k<d} \hat w'_k (v_{k+1} - v_k)\,/\,\tfrac34$ | positiva si los niveles interiores son mejores que los exteriores (−1 a 1) |
+| **Aspereza** (`roughness_measure`) | $\sum_{k<d} \hat w'_k\, \lvert v_{k+1} - v_k\rvert\,/\,\tfrac34$ | lo bruscos que son los saltos de edad entre niveles consecutivos (0 a 1) |
+| **Contraste** (`contrast_measure`) | $(\operatorname{dharma}_i - \operatorname{dharma}_{i-1})\,/\,\tfrac34$ | el salto de dharma al empezar el subciclo, la *sandhi* o juntura (−1 a 1) |
+| **Balance** (`balance_measure`) | $\sum_{j \le i} (\operatorname{dharma}_j - \overline{\operatorname{dharma}})\, \delta_j$ | el saldo acumulado desde el inicio del ciclo |
+
+En la tendencia y la aspereza, el paso entre los niveles $k$ y $k+1$ pesa como el exterior de los dos
+($\hat w'$, los pesos $w_1 \dots w_{d-1}$ normalizados); a profundidad 1 ambas valen 0. Las divisiones por
+$\tfrac34$ (la mayor diferencia de virtudes) y por $\tfrac38$ (la mayor desviación, mitad Satya y mitad Kali)
+llevan cada medida a un rango fijo, comparable entre profundidades.
+
+- La **tendencia** recoge una idea de la tradición jainista: el ciclo del tiempo tiene una mitad descendente
+  (*avasarpiṇī*) y otra ascendente (*utsarpiṇī*). Aquí un subciclo puede ser un ascenso dentro de un descenso:
+  Kali › Satya tiene tendencia +1.
+- El **contraste** y el **balance** dependen del lugar en el tiempo, no solo de la dirección: se calculan sobre
+  el nivel entero en orden temporal. En el contraste, el ciclo se repite, así que el primer subciclo sigue al
+  último. En el balance, $\delta_j$ es la duración y $\overline{\operatorname{dharma}} = \sum_j
+  \operatorname{dharma}_j\, \delta_j$ la media ponderada por duración, de modo que el saldo vuelve a 0 al final
+  del ciclo; sus extremos marcan puntos de giro.
+
+La novena medida depende del **modelo de ciclo** (capítulo 8), no de la dirección:
+
+$$
+\operatorname{densidad}(a) = \frac{\Delta\lambda_a / \Delta\lambda}{\Delta t_a / \Delta t}
+$$
+
+la cuota del arco de precesión que barre el subciclo entre su cuota del tiempo, es decir, su ritmo medio de
+precesión entre el del ciclo entero (`cycle_analysis.angular_density`). Por encima de 1, el equinoccio avanza
+más deprisa que la media. Con precesión constante vale 1 en todas partes.
+
+Todas están en el registro `measure.MEASURES` (nombre, rango, parámetro del que dependen, descripción). El panel
+*Measures* del explorador pone cualquiera de ellas en cada eje o colorea los puntos con ella, y el inspector
+las muestra todas en una línea (capítulo 12).
+
+![Las nueve medidas de los 256 subciclos de profundidad 4 en el tiempo, con el modelo por defecto](figuras/medidas_en_el_tiempo.png)
+
+Lo que se ve en el tiempo:
+
+- El dharma **baja despacio y sube de golpe**. El contraste es casi siempre un poco negativo (−0,048 como mucho a
+  profundidad 3) y tiene picos positivos al empezar cada nueva Satya.
+- El **balance** es positivo en todo el ciclo y tiene su máximo hacia la mitad, donde el dharma cruza su media.
+- La **densidad angular** oscila ±4 % con un periodo de unos 40 000 años: es la variación del ritmo de precesión
+  del modelo de largo plazo, ligada a la oblicuidad (capítulo 4), no la estructura de los yugas.
+
+¿Cuáles aportan información propia? Las correlaciones de rango (Spearman) entre las medidas responden
+(`study_of_measures.py measure_correlations`):
+
+![Correlaciones de rango entre las medidas a profundidades 2, 4 y 6](figuras/medidas_correlaciones.png)
+
+| Par | Correlación (profundidad 6) | Lectura |
+|---|---|---|
+| pureza – mezcla | −0,91 | la mezcla repite casi la pureza |
+| tensión – aspereza | 0,81 | la aspereza repite casi la tensión (1,00 a profundidad 2) |
+| dharma – balance | 0,60 | el balance es en parte dharma acumulado |
+| dharma – tendencia | −0,54 | una tendencia alta exige un nivel exterior bajo |
+| dharma – pureza | 0,00 | independientes por simetría |
+| contraste – cualquiera | ≤ 0,05 | información propia |
+| densidad – cualquiera | ≤ 0,38 | información propia (física) |
+
+Las medidas nuevas que dicen algo que no decían el dharma y la pureza son la **tendencia**, el **contraste** y la
+**densidad angular**; la tensión y la mezcla matizan la pureza.
+
+## 2.5 Colores: las edades como tintas
 
 Cada edad se asocia a una tinta de imprenta: **Satya → cian, Treta → magenta, Dvapara → amarillo, Kali →
 negro**. Cada dígito añade su peso a la tinta de su edad, y de esas sumas salen las variantes CMYK
@@ -89,7 +163,7 @@ Además hay cuatro coloreados más (`division.level_colors`):
 
 | Coloreado | Definición |
 |---|---|
-| `tetrahedron` | «juego del caos» en el espacio RGB (2.5) |
+| `tetrahedron` | «juego del caos» en el espacio RGB (2.6) |
 | `lrgb` | la tinta pura de la edad del último nivel |
 | `dharma`, `purity` | gris con el valor de la medida |
 
@@ -98,7 +172,7 @@ En total, `COLOR_KEYS` tiene diez nombres. Ejemplo, Kali › Treta › Dvapara �
 
 ![Las diez variantes de color de los 64 subciclos de profundidad 3](figuras/variantes_color.png)
 
-## 2.5 El tetraedro de Sierpinski
+## 2.6 El tetraedro de Sierpinski
 
 El coloreado `tetrahedron` coloca las cuatro edades en cuatro colores-vértice (por defecto amarillo, cian,
 magenta y negro, el mayor tetraedro que cabe en el cubo RGB, de volumen 1/3) y parte del centroide; cada
@@ -113,7 +187,7 @@ direcciones llenan un **tetraedro de Sierpinski**.
 
 ![Colores `tetrahedron` de los 4 096 subciclos de profundidad 6 en el cubo RGB: un tetraedro de Sierpinski](figuras/sierpinski_tetraedro.png)
 
-## 2.6 Cuándo los colores no se repiten
+## 2.7 Cuándo los colores no se repiten
 
 Que cada subciclo de un nivel tenga un color distinto exige mantener los parámetros en ciertos rangos,
 comprobados por `color.color_parameter_problems` (y por el diálogo de parámetros del explorador, que no aplica
@@ -133,13 +207,17 @@ separar: a profundidad 7, la base 2 da 15 764 colores distinguibles en pantalla 
 4 442.
 
 Los efectos de cada parámetro sobre los coloreados están en `division.COLOR_PARAMETER_EFFECTS`: la base de
-color cambia las variantes CMYK salvo `cmyk_composition` y también el dharma; la de pureza, solo la pureza; las
+color cambia las variantes CMYK salvo `cmyk_composition`, el dharma y las medidas hechas de virtudes (tensión,
+tendencia, aspereza, contraste, balance); la de pureza, la pureza y la mezcla; las
 escalas, cada una su variante; paso y vértices, el tetraedro.
 
-## 2.7 Resumen
+## 2.8 Resumen
 
 - Pesos `b^−k`: los niveles exteriores cuentan más.
 - Dharma: media ponderada de las virtudes (1 a 1/4). Pureza: cuota mayor menos cuota menor.
+- Siete medidas más: mezcla, tensión, tendencia, aspereza, contraste, balance y densidad angular. Las que aportan
+  información propia son la tendencia, el contraste y la densidad angular; la mezcla repite casi la pureza y la
+  aspereza casi la tensión.
 - Las medidas distinguen las ordenaciones de una composición, que tienen la misma duración.
 - Diez coloreados; los CMYK asocian cada edad a una tinta, el del tetraedro dibuja un Sierpinski.
 - Los parámetros tienen rangos que garantizan colores distintos dentro de cada nivel.

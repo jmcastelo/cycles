@@ -32,8 +32,17 @@ Planetary events and significance tests.
   `mean_planets` (five boundaries, without the anchor, Treta and Kali where the text's even revolutions conjoin
   them, Treta alone) and the drift of the text's mean motions from the sky (closest around AD 1172, more than 20°
   off at its own epoch); two more tests in the Events panel. Still nothing significant after Holm (37 tests).
+- **More measures of the subcycles** (`measure.MEASURES`): mixture (entropy of the age shares), tension (weighted
+  spread of the virtues), trend (inner levels better or worse than the outer ones), roughness (jumps between
+  levels), contrast (the jump of dharma from the previous subcycle), balance (running sum of dharma above its mean)
+  and, with a cycle model, angular density (`cycle_analysis.angular_density`: the subcycle's mean precession rate
+  over the cycle's). The Measures panel plots any two of them and colors the points by any; the inspector (and
+  so the dossier) shows them on one line. The study `measure_correlations` finds that trend, contrast and angular
+  density carry information of their own, while mixture nearly repeats purity and roughness tension.
 - **Docs**: the formulas are LaTeX in the Markdown (`$…$`, `$$…$$`, as GitHub renders them), typeset in the PDF
   with `unicode-math` and Libertinus Math.
+- **README**: a short introduction with installation, a quick start, the chapters of the documentation and the
+  references; everything else lives in `docs/es` (the VS Code tasks are now described in chapter 11).
 - The panel arrangements put Events with the sky panels; the eleventh panel has no `Alt` shortcut.
 
 ## 0.2.0 — 2026-11-07

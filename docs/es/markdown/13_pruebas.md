@@ -26,7 +26,7 @@ pendientes y `ephemeris` localiza las tablas.
 
 ## 13.2 Qué se comprueba
 
-En total hay **230 pruebas** en 21 ficheros.
+En total hay **241 pruebas** en 23 ficheros.
 
 ### Cálculo
 
@@ -38,6 +38,7 @@ En total hay **230 pruebas** en 21 ficheros.
 | `test_color.py` | 20 | los valores por defecto y otros dentro de los rangos dan colores únicos; los de fuera se avisan; vértices coplanarios se rechazan y cuatro colores alineados repiten colores |
 | `test_cycle_model.py` | 13 | los presets, sus mapas de tiempo y fronteras (por ejemplo, el inicio del Kali el 17 de febrero de 3102 a. C. a las 18:57 UT) |
 | `test_events.py` | 12 | distancia al acontecimiento más cercano, rotaciones que conservan el espaciado, contrastes con acontecimientos en las fronteras (p pequeño) y sin relación (p uniforme), Holm; grandes conjunciones y de planetas exteriores frente a fechas conocidas; cambios de trígono asentados (1603, 2020); la reunión de planetas al inicio del Kali |
+| `test_measures.py` | 6 | las medidas de 2.4: cada una en su rango; una sola edad da 0 en mezcla, tensión, tendencia y aspereza; los extremos (cuatro edades iguales, mitad Satya y mitad Kali, Kali › Satya); la mezcla distingue lo que la pureza no; el contraste y el balance siguen el orden temporal y el balance cierra en 0; la densidad angular (1 para el ciclo entero y con precesión constante, media ponderada 1) |
 | `test_landscape.py` | 9 | `mismatch_grid` frente a `mismatch_by_depth`; los periodos de 41 000 y 20 000 años; el panel del paisaje |
 | `test_version.py` | 5 | la versión: formato MAJOR.MINOR.PATCH, `pyproject.toml` la lee del paquete, el `CHANGELOG.md` empieza por ella, los documentos describen esa versión (si están en el equipo) y el explorador la muestra |
 | `test_session_studies.py` | 3 | los estudios con `--session`: el modelo y los colores de la sesión llegan al estudio; una sesión inválida se rechaza |
@@ -49,6 +50,7 @@ En total hay **230 pruebas** en 21 ficheros.
 | `test_gui_panels.py` | 6 | los paneles existen; al reordenarlos, los cerrados siguen colocados y se pueden abrir |
 | `test_gui_layouts.py` | 12 | mover un panel a cada lado, flotante, en pestaña; disposiciones por tipo; esquinas; disposiciones con nombre; menús; el espacio del navegador |
 | `test_gui_navigator.py` | 5 | la banda de etiquetas, arrastrar las etiquetas, Mayús + clic |
+| `test_gui_measures.py` | 5 | el panel Measures con dos medidas cualesquiera (2D, tiempo, 3D), coloreado por una medida con su barra, la densidad angular sin modelo, la línea de medidas del inspector, sesiones |
 | `test_gui_highlight.py` | 5 | los resaltados alrededor de la selección y el momento con *Follow* |
 | `test_gui_export.py` | 10 | guardar gráficos: tamaños, formatos, resolución; los paneles conservan su tamaño en pantalla |
 | `test_gui_permutations.py` | 12 | el panel de permutaciones y el explorador de grupo |

@@ -69,6 +69,23 @@ def precession_rate(model: CycleModel, years) -> np.ndarray:
     return (np.asarray(model.ayanamsa(years + 0.5)) - np.asarray(model.ayanamsa(years - 0.5))) * 3600
 
 
+def angular_density(model: CycleModel, starts, durations, time_map=None) -> np.ndarray:
+    """
+    Angular density of subcycles (``starts`` and ``durations`` as fractions of the cycle): the share of the
+    precession arc swept while each lasts over its share of the time, i.e. its mean precession rate over the whole
+    cycle's. Above 1 the equinox moves faster than on average. ``time_map``: the model's, if already made.
+    """
+    time_map = model.time_map() if time_map is None else time_map
+    starts, durations = np.asarray(starts, dtype=float), np.asarray(durations, dtype=float)
+    y0 = np.asarray(time_map.to_physical(starts), dtype=float)
+    y1 = np.asarray(time_map.to_physical(np.minimum(starts + durations, 1.0)), dtype=float)
+    start, end = float(time_map.to_physical(0.0)), float(time_map.to_physical(1.0))
+    arc = np.asarray(model.ayanamsa(y1), dtype=float) - np.asarray(model.ayanamsa(y0), dtype=float)
+    total = float(model.ayanamsa(end)) - float(model.ayanamsa(start))
+    with np.errstate(divide='ignore', invalid='ignore'):
+        return (arc / total) / ((y1 - y0) / (end - start))
+
+
 MEASURES = {'max': 'Largest deviation', 'rms': 'RMS deviation'}
 
 

@@ -552,7 +552,7 @@ class MainWindow(QMainWindow):
                         formats=('png', 'jpg', 'pdf', 'svg')),
             figure_source('sky', 'Sky chart', self.sky_panel, sky_title, self.sky_panel.fit_chart),
             figure_source('measures', 'Measures', self.measures_panel,
-                          lambda: self.measures_panel.kind.currentText()),
+                          lambda: self.measures_panel.graph_name()),
             figure_source('colorspace', 'Color space', self.colorspace_panel,
                           lambda: f"{self.colorspace_panel.plot.currentText()} · {state.color_key}"),
             figure_source('permutations', 'Permutations', self.permutations_panel,

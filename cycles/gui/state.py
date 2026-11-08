@@ -129,6 +129,7 @@ class LevelCache:
         self.vertices = np.asarray(colors, dtype=float)    # of the tetrahedron coloring
         self._levels: dict[int, Level] = {}
         self._colors: dict[int, dict[str, np.ndarray]] = {}
+        self._measures: dict[int, dict[str, np.ndarray]] = {}
 
     def has(self, depth: int) -> bool:
         return depth in self._levels
@@ -143,6 +144,15 @@ class LevelCache:
         if depth not in self._colors:
             self._colors[depth] = level_colors(self.level(depth))
         return self._colors[depth][key]
+
+    def measure(self, depth: int, key: str) -> np.ndarray:
+        """Values (N,) of the measure ``key`` of ``measure.ADDRESS_MEASURES`` for the subcycles of ``depth``."""
+        if depth not in self._measures:
+            from cycles.functions.measure import address_measures
+            level = self.level(depth)
+            self._measures[depth] = address_measures(level.lcoords, level.durations, level.dharmas,
+                                                     level.purities, self.bases)
+        return self._measures[depth][key]
 
 
 def equal_duration_indices(level: Level, index: int) -> np.ndarray:
@@ -388,6 +398,23 @@ class CycleState(QObject):
             self._criteria[key] = {name: dict(years=y, normalized=np.asarray(time_map.to_normalized(y), dtype=float))
                                    for name, y in years.items()}
         return self._criteria[key]
+
+    def measure_values(self, depth: int, key: str) -> np.ndarray | None:
+        """
+        Values (N,) of the measure ``key`` (``measure.MEASURES``) for the subcycles of ``depth``; None for a measure
+        of the cycle model when there is none.
+        """
+        from cycles.functions.measure import MEASURES
+        if MEASURES[key]['parameter'] != 'model':
+            return self.cache.measure(depth, key)
+        if self.model is None or self.time_map is None:
+            return None
+        cached = (self.model, depth, key)
+        if cached not in self._criteria:
+            from cycles.functions.cycle_analysis import angular_density
+            level = self.cache.level(depth)
+            self._criteria[cached] = angular_density(self.model, level.starts, level.durations, self.time_map)
+        return self._criteria[cached]
 
     def set_permutation(self, sigma: tuple | None, first: int = 0) -> None:
         value = None if sigma is None else (tuple(sigma), int(first))

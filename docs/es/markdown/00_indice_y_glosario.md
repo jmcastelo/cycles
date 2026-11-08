@@ -14,7 +14,7 @@ explorador gráfico. Incorpora, revisados y actualizados, los documentos de `efe
 |---|---|
 | **I. La estructura** | |
 | [`01_division_fractal.md`](01_division_fractal.md) | la regla 4:3:2:1, direcciones e índices, duración e inicio, niveles, composiciones, la regla (1, 0, −2, 1) y las (*d* + 1)² duraciones |
-| [`02_medidas_y_colores.md`](02_medidas_y_colores.md) | pesos por posición, dharma, pureza, medidas por nivel, los diez coloreados, el tetraedro de Sierpinski y los rangos de los parámetros |
+| [`02_medidas_y_colores.md`](02_medidas_y_colores.md) | pesos por posición, dharma, pureza, medidas por nivel, más medidas (mezcla, tensión, tendencia, aspereza, contraste, balance, densidad angular), los diez coloreados, el tetraedro de Sierpinski y los rangos de los parámetros |
 | [`03_permutaciones.md`](03_permutaciones.md) | la acción de una permutación de las posiciones, su alcance, órbitas, puntos fijos y el lema de Burnside |
 | **II. Astronomía y tiempo** | |
 | [`04_precesion_y_ayanamsa.md`](04_precesion_y_ayanamsa.md) | precesión, zodiaco trópico y sidéreo, ayanāṃśa de Lahiri, modelos lineal y de largo plazo, la tasa variable, la inversa, el esquema |
@@ -90,6 +90,14 @@ profundidad.
 **Dharma.** Media ponderada de las virtudes de las edades de una dirección (Satya 1, Treta ¾, Dvapara ½, Kali ¼).
 
 **Pureza.** Cuota ponderada de la edad más presente menos la de la menos presente.
+
+**Tendencia.** Cambio medio de virtud de cada nivel al siguiente interior: positiva si un subciclo asciende dentro
+de su edad (un *utsarpiṇī* dentro de un *avasarpiṇī*).
+
+**Contraste.** Salto de dharma al empezar un subciclo respecto del anterior: la *sandhi* o juntura.
+
+**Densidad angular.** Cuota del arco de precesión de un subciclo entre su cuota del tiempo: su ritmo medio de
+precesión entre el del ciclo.
 
 **Coloreado.** Regla que da un color a cada subciclo a partir de su dirección (las edades como tintas: cian,
 magenta, amarillo y negro).

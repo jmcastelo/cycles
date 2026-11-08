@@ -40,7 +40,7 @@ tienen docstrings (`help(compute_level)`).
 | `conversion.py` | dirección ↔ índice ↔ fracción en base *b* |
 | `composition.py` | composiciones, clases de igual duración, enumeración de una composición, `analyse_level` |
 | `duration.py` | `count_digits`, `same_duration`, `duration_quotient`, distancias entre inicios |
-| `measure.py` | `dharma_measure`, `purity_measure`, `dharma_from_cmyk` |
+| `measure.py` | `dharma_measure`, `purity_measure`, `dharma_from_cmyk`; las demás medidas (`mixture_measure`, `tension_measure`, `trend_measure`, `roughness_measure`, `contrast_measure`, `balance_measure`), `address_measures` y el registro `MEASURES` |
 | `color.py` | variantes CMYK, CMYK → RGB, `lrgb`, coloreado del tetraedro, rangos de los parámetros (`color_parameter_problems`) |
 | `permutation.py` | matriz de una permutación sobre un nivel; composición, potencias, ciclos, orden, signo, tipo, notación, `parse_permutation`, `permute_digits`, `tcoords_of` (capítulo 3) |
 | `timescale.py` | `TimeMap` (lineal, por fronteras de edades, por funciones), `address_label`, nombres de las edades |
@@ -175,7 +175,7 @@ línea de versión, regenerar el LaTeX y etiquetar el commit `vX.Y.Z`. Con una i
 
 | Versión | Fecha | Contenido |
 |---|---|---|
-| 0.3.0 | 2026-11-08 | acontecimientos planetarios y contrastes de significación: cálculo, estudio y panel *Events*; mapa sobre todos los modelos; H1 con los planetas medios; fórmulas en LaTeX |
+| 0.3.0 | 2026-11-08 | acontecimientos planetarios y contrastes de significación: cálculo, estudio y panel *Events*; mapa sobre todos los modelos; H1 con los planetas medios; más medidas de los subciclos; fórmulas en LaTeX |
 | 0.2.0 | 2026-11-07 | el explorador, el modelo de ciclo, sesiones, marcadores, dosier, disposición de paneles, consultas vectorizadas, pruebas, esta documentación |
 | 0.1.0 | 2026-11-05 | la biblioteca de cálculo y los estudios del sandbox |
 

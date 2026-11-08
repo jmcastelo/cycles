@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 from cycles.functions.division import CMYK_KEYS, COLOR_KEYS
 from cycles.gui.navigator import rgb_to_qcolor
 from cycles.functions.permutation import cycle_text
-from cycles.gui.state import CycleState, date_text, measure_breakdown, span_text, subcycle_info
+from cycles.gui.state import CycleState, date_text, measure_breakdown, span_text, subcycle_info, tcoord
 
 
 def _hex(rgb) -> str:
@@ -54,6 +54,7 @@ class Inspector(QWidget):
             ('permutation', 'Under σ'),
             ('dharma', 'Dharma'),
             ('purity', 'Purity'),
+            ('measures', 'More measures'),
         ]
         for key, label in rows:
             value = QLabel()
@@ -127,6 +128,20 @@ class Inspector(QWidget):
             return f"fixed by σ = {cycle_text(sigma)}"
         image = ' › '.join(state.names[d] for d in orbit[1])
         return f"σ = {cycle_text(sigma)} takes it to {image}; its orbit has {len(orbit)} subcycles"
+
+    def _measures_text(self, address: tuple) -> str:
+        """The measures other than dharma and purity (measure.MEASURES), on one line."""
+        from cycles.functions.measure import MEASURES
+        state, index = self.state, tcoord(address)
+        parts = []
+        for key, m in MEASURES.items():
+            if key in ('dharma', 'purity'):
+                continue
+            values = state.measure_values(len(address), key)
+            if values is not None:
+                signed = m['range'] is not None and m['range'][0] < 0 or key == 'balance'
+                parts.append(f"{m['label'].lower()} {values[index]:{'+' if signed else ''}.4f}".replace('-', '−'))
+        return ' · '.join(parts)
 
     def _show_levels(self, address: tuple) -> None:
         """The per-level table of dharma and the age shares of purity, and their range over the orderings."""
@@ -215,6 +230,7 @@ class Inspector(QWidget):
         f['permutation'].setText(self._permutation_text(address))
         f['dharma'].setText(f"{info['dharma']:.6f}")
         f['purity'].setText(f"{info['purity']:.6f}")
+        f['measures'].setText(self._measures_text(address))
         self._show_levels(address)
 
         bold = QFont(self.colors.font())

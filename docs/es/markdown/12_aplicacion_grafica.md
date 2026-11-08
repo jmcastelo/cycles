@@ -58,7 +58,7 @@ Todo lo que se sabe del subciclo seleccionado: dirección, índice, inicio, dura
 modelo, fechas de inicio y fin, duración en años, ayanāṃśa al inicio y al final, arco (y su lugar en el arco del
 ciclo) y tasa media de precesión; composición; cuántos subciclos comparten su duración y su composición (y su
 lugar en el tiempo entre estos); su imagen por la σ del panel de permutaciones y el tamaño de su órbita; dharma y
-pureza. La tabla *Measures by level* desglosa ambas medidas (capítulo 2). Al final, su color en las diez
+pureza, y en una línea (*More measures*) las demás medidas de 2.4 (la densidad angular, solo con un modelo). La tabla *Measures by level* desglosa ambas medidas (capítulo 2). Al final, su color en las diez
 variantes, con RGB y CMYK; doble clic en una fila usa ese coloreado.
 
 ## 12.3 *Date*
@@ -117,13 +117,24 @@ un segundo; por encima de 100 000 se muestrea), y el panel solo dibuja mientras 
 
 ## 12.6 *Measures*
 
-![El panel Measures: pureza frente a dharma a profundidad 4 dentro del Kali](figuras/panel_medidas.png)
+![El panel Measures: tendencia frente a tensión a profundidad 4 en todo el ciclo, coloreado por el dharma](figuras/panel_medidas.png)
 
-Dharma y pureza del nivel de la selección o de una profundidad elegida (*auto* sigue a la selección), dentro del
-zoom o en todo el ciclo: una frente a otra, frente al tiempo o al índice, o en 3D (dharma, pureza y tiempo o
-índice, con una línea tenue en orden temporal, vistas predefinidas a lo largo de cada eje y arrastre para girar).
-Los puntos pueden tener tamaño según la duración. La selección se rodea en azul, los resaltados en negro; pulsar
-un punto lo selecciona.
+Dos medidas cualesquiera (capítulo 2: dharma, pureza, mezcla, tensión, tendencia, aspereza, contraste, balance y
+densidad angular; por defecto, dharma y pureza) del nivel de la selección o de una profundidad elegida (*auto*
+sigue a la selección), dentro del zoom o en todo el ciclo:
+
+- *Y against X*: una frente a otra;
+- *Y against time* o *Y against index*: la medida Y en orden temporal;
+- *X, Y and time (3D)* o *X, Y and index (3D)*: con una línea tenue en orden temporal, vistas predefinidas a lo
+  largo de cada eje y arrastre para girar.
+
+Los puntos llevan los colores de los subciclos o, con *Color by…*, el valor de una medida, con su barra de color:
+mapa divergente centrado en 0 para las medidas con signo (y en 1 para la densidad angular), secuencial para las
+demás, sobre el rango fijo de la medida, de modo que los colores se comparan entre profundidades. La densidad
+angular necesita un modelo de ciclo; sin él, el panel lo avisa. Los puntos pueden tener tamaño según la
+duración. La selección se rodea en azul, los resaltados en negro; pulsar un punto lo selecciona, y al pasar por
+encima se ven sus valores. En la figura se ve que una tendencia fuerte exige tensión y que los subciclos buenos
+tienden a descender y los malos a ascender.
 
 ## 12.7 *Color space*
 

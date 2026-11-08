@@ -26,8 +26,11 @@ python sandbox/study_of_precession.py --session sandbox/sessions/mi_sesion.cycle
 
 Cada estudio recibe `ctx` (lo que devolvió `setup`) y `opts` (`save`, `show`, `session`).
 `python sandbox/runner.py --catalog` imprime en JSON los estudios de todos los guiones: lo usa el lanzador del
-explorador (*File → Studies…*, capítulo 12). En VS Code, las tareas de `.vscode/tasks.json` ejecutan el guion
-abierto.
+explorador (*File → Studies…*, capítulo 12).
+
+En VS Code (o Code OSS), las tareas de `.vscode/tasks.json` ejecutan el guion de estudios que está abierto, con el
+intérprete de `.venv`: `Ctrl+Mayús+B` pregunta qué estudios y opciones ejecutar (en blanco, los de por defecto), y
+*Terminal → Run Task…* ofrece además listar los estudios y una ejecución por lotes que guarda todas las figuras.
 
 ### Con una sesión
 
@@ -92,7 +95,7 @@ error. El lanzador del explorador pasa por defecto su propia sesión (casilla *W
 | `cmyk_scatter_3d` | componentes CMY como puntos 3D, coloreados con `lrgb` |
 | `cmyk_vs_time`, `rgb_vs_time`, `hsv_vs_time`, `hls_vs_time` (y `_vs_index`) | componentes frente a tiempo o índice, una figura por profundidad |
 
-### `study_of_measures.py`: dharma y pureza
+### `study_of_measures.py`: las medidas
 
 | Estudio | Qué hace |
 |---|---|
@@ -100,6 +103,11 @@ error. El lanzador del explorador pasa por defecto su propia sesión (casilla *W
 | `quality_by_age`, `quality_by_subage` | lo mismo en la profundidad mayor, un panel por edad o por subedad |
 | `purity_vs_dharma`, `quality_scatter_3d`, `dharma_purity_lines` | en una figura, en 3D con el tiempo, como línea en orden temporal |
 | `dharma_vs_time`, `dharma_vs_index`, `purity_vs_time`, `purity_vs_index` | frente a tiempo o índice |
+| `measures_over_time`* | las nueve medidas de `measure.MEASURES` frente a los años del modelo, a profundidad 4 |
+| `measure_correlations`* | correlaciones de rango (Spearman) entre las medidas a profundidades 2 a 6: cuáles aportan información propia (2.4) |
+
+Los estudios del principio usan las bases de la versión original (pesos de pureza iguales, base 1); los dos
+últimos, las del explorador (`common.BASES`, o las de una sesión) y su modelo (o el modelo por defecto).
 
 ### `study_of_permutations.py`: permutaciones
 

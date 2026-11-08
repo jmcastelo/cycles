@@ -46,10 +46,12 @@ COLOR_KEYS = RGB_KEYS + ('lrgb', 'dharma', 'purity')
 
 # Colorings (names of level_colors) that each parameter of compute_level changes;
 # cmyk_composition and lrgb depend on none. The color base also changes the
-# dharma values, and the purity base the purity values.
+# dharma values and the measures of measure.MEASURES built on the virtues, and the purity base the purity and
+# mixture values.
 COLOR_PARAMETER_EFFECTS = {
-    'color_base': ('cmyk', 'cmyk_normalised', 'cmyk_scaled', 'cmyk_kscaled', 'wcmy', 'dharma'),   # bases[1]
-    'purity_base': ('purity',),                                                                 # bases[2]
+    'color_base': ('cmyk', 'cmyk_normalised', 'cmyk_scaled', 'cmyk_kscaled', 'wcmy', 'dharma',    # bases[1]
+                   'tension', 'trend', 'roughness', 'contrast', 'balance'),
+    'purity_base': ('purity', 'mixture'),                                                       # bases[2]
     'cmyk_scale': ('cmyk_scaled',),                                                             # scales[0]
     'black_scale': ('cmyk_kscaled',),                                                           # scales[1]
     'tetrahedron_step': ('tetrahedron',),                                                       # scales[2]

@@ -43,7 +43,7 @@ PANEL_WIDGETS = {
     'date_panel': ('depth',),
     'sky_panel': ('outer', 'follow', 'step', 'step_unit', 'delay'),
     'skycompare_panel': ('kind', 'moment', 'inside', 'order', 'compared', 'charts'),
-    'measures_panel': ('kind', 'depth', 'inside', 'sized', 'view'),
+    'measures_panel': ('kind', 'x_measure', 'y_measure', 'color_by', 'depth', 'inside', 'sized', 'view'),
     'colorspace_panel': ('plot', 'space', 'depth', 'inside', 'sized', 'cube', 'tetrahedron', 'view'),
     'permutations_panel': ('view', 'acts', 'depth', 'lines', 'preset', 'element'),
     'compositions_panel': ('depth', 'inside', 'color_by', 'lines', 'labels', 'view'),
