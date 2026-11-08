@@ -136,6 +136,22 @@ duración. La selección se rodea en azul, los resaltados en negro; pulsar un pu
 encima se ven sus valores. En la figura se ve que una tendencia fuerte exige tensión y que los subciclos buenos
 tienden a descender y los malos a ascender.
 
+Con *Join* (activo por defecto), los subciclos resaltados se **unen**:
+
+- con el resaltado *⟨σ⟩ orbit*, los pasos de la órbita de la selección en orden (la selección, su imagen por σ,
+  la de σ², … y vuelta), con flechas púrpura algo curvadas, para que se vean un paso y su vuelta;
+- con *Same composition*, las ordenaciones de sus edades que difieren en el **intercambio de dos dígitos
+  vecinos**, con líneas grises finas (más tenues cuantas más hay).
+
+Así se ve qué hace σ con las medidas, y por qué el orden de los dígitos cambia las medidas pero no la duración:
+los intercambios de los niveles exteriores son las líneas largas, y los de una misma posición, paralelas
+(capítulo 3). Las uniones solo se dibujan cuando la profundidad del gráfico es la de la selección y, para la
+órbita, cuando σ actúa en ella.
+
+![Ordenaciones de Kali › Treta › Dvapara › Satya en tendencia frente a dharma: cada línea, un intercambio de dígitos vecinos](figuras/union_intercambios.png)
+
+![La órbita de Kali › Treta › Dvapara › Satya bajo el desplazamiento cíclico, paso a paso](figuras/union_orbita.png)
+
 ## 12.7 *Color space*
 
 ![El panel Color space: los colores de un nivel en el cubo RGB](figuras/panel_espacio_color.png)
@@ -143,8 +159,9 @@ tienden a descender y los malos a ascender.
 Los colores de un nivel como puntos en 3D, el camino que los une en orden temporal, o ambos: en el cubo RGB (con
 sus esquinas nombradas) o, para los coloreados CMYK, en coordenadas de tinta CMY. Sigue al coloreado y a sus
 parámetros, dibuja el tetraedro del coloreado `tetrahedron`, puede dar tamaño por duración y tiene vistas
-predefinidas (eje de grises vertical, a lo largo de él, las caras del cubo). Rodea la selección y los resaltados;
-pulsar un punto lo selecciona.
+predefinidas (eje de grises vertical, a lo largo de él, las caras del cubo). Rodea la selección y los resaltados
+y, con *Join*, los une como el panel *Measures* (en 3D, la dirección de cada paso de la órbita la marca un punto
+cerca de su final); pulsar un punto lo selecciona.
 
 ## 12.8 *Permutations* y el explorador de grupo
 

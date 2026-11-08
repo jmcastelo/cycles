@@ -41,6 +41,10 @@ Planetary events and significance tests.
   density carry information of their own, while mixture nearly repeats purity and roughness tension.
 - **Docs**: the formulas are LaTeX in the Markdown (`$…$`, `$$…$$`, as GitHub renders them), typeset in the PDF
   with `unicode-math` and Libertinus Math.
+- **Joining the highlighted subcycles** in the Measures and Color space panels (*Join*): the steps of the ⟨σ⟩
+  orbit of the selection in order, with arrows, or the swaps of neighbouring digits between the orderings of its
+  ages (Same composition). The swaps of one position are parallel in the plane of two measures linear in the
+  virtues, such as trend against dharma.
 - **README**: a short introduction with installation, a quick start, the chapters of the documentation and the
   references; everything else lives in `docs/es` (the VS Code tasks are now described in chapter 11).
 - The panel arrangements put Events with the sky panels; the eleventh panel has no `Alt` shortcut.

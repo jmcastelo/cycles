@@ -454,6 +454,40 @@ class CycleState(QObject):
         orbit = self.permutation_orbit(address)
         return None if orbit is None else np.array(sorted(tcoord(a) for a in orbit))
 
+    def highlight_links(self, address: tuple | None) -> tuple[str, np.ndarray] | None:
+        """
+        How the highlighted subcycles around ``address`` are joined in the plots, as ``(kind, pairs)`` with
+        ``pairs`` an (n, 2) array of indices in the level of ``address``:
+
+        * ``'orbit'`` (highlight ⟨σ⟩ orbit): the steps of the orbit in order, ``address`` → its image under σ →
+          … → back to ``address``;
+        * ``'swaps'`` (highlight Same composition): the orderings of its ages that differ by swapping two
+          neighbouring digits, each pair once.
+
+        None for the other highlights, or when there is nothing to join.
+        """
+        if address is None or not address:
+            return None
+        if self.highlight == 'orbit':
+            orbit = self.permutation_orbit(address)
+            if orbit is None or len(orbit) < 2:
+                return None
+            steps = [tcoord(a) for a in orbit]
+            return 'orbit', np.array([steps, steps[1:] + steps[:1]]).T
+        if self.highlight == 'composition':
+            level = self.cache.level(len(address))
+            lcoords = np.asarray(level.lcoords)[same_composition_indices(level, address)]
+            powers = 4 ** np.arange(lcoords.shape[1] - 1, -1, -1)
+            pairs = []
+            for k in range(lcoords.shape[1] - 1):
+                rising = lcoords[:, k] < lcoords[:, k + 1]          # each swap once
+                if rising.any():
+                    swapped = lcoords[rising].copy()
+                    swapped[:, [k, k + 1]] = swapped[:, [k + 1, k]]
+                    pairs.append(np.stack([lcoords[rising] @ powers, swapped @ powers], axis=1))
+            return ('swaps', np.concatenate(pairs)) if pairs else None
+        return None
+
     @property
     def color_parameters(self) -> tuple:
         """``(bases, scales, tetrahedron colors)`` of the colorings and measures, as tuples."""

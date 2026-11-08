@@ -51,6 +51,9 @@ def test_the_measures_plot_rings_the_highlighted_class(window, selected, spin):
     plain = len(panel._highlights)
     selected.set_highlight('composition')
     spin()
+    assert len(panel._highlights) == plain + 2            # the rings of the class and the swaps joining them
+    panel.join.setChecked(False)
+    spin()
     assert len(panel._highlights) == plain + 1
 
 

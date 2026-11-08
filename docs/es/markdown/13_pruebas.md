@@ -26,7 +26,7 @@ pendientes y `ephemeris` localiza las tablas.
 
 ## 13.2 Qué se comprueba
 
-En total hay **241 pruebas** en 23 ficheros.
+En total hay **244 pruebas** en 23 ficheros.
 
 ### Cálculo
 
@@ -50,7 +50,7 @@ En total hay **241 pruebas** en 23 ficheros.
 | `test_gui_panels.py` | 6 | los paneles existen; al reordenarlos, los cerrados siguen colocados y se pueden abrir |
 | `test_gui_layouts.py` | 12 | mover un panel a cada lado, flotante, en pestaña; disposiciones por tipo; esquinas; disposiciones con nombre; menús; el espacio del navegador |
 | `test_gui_navigator.py` | 5 | la banda de etiquetas, arrastrar las etiquetas, Mayús + clic |
-| `test_gui_measures.py` | 5 | el panel Measures con dos medidas cualesquiera (2D, tiempo, 3D), coloreado por una medida con su barra, la densidad angular sin modelo, la línea de medidas del inspector, sesiones |
+| `test_gui_measures.py` | 8 | el panel Measures con dos medidas cualesquiera (2D, tiempo, 3D), coloreado por una medida con su barra, la densidad angular sin modelo, la línea de medidas del inspector, sesiones; las uniones de los resaltados (36 intercambios entre las 24 ordenaciones de cuatro edades distintas, los pasos de la órbita en orden) en Measures y Color space |
 | `test_gui_highlight.py` | 5 | los resaltados alrededor de la selección y el momento con *Follow* |
 | `test_gui_export.py` | 10 | guardar gráficos: tamaños, formatos, resolución; los paneles conservan su tamaño en pantalla |
 | `test_gui_permutations.py` | 12 | el panel de permutaciones y el explorador de grupo |

@@ -18,6 +18,7 @@ from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox, QToolTip, QToolButton, QVBoxLayout, QWidget
 
 from cycles.functions.measure import MEASURES
+from cycles.gui.links import draw_links
 from cycles.gui.state import MAX_DEPTH, MOMENT_COLOR, CycleState, address_of, children_range, tcoord
 from cycles.plotting.generic import plot_y_vs_x
 
@@ -124,6 +125,11 @@ class MeasuresPanel(QWidget):
         self.sized.setToolTip('Point areas proportional to the durations of the subcycles')
         self.sized.toggled.connect(self._schedule)
         row.addWidget(self.sized)
+        self.join = QCheckBox('Join')
+        self.join.setChecked(True)
+        self.join.setToolTip('Join the highlighted subcycles: the steps of the ⟨σ⟩ orbit of the selection, with arrows, or the swaps of neighbouring digits between the orderings of its ages (Same composition)')
+        self.join.toggled.connect(self._schedule)
+        row.addWidget(self.join)
         row.addStretch(1)
         self.view_label = QLabel('View')
         self.view = QComboBox()
@@ -356,6 +362,9 @@ class MeasuresPanel(QWidget):
         selection = state.selection
         if selection is None or len(selection) != depth:
             return
+        if self.join.isChecked():
+            points = np.column_stack([self._x, self._y] + ([self._z] if self._z is not None else []))
+            self._highlights += draw_links(self.ax, state.highlight_links(selection), positions, points)
         bright = state.highlight_indices(selection)
         if bright is not None:
             equal = [positions[int(i)] for i in bright if int(i) in positions]

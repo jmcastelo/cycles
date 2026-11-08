@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 
 from cycles.functions.division import CMYK_KEYS
 from cycles.functions.view import bottom_view, camera_view_angles, top_view
+from cycles.gui.links import draw_links
 from cycles.gui.state import MOMENT_COLOR, CycleState, address_of, children_range, tcoord
 from cycles.plotting.color import draw_color_path_3d, draw_colors_3d, draw_rgb_cube, setup_color_axes_3d
 
@@ -91,12 +92,15 @@ class ColorSpacePanel(QWidget):
         self.tetrahedron = QCheckBox('Tetrahedron')
         self.tetrahedron.setChecked(True)
         self.tetrahedron.setToolTip('Vertices and edges of the tetrahedron coloring (when it is shown)')
+        self.join = QCheckBox('Join')
+        self.join.setChecked(True)
+        self.join.setToolTip('Join the highlighted subcycles: the steps of the ⟨σ⟩ orbit of the selection, with arrows, or the swaps of neighbouring digits between the orderings of its ages (Same composition)')
         self.view = QComboBox()
         self.view.addItem('Free (drag to rotate)', None)
         for key, (label, _) in VIEWS.items():
             self.view.addItem(label, key)
         self.view.setCurrentIndex(self.view.findData('gray'))
-        for widget in (self.inside, self.sized, self.cube, self.tetrahedron):
+        for widget in (self.inside, self.sized, self.cube, self.tetrahedron, self.join):
             row.addWidget(widget)
         row.addStretch(1)
         row.addWidget(QLabel('View'))
@@ -123,7 +127,7 @@ class ColorSpacePanel(QWidget):
             widget.currentIndexChanged.connect(self._schedule)
         self.view.currentIndexChanged.connect(self._apply_view)
         self.depth.valueChanged.connect(self._schedule)
-        for widget in (self.inside, self.sized, self.cube, self.tetrahedron):
+        for widget in (self.inside, self.sized, self.cube, self.tetrahedron, self.join):
             widget.toggled.connect(self._schedule)
         for signal in (state.selectionChanged, state.focusChanged, state.viewChanged, state.colorParametersChanged,
                        state.skyTimeChanged, state.permutationChanged):
@@ -262,6 +266,8 @@ class ColorSpacePanel(QWidget):
         selection = state.selection
         if selection is None or len(selection) != self._depth:
             return
+        if self.join.isChecked():
+            self._highlights += draw_links(self.ax, state.highlight_links(selection), positions, self._coords)
         bright = state.highlight_indices(selection)
         if bright is not None:
             equal = [positions[int(i)] for i in bright if int(i) in positions]

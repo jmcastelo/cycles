@@ -82,3 +82,55 @@ def test_kept_in_sessions(window, panel):
     choose(panel.color_by, 'subcycle')
     session.apply(window, data)
     assert panel.x_measure.currentData() == 'roughness' and panel.color_by.currentData() == 'balance'
+
+
+# -- joining the highlighted subcycles (Measures and Color space)
+
+def test_the_links_of_the_highlights(window):
+    from cycles.gui.state import tcoord
+    state = window.state
+    address = (3, 1, 2, 0)
+    state.set_highlight('composition')
+    kind, pairs = state.highlight_links(address)
+    # the 24 orderings of four different ages, joined by the 3 swaps of neighbours each: 36 pairs
+    assert kind == 'swaps' and pairs.shape == (36, 2)
+    level = state.cache.level(4)
+    for a, b in pairs:
+        x, y = level.lcoords[a], level.lcoords[b]
+        differ = np.flatnonzero(x != y)
+        assert len(differ) == 2 and differ[1] == differ[0] + 1 and (x[differ] == y[differ[::-1]]).all()
+    state.set_highlight('orbit')                          # the Permutations panel then publishes its σ…
+    state.set_permutation((1, 2, 3, 0), 0)                # …which this replaces
+    kind, pairs = state.highlight_links(address)
+    orbit = [tcoord(a) for a in state.permutation_orbit(address)]
+    assert kind == 'orbit' and [int(a) for a in pairs[:, 0]] == orbit
+    assert [int(b) for b in pairs[:, 1]] == orbit[1:] + orbit[:1]
+    state.set_highlight('duration')
+    assert state.highlight_links(address) is None
+
+
+@pytest.mark.parametrize('name', ['measures', 'colorspace'])
+def test_the_panels_join_them(window, spin, name):
+    state = window.state
+    window.show_panel(name)
+    panel = getattr(window, f"{name}_panel")
+    panel.inside.setChecked(False)
+    state.set_focus(())
+    state.select((3, 1, 2, 0))
+    state.set_highlight('composition')
+    spin()
+    panel.render()
+    joined = len(panel._highlights)
+    panel.join.setChecked(False)
+    panel.render()
+    assert len(panel._highlights) == joined - 1           # the collection of the 36 swaps
+    panel.join.setChecked(True)
+    state.set_highlight('orbit')                          # the Permutations panel then publishes its σ…
+    state.set_permutation((1, 2, 3, 0), 0)                # …which this replaces
+    spin()
+    panel.render()
+    plain = len(panel._highlights)
+    panel.join.setChecked(False)
+    panel.render()
+    # four arrows in 2D; in 3D the lines and the dots of their directions
+    assert plain - len(panel._highlights) == (4 if name == 'measures' else 2)
