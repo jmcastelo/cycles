@@ -55,6 +55,13 @@ Planetary events and significance tests.
   model, the angular density and the sign and element of the vernal point at the start of each subcycle.
   `CycleState.colors` gives every coloring to the panels. Dharma and purity are no longer gray by default (the
   gray map shows them as before).
+- **Three more measures** and three more colorings: *microcosm* (how closely the age shares match the whole
+  cycle's 0.4, 0.3, 0.2, 0.1) and *complexity* (Lempel–Ziv, of the order of the ages), from the address; and,
+  with a cycle model and the ephemeris of the Sky panel (now also given to the state), *gathering* (how gathered
+  Sun to Saturn are at the start of each subcycle) and the colorings of the **trigon of the great conjunctions
+  in force** at each start, sidereal and tropical (`events.trigon_periods`, `events.trigon_in_force`). The
+  correlation study finds microcosm close to dharma, complexity close to mixture, and gathering independent of
+  the address measures.
 - **README**: a short introduction with installation, a quick start, the chapters of the documentation and the
   references; everything else lives in `docs/es` (the VS Code tasks are now described in chapter 11).
 - The panel arrangements put Events with the sky panels; the eleventh panel has no `Alt` shortcut.

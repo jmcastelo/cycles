@@ -87,3 +87,24 @@ def test_the_angular_density():
     # with a constant precession every subcycle sweeps arc at the mean rate
     constant = model.replace(precession='constant')
     assert np.allclose(angular_density(constant, level.starts, level.durations), 1.0)
+
+
+# -- microcosm and complexity
+
+def test_microcosm():
+    from cycles.functions.measure import microcosm_measure
+    whole = [[0, 0, 0, 0, 1, 1, 1, 2, 2, 3]]                      # equal weights: shares 0.4, 0.3, 0.2, 0.1
+    assert np.isclose(microcosm_measure(whole, np.ones(10)), 1)
+    assert np.isclose(microcosm_measure([[3, 3, 3]], np.ones(3)), 0)          # all Kali: the farthest
+    assert np.isclose(microcosm_measure([[0, 0]], np.ones(2)), 1 - 0.6 / 0.9)  # all Satya: 0.6 away
+
+
+def test_lempel_ziv_and_complexity(level, values):
+    from cycles.functions.measure import complexity_measure, lempel_ziv
+    assert lempel_ziv('0001101001000101') == 6                    # Kaspar and Schuster's example
+    assert [lempel_ziv(s) for s in ('', '0', 'aaaa', 'abab', 'abcd')] == [0, 1, 2, 3, 4]
+    c = values['complexity']
+    assert c.min() == 0 and c.max() == 1
+    for age in range(4):                                           # one age repeated: the least complex
+        assert c[int(''.join(str(age) * 4), 4)] == 0
+    assert np.allclose(complexity_measure([[0], [3]]), 0)          # depth 1: nothing to tell apart

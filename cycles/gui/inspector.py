@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView, QFormLayout, QHeaderView, QLabel, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
-from cycles.functions.division import CMYK_KEYS, COLOR_DESCRIPTIONS, COLOR_KEYS, MODEL_COLOR_KEYS
+from cycles.functions.division import CMYK_KEYS, COLOR_DESCRIPTIONS, COLOR_KEYS, STATE_COLOR_KEYS
 from cycles.gui.navigator import rgb_to_qcolor
 from cycles.functions.permutation import cycle_text
 from cycles.gui.state import CycleState, date_text, measure_breakdown, span_text, subcycle_info, tcoord
@@ -238,13 +238,14 @@ class Inspector(QWidget):
         bold = QFont(self.colors.font())
         bold.setBold(True)
         for row, key in enumerate(COLOR_KEYS):
-            needs_model = key in MODEL_COLOR_KEYS and state.model is None
-            rgb = state.colors(len(address), key)[info['index']] if key in MODEL_COLOR_KEYS else info['rgb'][key]
+            missing = state.missing_for(key) if key in STATE_COLOR_KEYS else ''
+            rgb = None if missing else (state.colors(len(address), key)[info['index']] if key in STATE_COLOR_KEYS
+                                        else info['rgb'][key])
             swatch = QTableWidgetItem('')
-            if not needs_model:
+            if not missing:
                 swatch.setBackground(rgb_to_qcolor(rgb))
             self.colors.setItem(row, 0, swatch)
-            items = [QTableWidgetItem('needs a cycle model' if needs_model else _hex(rgb)),
+            items = [QTableWidgetItem(missing or _hex(rgb)),
                      QTableWidgetItem(' '.join(f"{c:.3f}" for c in info['cmyk'][key]) if key in CMYK_KEYS else '')]
             for col, item in enumerate(items, 1):
                 if key == state.color_key:

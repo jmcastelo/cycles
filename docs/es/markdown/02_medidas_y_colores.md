@@ -87,6 +87,8 @@ virtudes y de `bases[2]` para las cuotas, como el dharma y la pureza) y las cuot
 | **Aspereza** (`roughness_measure`) | $\sum_{k<d} \hat w'_k\, \lvert v_{k+1} - v_k\rvert\,/\,\tfrac34$ | lo bruscos que son los saltos de edad entre niveles consecutivos (0 a 1) |
 | **Contraste** (`contrast_measure`) | $(\operatorname{dharma}_i - \operatorname{dharma}_{i-1})\,/\,\tfrac34$ | el salto de dharma al empezar el subciclo, la *sandhi* o juntura (−1 a 1) |
 | **Balance** (`balance_measure`) | $\sum_{j \le i} (\operatorname{dharma}_j - \overline{\operatorname{dharma}})\, \delta_j$ | el saldo acumulado desde el inicio del ciclo |
+| **Microcosmos** (`microcosm_measure`) | $1 - \tfrac12 \sum_e \lvert p_e - q_e\rvert \,/\, 0{,}9$ | cuánto se parecen las cuotas de la dirección a las del ciclo entero, $q = (0{,}4;\ 0{,}3;\ 0{,}2;\ 0{,}1)$: la parte que refleja el todo (0 a 1) |
+| **Complejidad** (`complexity_measure`) | complejidad de Lempel–Ziv de la dirección, escalada entre la mínima y la máxima del nivel | 0 para una edad repetida, 1 para la dirección más irregular (0 a 1) |
 
 En la tendencia y la aspereza, el paso entre los niveles $k$ y $k+1$ pesa como el exterior de los dos
 ($\hat w'$, los pesos $w_1 \dots w_{d-1}$ normalizados); a profundidad 1 ambas valen 0. Las divisiones por
@@ -96,13 +98,19 @@ llevan cada medida a un rango fijo, comparable entre profundidades.
 - La **tendencia** recoge una idea de la tradición jainista: el ciclo del tiempo tiene una mitad descendente
   (*avasarpiṇī*) y otra ascendente (*utsarpiṇī*). Aquí un subciclo puede ser un ascenso dentro de un descenso:
   Kali › Satya tiene tendencia +1.
+- El **microcosmos** recoge la idea de que cada parte del ciclo refleja el todo. Mide la distancia de variación
+  total entre las cuotas de la dirección y las del ciclo; 0,9 es la mayor posible (una dirección toda Kali).
+- La **complejidad** cuenta, con el algoritmo de Kaspar y Schuster (1987), las frases nuevas que aparecen al leer
+  la dirección (Lempel y Ziv, 1976): pocas si se repite (Kali › Kali › Kali), muchas si es irregular. Solo ve el
+  orden de las edades, no los pesos. Con direcciones cortas toma pocos valores: cinco a profundidad 8, y a
+  profundidad 2 es constante.
 - El **contraste** y el **balance** dependen del lugar en el tiempo, no solo de la dirección: se calculan sobre
   el nivel entero en orden temporal. En el contraste, el ciclo se repite, así que el primer subciclo sigue al
   último. En el balance, $\delta_j$ es la duración y $\overline{\operatorname{dharma}} = \sum_j
   \operatorname{dharma}_j\, \delta_j$ la media ponderada por duración, de modo que el saldo vuelve a 0 al final
   del ciclo; sus extremos marcan puntos de giro.
 
-La novena medida depende del **modelo de ciclo** (capítulo 8), no de la dirección:
+Dos medidas más no salen de la dirección. La **densidad angular** depende del **modelo de ciclo** (capítulo 8):
 
 $$
 \operatorname{densidad}(a) = \frac{\Delta\lambda_a / \Delta\lambda}{\Delta t_a / \Delta t}
@@ -112,11 +120,16 @@ la cuota del arco de precesión que barre el subciclo entre su cuota del tiempo,
 precesión entre el del ciclo entero (`cycle_analysis.angular_density`). Por encima de 1, el equinoccio avanza
 más deprisa que la media. Con precesión constante vale 1 en todas partes.
 
+La **reunión** (*gathering*) depende además de la **efeméride** (capítulo 6): cuán juntos están los planetas del
+Sol a Saturno al empezar el subciclo, $1 - \text{arco}/360°$, con *arco* el menor arco que los contiene a todos
+(el mismo de la hipótesis H1, capítulo 15; `events.around_point`). Vale 1 si están todos en un punto. Los inicios
+de los subciclos se pasan de UT a TDB (la escala de la efeméride) interpolando el ΔT sobre una rejilla.
+
 Todas están en el registro `measure.MEASURES` (nombre, rango, parámetro del que dependen, descripción). El panel
 *Measures* del explorador pone cualquiera de ellas en cada eje o colorea los puntos con ella, y el inspector
 las muestra todas en una línea (capítulo 12).
 
-![Las nueve medidas de los 256 subciclos de profundidad 4 en el tiempo, con el modelo por defecto](figuras/medidas_en_el_tiempo.png)
+![Las doce medidas de los 256 subciclos de profundidad 4 en el tiempo, con el modelo por defecto](figuras/medidas_en_el_tiempo.png)
 
 Lo que se ve en el tiempo:
 
@@ -125,6 +138,8 @@ Lo que se ve en el tiempo:
 - El **balance** es positivo en todo el ciclo y tiene su máximo hacia la mitad, donde el dharma cruza su media.
 - La **densidad angular** oscila ±4 % con un periodo de unos 40 000 años: es la variación del ritmo de precesión
   del modelo de largo plazo, ligada a la oblicuidad (capítulo 4), no la estructura de los yugas.
+- La **reunión** salta de un subciclo a otro sin tendencia: el cielo no sigue la división. Al inicio del Kali vale
+  0,89 (los planetas, juntos cerca de 0° de Aries: H1), pero eso es el ancla del modelo.
 
 ¿Cuáles aportan información propia? Las correlaciones de rango (Spearman) entre las medidas responden
 (`study_of_measures.py measure_correlations`):
@@ -138,11 +153,15 @@ Lo que se ve en el tiempo:
 | dharma – balance | 0,60 | el balance es en parte dharma acumulado |
 | dharma – tendencia | −0,54 | una tendencia alta exige un nivel exterior bajo |
 | dharma – pureza | 0,00 | independientes por simetría |
+| dharma – microcosmos | 0,73 | el microcosmos es en buena parte dharma: el todo pesa hacia el Satya |
+| mezcla – complejidad | 0,71 | la complejidad repite en parte la mezcla (0,88 a profundidad 4) |
 | contraste – cualquiera | ≤ 0,05 | información propia |
 | densidad – cualquiera | ≤ 0,38 | información propia (física) |
+| reunión – cualquiera | ≤ 0,05 | información propia (del cielo) |
 
-Las medidas nuevas que dicen algo que no decían el dharma y la pureza son la **tendencia**, el **contraste** y la
-**densidad angular**; la tensión y la mezcla matizan la pureza.
+Las medidas nuevas que dicen algo que no decían el dharma y la pureza son la **tendencia**, el **contraste**, la
+**densidad angular** y la **reunión**; la tensión, la mezcla y la complejidad matizan la pureza, y el microcosmos,
+el dharma.
 
 ## 2.5 Colores: las edades como tintas
 
@@ -168,8 +187,8 @@ Además hay cuatro coloreados más que solo dependen de la dirección (`division
 | `lrgb` | la tinta pura de la edad del último nivel |
 | `duration_class` | un color por clase de igual duración (2.7) |
 
-Estos diez son `division.LEVEL_COLOR_KEYS`. Con los ocho de las medidas y los tres del modelo de ciclo (2.7),
-`COLOR_KEYS` tiene **veintiún** coloreados, con una descripción de cada uno en `division.COLOR_DESCRIPTIONS`.
+Estos diez son `division.LEVEL_COLOR_KEYS`. Con los diez de las medidas, los tres del modelo de ciclo y los tres
+del cielo (2.7), `COLOR_KEYS` tiene **veintiséis** coloreados, con una descripción de cada uno en `division.COLOR_DESCRIPTIONS`.
 Ejemplo, Kali › Treta › Dvapara › Satya: `cmyk` = (0,0625; 0,25; 0,125; 0,5); `cmyk_normalised` = (0,0667;
 0,2667; 0,1333; 0,5333); `cmyk_composition` = (¼, ¼, ¼, ¼).
 
@@ -217,14 +236,15 @@ del ciclo, `tetrahedron_oklab`.
 
 ## 2.7 Coloreados por clase, por medida y por el punto vernal
 
-Otros doce coloreados miran más allá de la dirección: el nivel entero, las medidas o el modelo de ciclo.
+Otros diecisiete coloreados miran más allá de la dirección: el nivel entero, las medidas, el modelo de ciclo o
+el cielo.
 
 - **`duration_class`**: un color por clase de igual duración (capítulo 1). Las clases, de la más larga a la más
   corta, toman tonos separados por el ángulo áureo (137,5°, cada uno lejos de los anteriores) y tres
   luminosidades alternas, en OKLab para que todos se vean igual de intensos (`color.duration_class_colors`). Los
   subciclos del mismo color son intercambiables en duración; a profundidad *d* hay $(d + 1)^2$ colores.
 - **Las medidas** (`MEASURE_COLOR_KEYS`): `dharma`, `purity` y las de 2.4, `mixture`, `tension`, `trend`,
-  `roughness`, `contrast` y `balance`, todas por igual: un mapa de color **secuencial** para las que van de 0 a 1
+  `roughness`, `contrast`, `balance`, `microcosm` y `complexity`, todas por igual: un mapa de color **secuencial** para las que van de 0 a 1
   (de 1/4 a 1 el dharma) y uno **divergente** para las que tienen signo (`color.DIVERGING_MEASURES`, con el 0 en
   el centro), sobre el rango fijo de cada medida (`color.measure_colors`, la misma función del panel
   *Measures*). El color de un subciclo no depende del zoom: el balance, sin rango fijo, se escala con el nivel
@@ -238,6 +258,17 @@ Los tres últimos dependen del **modelo de ciclo** (`MODEL_COLOR_KEYS`) y se ven
   rojo). El punto vernal está en 0° trópico, así que su longitud sidérea es $-\text{ayanāṃśa}$
   (`color.vernal_point_longitude`); hoy, unos 336°: Piscis;
 - `vernal_element`: el elemento de ese signo: fuego rojo, tierra verde, aire amarillo, agua azul.
+
+Otros tres dependen del modelo y de la **efeméride** (`SKY_COLOR_KEYS`): el estado los recibe del panel *Sky*, y
+se ven en gris sin ella:
+
+- `gathering`: la reunión de 2.4, en el mapa secuencial;
+- `trigon_sidereal` y `trigon_tropical`: el **trígono** (elemento) de las grandes conjunciones de Júpiter y
+  Saturno **vigente** al empezar el subciclo, en el zodiaco sidéreo o en el trópico, con los colores de los
+  elementos. Es el del último periodo empezado antes (`events.trigon_periods` y `events.trigon_in_force`, con la
+  regla de asentamiento del capítulo 15) sobre el catálogo de las conjunciones de toda la efeméride, el mismo
+  del mapa del panel *Events*, que se calcula una vez y se guarda en disco. Con el modelo por defecto, los yugas
+  empiezan en agua, tierra, aire y aire (sidéreo), o en agua, tierra, agua y fuego (trópico).
 
 Los dos mapas se eligen en el diálogo de parámetros de color (capítulo 12) y se guardan con la sesión:
 
@@ -292,11 +323,13 @@ coloreados de clases, medidas y modelo no buscan colores únicos.
 
 - Pesos `b^−k`: los niveles exteriores cuentan más.
 - Dharma: media ponderada de las virtudes (1 a 1/4). Pureza: cuota mayor menos cuota menor.
-- Siete medidas más: mezcla, tensión, tendencia, aspereza, contraste, balance y densidad angular. Las que aportan
-  información propia son la tendencia, el contraste y la densidad angular; la mezcla repite casi la pureza y la
-  aspereza casi la tensión.
+- Diez medidas más: mezcla, tensión, tendencia, aspereza, contraste, balance, microcosmos y complejidad, de la
+  dirección; la densidad angular, del modelo; y la reunión de los planetas, del cielo. Las que aportan
+  información propia son la tendencia, el contraste, la densidad angular y la reunión; la mezcla repite casi la
+  pureza, la aspereza la tensión, la complejidad la mezcla y el microcosmos el dharma.
 - Las medidas distinguen las ordenaciones de una composición, que tienen la misma duración.
 - Veintiún coloreados: diez de la dirección (los CMYK asocian cada edad a una tinta, el del tetraedro dibuja un
-  Sierpinski, en RGB o en OKLab; uno por clase de duración), ocho de medidas, en un mapa secuencial o divergente
-  a elegir, y tres del modelo (la densidad angular y el signo y el elemento del punto vernal).
+  Sierpinski, en RGB o en OKLab; uno por clase de duración), diez de medidas, en un mapa secuencial o divergente
+  a elegir, tres del modelo (la densidad angular y el signo y el elemento del punto vernal) y tres del cielo (la
+  reunión de los planetas y el trígono de las grandes conjunciones en los dos zodiacos).
 - Los parámetros tienen rangos que garantizan colores distintos dentro de cada nivel.

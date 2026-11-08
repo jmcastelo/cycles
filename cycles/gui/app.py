@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from cycles.functions.division import (
-    COLOR_DESCRIPTIONS, COLOR_KEYS, LEVEL_COLOR_KEYS, MEASURE_COLOR_KEYS, MODEL_COLOR_KEYS,
+    COLOR_DESCRIPTIONS, COLOR_KEYS, LEVEL_COLOR_KEYS, MEASURE_COLOR_KEYS, MODEL_COLOR_KEYS, SKY_COLOR_KEYS,
 )
 from cycles.gui.colordialog import ColorDialog
 from cycles.gui.colorspace import ColorSpacePanel
@@ -102,6 +102,7 @@ class MainWindow(QMainWindow):
         self._build_menus()
         self.navigator.hovered.connect(self._show_hovered)
         self.navigator.busy.connect(self._show_busy)
+        self.state.busy.connect(self._show_busy)
         self.resize(1400, 760)
         self.arrange_panels('tabs')
         self._restore_layout()
@@ -235,14 +236,14 @@ class MainWindow(QMainWindow):
         bar.addWidget(QLabel('  Color '))
         self.color_box = QComboBox()
         # in groups: of the address, of a measure, of the cycle model
-        for group in (LEVEL_COLOR_KEYS, MEASURE_COLOR_KEYS, MODEL_COLOR_KEYS):
+        for group in (LEVEL_COLOR_KEYS, MEASURE_COLOR_KEYS, MODEL_COLOR_KEYS, SKY_COLOR_KEYS):
             if self.color_box.count():
                 self.color_box.insertSeparator(self.color_box.count())
             for key in group:
                 self.color_box.addItem(key)
                 self.color_box.setItemData(self.color_box.count() - 1, COLOR_DESCRIPTIONS[key],
                                            Qt.ItemDataRole.ToolTipRole)
-        self.color_box.setMaxVisibleItems(len(COLOR_KEYS) + 2)
+        self.color_box.setMaxVisibleItems(len(COLOR_KEYS) + 3)
         self.color_box.setCurrentText(state.color_key)
         self.color_box.currentTextChanged.connect(state.set_color_key)
         bar.addWidget(self.color_box)

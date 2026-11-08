@@ -45,13 +45,17 @@ DEFAULT_SCALES = [1 / 2, 2 / 3, 0.5]
 TETRAHEDRON_COLORS = np.array([[1, 1, 0], [0, 1, 1], [1, 0, 1], [0, 0, 0]])
 
 # The colorings. level_colors gives those of a Level alone (the RGB variants and two more, and dharma and purity);
-# the other measures of MEASURE_COLOR_KEYS also need the weights (gui.state.LevelCache), and those of
-# MODEL_COLOR_KEYS the cycle model (gui.state.CycleState.colors). The measures take the sequential or the diverging
+# the other measures of MEASURE_COLOR_KEYS also need the weights (gui.state.LevelCache), those of
+# MODEL_COLOR_KEYS the cycle model and those of SKY_COLOR_KEYS the model and the ephemeris
+# (gui.state.CycleState.colors). The measures take the sequential or the diverging
 # color map of color.DEFAULT_COLOR_MAPS, or of the parameters.
 LEVEL_COLOR_KEYS = RGB_KEYS + ('lrgb', 'duration_class')
-MEASURE_COLOR_KEYS = ('dharma', 'purity', 'mixture', 'tension', 'trend', 'roughness', 'contrast', 'balance')
+MEASURE_COLOR_KEYS = ('dharma', 'purity', 'mixture', 'tension', 'trend', 'roughness', 'contrast', 'balance',
+                      'microcosm', 'complexity')
 MODEL_COLOR_KEYS = ('density', 'vernal_sign', 'vernal_element')
-COLOR_KEYS = LEVEL_COLOR_KEYS + MEASURE_COLOR_KEYS + MODEL_COLOR_KEYS
+SKY_COLOR_KEYS = ('gathering', 'trigon_sidereal', 'trigon_tropical')      # need the model and the ephemeris
+STATE_COLOR_KEYS = MODEL_COLOR_KEYS + SKY_COLOR_KEYS                     # given by CycleState.colors
+COLOR_KEYS = LEVEL_COLOR_KEYS + MEASURE_COLOR_KEYS + STATE_COLOR_KEYS
 COLOR_DESCRIPTIONS = {
     'cmyk': 'the ages as inks (Satya cyan, Treta magenta, Dvapara yellow, Kali black), weighted by level',
     'cmyk_normalised': 'the weighted inks divided by the sum of the weights',
@@ -71,9 +75,16 @@ COLOR_DESCRIPTIONS = {
     'roughness': 'roughness (jumps between levels), on the sequential map',
     'contrast': 'contrast (the jump of dharma from the previous subcycle), on the diverging map',
     'balance': 'balance (running sum of dharma above its mean), on the diverging map',
+    'microcosm': 'microcosm (how closely the age shares match the whole cycle\'s), on the sequential map',
+    'complexity': 'complexity (Lempel–Ziv, of the order of the ages), on the sequential map',
     'density': 'angular density (needs a cycle model), on the diverging map: 1, the mean rate, in the middle',
     'vernal_sign': 'the sidereal sign of the vernal point at the start (needs a cycle model)',
     'vernal_element': 'the element of that sign: fire red, earth green, air yellow, water blue (needs a model)',
+    'gathering': 'how gathered Sun to Saturn are at the start, on the sequential map (needs a model and the '
+                 'ephemeris)',
+    'trigon_sidereal': 'the element of the great conjunctions in force at the start, sidereal zodiac: fire red, '
+                       'earth green, air yellow, water blue (needs a model and the ephemeris)',
+    'trigon_tropical': 'the same in the tropical zodiac (needs a model and the ephemeris)',
 }
 
 # Colorings (and measures, of the same names) that each color parameter changes; cmyk_composition and lrgb depend
@@ -83,12 +94,13 @@ COLOR_DESCRIPTIONS = {
 COLOR_PARAMETER_EFFECTS = {
     'color_base': ('cmyk', 'cmyk_normalised', 'cmyk_scaled', 'cmyk_kscaled', 'wcmy', 'dharma',    # bases[1]
                    'tension', 'trend', 'roughness', 'contrast', 'balance'),
-    'purity_base': ('purity', 'mixture'),                                                       # bases[2]
+    'purity_base': ('purity', 'mixture', 'microcosm'),                                          # bases[2]
     'cmyk_scale': ('cmyk_scaled',),                                                             # scales[0]
     'black_scale': ('cmyk_kscaled',),                                                           # scales[1]
     'tetrahedron_step': ('tetrahedron', 'tetrahedron_oklab'),                                   # scales[2]
     'tetrahedron_colors': ('tetrahedron', 'tetrahedron_oklab'),                                 # colors
-    'sequential_map': ('dharma', 'purity', 'mixture', 'tension', 'roughness'),                  # maps[0]
+    'sequential_map': ('dharma', 'purity', 'mixture', 'tension', 'roughness', 'microcosm',     # maps[0]
+                       'complexity', 'gathering'),
     'diverging_map': ('trend', 'contrast', 'balance', 'density'),                               # maps[1]
 }
 

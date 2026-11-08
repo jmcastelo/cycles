@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox, QToolTip, QToolButton, QVBoxLayout, QWidget,
 )
 
-from cycles.functions.division import CMYK_KEYS, MODEL_COLOR_KEYS
+from cycles.functions.division import CMYK_KEYS
 from cycles.functions.view import bottom_view, camera_view_angles, top_view
 from cycles.gui.links import draw_links
 from cycles.gui.state import MOMENT_COLOR, CycleState, address_of, children_range, tcoord
@@ -171,7 +171,7 @@ class ColorSpacePanel(QWidget):
         key = state.color_key
         self.space.setEnabled(key in CMYK_KEYS)
         base = (self.plot.currentData(), self.space_key(), depth, scope, key, state.parameters_of(key),
-                state.model if key in MODEL_COLOR_KEYS else None,
+                state.context_of(key),
                 self.sized.isChecked(), self.cube.isChecked(), self.tetrahedron.isChecked())
         if base != self._base:
             self._draw_base(depth, scope)

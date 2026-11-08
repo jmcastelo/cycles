@@ -14,7 +14,7 @@ explorador gráfico. Incorpora, revisados y actualizados, los documentos de `efe
 |---|---|
 | **I. La estructura** | |
 | [`01_division_fractal.md`](01_division_fractal.md) | la regla 4:3:2:1, direcciones e índices, duración e inicio, niveles, composiciones, la regla (1, 0, −2, 1) y las (*d* + 1)² duraciones |
-| [`02_medidas_y_colores.md`](02_medidas_y_colores.md) | pesos por posición, dharma, pureza, medidas por nivel, más medidas (mezcla, tensión, tendencia, aspereza, contraste, balance, densidad angular), los veintiún coloreados (de la dirección, de las clases de duración, de las medidas y del punto vernal), el tetraedro de Sierpinski en RGB y en OKLab y los rangos de los parámetros |
+| [`02_medidas_y_colores.md`](02_medidas_y_colores.md) | pesos por posición, dharma, pureza, medidas por nivel, más medidas (mezcla, tensión, tendencia, aspereza, contraste, balance, microcosmos, complejidad, densidad angular, reunión), los veintiséis coloreados (de la dirección, de las clases de duración, de las medidas, del punto vernal y del trígono de las grandes conjunciones), el tetraedro de Sierpinski en RGB y en OKLab y los rangos de los parámetros |
 | [`03_permutaciones.md`](03_permutaciones.md) | la acción de una permutación de las posiciones, su alcance, órbitas, puntos fijos y el lema de Burnside |
 | **II. Astronomía y tiempo** | |
 | [`04_precesion_y_ayanamsa.md`](04_precesion_y_ayanamsa.md) | precesión, zodiaco trópico y sidéreo, ayanāṃśa de Lahiri, modelos lineal y de largo plazo, la tasa variable, la inversa, el esquema |
@@ -96,6 +96,12 @@ de su edad (un *utsarpiṇī* dentro de un *avasarpiṇī*).
 
 **Contraste.** Salto de dharma al empezar un subciclo respecto del anterior: la *sandhi* o juntura.
 
+**Microcosmos.** Cuánto se parecen las cuotas de las edades de una dirección a las del ciclo entero (0,4; 0,3;
+0,2; 0,1): la parte que refleja el todo.
+
+**Reunión.** Cuán juntos están los planetas del Sol a Saturno al empezar un subciclo: 1 menos el menor arco que
+los contiene, en vueltas.
+
 **Densidad angular.** Cuota del arco de precesión de un subciclo entre su cuota del tiempo: su ritmo medio de
 precesión entre el del ciclo.
 
@@ -171,4 +177,9 @@ al azar.
   tabla 31.A.
 - Burgess, E. (1860). *Translation of the Sûrya-Siddhânta.* Journal of the American Oriental Society 6.
 - Billard, R. (1971). *L'astronomie indienne.* École française d'Extrême-Orient.
+- Lempel, A., Ziv, J. (1976). *On the complexity of finite sequences.* IEEE Transactions on Information Theory
+  22, 75–81.
+- Kaspar, F., Schuster, H. G. (1987). *Easily calculable measure for the complexity of spatiotemporal patterns.*
+  Physical Review A 36, 842–848.
+- Ottosson, B. (2020). *A perceptual color space for image processing* (OKLab).
 - Guénon, R. *Formes traditionnelles et cycles cosmiques*; Hani, J. (sobre la subdivisión de los ciclos).

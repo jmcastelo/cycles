@@ -16,7 +16,7 @@ import numpy as np
 from PySide6.QtCore import QObject, Signal
 
 from cycles.functions.division import (
-    CMYK_KEYS, COLOR_KEYS, MEASURE_COLOR_KEYS, MODEL_COLOR_KEYS, DEFAULT_BASES, DEFAULT_COLOR_KEY, DEFAULT_SCALES, TETRAHEDRON_COLORS, Level, compute_level,
+    CMYK_KEYS, COLOR_KEYS, MEASURE_COLOR_KEYS, MODEL_COLOR_KEYS, SKY_COLOR_KEYS, STATE_COLOR_KEYS, DEFAULT_BASES, DEFAULT_COLOR_KEY, DEFAULT_SCALES, TETRAHEDRON_COLORS, Level, compute_level,
     level_colors,
 )
 from cycles.functions.color import DEFAULT_COLOR_MAPS, color_parameter_problems
@@ -263,7 +263,7 @@ def subcycle_info(cache: LevelCache, address: tuple) -> dict:
         dharma=float(level.dharmas[index]),
         purity=float(level.purities[index]),
         cmyk={key: level.cmyks[index, k] for k, key in enumerate(CMYK_KEYS)},
-        rgb={key: cache.colors(depth, key)[index] for key in COLOR_KEYS if key not in MODEL_COLOR_KEYS},
+        rgb={key: cache.colors(depth, key)[index] for key in COLOR_KEYS if key not in STATE_COLOR_KEYS},
     )
 
 
@@ -286,6 +286,7 @@ class CycleState(QObject):
     bookmarksChanged = Signal()
     notesChanged = Signal()             # the notes of the session
     eventsChanged = Signal()            # the planetary events shown in the navigator
+    busy = Signal(str)                  # a message while something slow is computed ('' when done)
 
     def __init__(self, cache: LevelCache | None = None, presets: dict[str, CycleModel] | None = None):
         super().__init__()
@@ -304,7 +305,9 @@ class CycleState(QObject):
         self.names: tuple = YUGA_NAMES
         self.highlight: str = 'none'    # a key of HIGHLIGHTS
         self.compare_criteria: bool = False   # the navigator shows where the other division criterion puts boundaries
-        self._criteria: dict = {}       # (model, depth) -> boundaries by criterion
+        self._criteria: dict = {}       # (model, depth) -> boundaries by criterion; measures and colors of the model
+        self.ephemeris = None           # (tables, folder) of the Sky panel, for the measures and colors of the sky
+        self._sky: dict = {}            # what is computed with the ephemeris
         self.permutation: tuple | None = None   # (σ, first permuted position) of the Permutations panel
         self.borders: bool = False
         self.labels: str = 'none'       # 'names', 'dots' (4, 3, 2, 1 for the four ages), 'both' or 'none'
@@ -420,33 +423,112 @@ class CycleState(QObject):
         """
         RGB colors (N, 3) of the subcycles of ``depth`` for the coloring ``key``: those of the cycle model
         (``MODEL_COLOR_KEYS``: the angular density, the sign and the element of the vernal point at each start)
-        here, light gray without a model; the others from the level cache.
+        and of the sky (``SKY_COLOR_KEYS``: the gathering of the planets and the trigon of the great conjunctions
+        at each start) here, light gray without what they need; the others from the level cache.
         """
-        if key not in MODEL_COLOR_KEYS:
+        if key not in STATE_COLOR_KEYS:
             return self.cache.colors(depth, key)
-        if self.model is None or self.time_map is None:
+        if not self.can_color(key):
             return np.full((4 ** depth, 3), NO_MODEL_GRAY)
         cached = ('colors', self.model, depth, key)          # apart from the measure values of the same name
-        if cached not in self._criteria:
-            from cycles.functions.color import measure_colors, vernal_colors
-            if key == 'density':
-                colors = measure_colors(self.measure_values(depth, 'density'), 'density', self.cache.maps)[0]
-            else:
+        store = self._sky if key in SKY_COLOR_KEYS else self._criteria
+        if cached not in store:
+            from cycles.functions.color import ELEMENT_COLORS, measure_colors, vernal_colors
+            if key in ('density', 'gathering'):
+                colors = measure_colors(self.measure_values(depth, key), key, self.cache.maps)[0]
+            elif key.startswith('vernal'):
                 starts = np.asarray(self.time_map.to_physical(self.cache.level(depth).starts), dtype=float)
                 colors = vernal_colors(self.model.ayanamsa(starts), key.split('_')[1])
-            self._criteria[cached] = colors
-        return self._criteria[cached]
+            else:
+                from cycles.functions.events import trigon_in_force
+                elements = trigon_in_force(self.great_conjunctions(), key.split('_')[1], self._tdb_starts(depth))
+                colors = np.where(elements[:, None] >= 0, ELEMENT_COLORS[np.clip(elements, 0, 3)], NO_MODEL_GRAY)
+            store[cached] = colors
+        return store[cached]
+
+    def can_color(self, key: str) -> bool:
+        """Whether the coloring (or measure) ``key`` can be computed now: with a model, and the ephemeris for the sky."""
+        from cycles.functions.measure import MEASURES
+        sky = key in SKY_COLOR_KEYS or MEASURES.get(key, {}).get('parameter') == 'sky'
+        model = sky or key in MODEL_COLOR_KEYS or MEASURES.get(key, {}).get('parameter') == 'model'
+        if model and (self.model is None or self.time_map is None):
+            return False
+        return not sky or self.ephemeris is not None
+
+    def missing_for(self, key: str) -> str:
+        """What the coloring (or measure) ``key`` still needs, as a phrase ('' if nothing)."""
+        from cycles.functions.measure import MEASURES
+        if self.can_color(key):
+            return ''
+        sky = key in SKY_COLOR_KEYS or MEASURES.get(key, {}).get('parameter') == 'sky'
+        return 'needs a cycle model and the ephemeris' if sky else 'needs a cycle model'
+
+    def context_of(self, key: str) -> tuple:
+        """
+        What the coloring (or measure) ``key`` depends on beyond the color parameters, for the panels to know when
+        to draw it again: the cycle model, and the ephemeris for the sky; () for the others.
+        """
+        from cycles.functions.measure import MEASURES
+        sky = key in SKY_COLOR_KEYS or MEASURES.get(key, {}).get('parameter') == 'sky'
+        if sky:
+            return (self.model, None if self.ephemeris is None else id(self.ephemeris[0]))
+        if key in MODEL_COLOR_KEYS or MEASURES.get(key, {}).get('parameter') == 'model':
+            return (self.model,)
+        return ()
+
+    # -- the sky: the ephemeris of the Sky panel
+
+    def set_ephemeris(self, tables, folder=None) -> None:
+        """Use the ephemeris ``tables`` (from ``folder``) for the measures and colors of the sky; None: none."""
+        value = None if not tables else (tables, folder)
+        if value is None and self.ephemeris is None:
+            return
+        self.ephemeris = value
+        self._sky = {}
+        self.viewChanged.emit()
+
+    def _tdb_starts(self, depth: int) -> np.ndarray:
+        """TDB years of the starts of the subcycles of ``depth`` (the model's years are UT)."""
+        cached = ('tdb', self.model, depth)
+        if cached not in self._sky:
+            from cycles.functions.events import tdb_years
+            years = np.asarray(self.time_map.to_physical(self.cache.level(depth).starts), dtype=float)
+            # ΔT changes slowly: convert a grid and interpolate
+            grid = np.linspace(years.min() - 1, years.max() + 1, 2001)
+            self._sky[cached] = years + np.interp(years, grid, tdb_years(grid) - grid)
+        return self._sky[cached]
+
+    def great_conjunctions(self) -> dict:
+        """The Jupiter–Saturn conjunctions over the whole ephemeris (as the Events panel's map; kept on disk)."""
+        if 'great' not in self._sky:
+            from cycles.functions.events import cached_conjunctions, table_span
+            tables, folder = self.ephemeris
+            start, end = table_span(tables)
+            self.busy.emit('Computing the Jupiter–Saturn conjunctions over the whole ephemeris (once; then kept '
+                           'on disk)…')
+            try:
+                self._sky['great'] = cached_conjunctions(tables, folder, 'jupiter', 'saturn', start + 1, end - 1)
+            finally:
+                self.busy.emit('')
+        return self._sky['great']
 
     def measure_values(self, depth: int, key: str) -> np.ndarray | None:
         """
         Values (N,) of the measure ``key`` (``measure.MEASURES``) for the subcycles of ``depth``; None for a measure
-        of the cycle model when there is none.
+        of the cycle model when there is none, or of the sky without the ephemeris.
         """
         from cycles.functions.measure import MEASURES
-        if MEASURES[key]['parameter'] != 'model':
+        if MEASURES[key]['parameter'] not in ('model', 'sky'):
             return self.cache.measure(depth, key)
-        if self.model is None or self.time_map is None:
+        if not self.can_color(key):
             return None
+        if MEASURES[key]['parameter'] == 'sky':
+            cached = ('measure', self.model, depth, key)
+            if cached not in self._sky:
+                from cycles.functions.events import CLASSICAL, around_point
+                spread = around_point(self.ephemeris[0], self._tdb_starts(depth), CLASSICAL)['spread']
+                self._sky[cached] = 1 - spread / 360.0
+            return self._sky[cached]
         cached = (self.model, depth, key)
         if cached not in self._criteria:
             from cycles.functions.cycle_analysis import angular_density
@@ -558,8 +640,9 @@ class CycleState(QObject):
             self.cache.set_maps(maps)
         else:
             self.cache = LevelCache(bases, scales, colors, maps)     # levels are recomputed when next needed
-        for cached in [k for k in self._criteria if k[0] == 'colors']:
-            del self._criteria[cached]                                # the colorings of the model
+        for store in (self._criteria, self._sky):
+            for cached in [k for k in store if k[0] == 'colors']:
+                del store[cached]                                     # the colorings of the model and the sky
         self.colorParametersChanged.emit(affected)
 
     @staticmethod

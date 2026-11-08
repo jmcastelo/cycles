@@ -114,7 +114,7 @@ def summary_html(window, address: tuple) -> str:
 
     colors = []
     for row, key in enumerate(COLOR_KEYS):
-        if key in MEASURE_COLOR_KEYS + ('density',) and key != state.color_key:
+        if key in MEASURE_COLOR_KEYS + ('density', 'gathering') and key != state.color_key:
             continue            # the measures themselves are in the summary
         swatch = inspector.colors.item(row, 0).background().color().name()
         rgb = inspector.colors.item(row, 1).text() if inspector.colors.item(row, 1) else ''

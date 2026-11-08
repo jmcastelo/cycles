@@ -14,7 +14,7 @@ from cycles.functions.division import (
 
 
 def test_every_coloring_is_described_once():
-    assert len(set(COLOR_KEYS)) == len(COLOR_KEYS) == len(LEVEL_COLOR_KEYS) + len(MEASURE_COLOR_KEYS) + 3
+    assert len(set(COLOR_KEYS)) == len(COLOR_KEYS) == len(LEVEL_COLOR_KEYS) + len(MEASURE_COLOR_KEYS) + 6
     assert set(COLOR_DESCRIPTIONS) == set(COLOR_KEYS)
 
 
@@ -101,7 +101,7 @@ def test_the_colorings_in_the_explorer(window, spin):
         window.color_box.setCurrentText(key)
         spin()
         window.navigator.repaint()
-    assert window.color_box.count() == len(COLOR_KEYS) + 2                 # two separators
+    assert window.color_box.count() == len(COLOR_KEYS) + 3                 # three separators
 
 
 # -- the color maps of the measures
@@ -136,7 +136,7 @@ def test_other_maps_only_recolor_the_measures(window, spin):
     state.set_color_parameters(bases, scales, colors, ('magma', 'PuOr_r'))
     assert state.cache is cache and state.cache.level(3) is level           # the levels are kept
     assert changed[-1] == {'dharma', 'purity', 'mixture', 'tension', 'roughness', 'trend', 'contrast', 'balance',
-                           'density'}
+                           'microcosm', 'complexity', 'density', 'gathering'}
     assert np.array_equal(state.colors(3, 'cmyk_normalised'), cmyk)
     for key, before in (('trend', trend), ('dharma', dharma), ('density', density)):
         assert not np.allclose(state.colors(3, key), before), key
@@ -161,3 +161,40 @@ def test_the_dialog_chooses_the_maps(window, spin):
     dialog.apply()
     assert state.color_parameters[3] == ('viridis', 'RdBu_r')
     dialog.close()
+
+
+# -- the sky: the gathering of the planets and the trigon of the great conjunctions
+
+@pytest.mark.gui
+@pytest.mark.ephemeris
+def test_the_sky_measures_and_colorings(window, spin, ephemeris):
+    from cycles.functions.events import ELEMENTS
+    state = window.state
+    assert state.ephemeris is not None                            # given by the Sky panel
+    gathering = state.measure_values(1, 'gathering')
+    assert gathering.shape == (4,) and gathering[3] > 0.85      # Sun to Saturn bunched at the start of the Kali
+    assert np.all((gathering > 0) & (gathering < 1))
+    # the trigon in force at the starts of the yugas (tropical): the great conjunctions in water, earth, water, fire
+    trigons = state.colors(1, 'trigon_tropical')
+    names = [ELEMENTS[int(np.argmin(np.abs(ELEMENT_COLORS - c).sum(axis=1)))] for c in trigons]
+    assert names == ['water', 'earth', 'water', 'fire']
+    state.select((3, 1))
+    spin()
+    assert 'gathering' in window.inspector.fields['measures'].text()
+    tables = state.ephemeris
+    state.set_ephemeris(None)
+    spin()
+    row = COLOR_KEYS.index('trigon_sidereal')
+    assert window.inspector.colors.item(row, 1).text() == 'needs a cycle model and the ephemeris'
+    assert np.allclose(state.colors(2, 'gathering'), 0.85) and state.measure_values(2, 'gathering') is None
+    assert 'gathering' not in window.inspector.fields['measures'].text()
+    window.show_panel('measures')
+    panel = window.measures_panel
+    panel.y_measure.setCurrentIndex(panel.y_measure.findData('gathering'))
+    panel.render()
+    assert panel.ax is None and 'needs a cycle model and the ephemeris' in panel.info.text()
+    state.set_ephemeris(*tables)
+    panel.render()
+    assert panel.ax is not None
+    spin()
+    assert window.inspector.colors.item(row, 1).text().startswith('#')

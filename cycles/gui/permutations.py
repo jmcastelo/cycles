@@ -278,7 +278,8 @@ class PermutationsPanel(QWidget):
             self.element.setText(' '.join(map(str, sigma)))
         self._show_summary(sigma, first, depth)
         base = (self.view.currentData(), depth, prefix, first, sigma, state.color_key,
-                state.parameters_of(state.color_key), state.spacing, state.model, state.names,
+                state.parameters_of(state.color_key), state.context_of(state.color_key), state.spacing, state.model,
+                state.names,
                 self.lines.currentData())
         if base != self._base:
             self._data = self._compute(depth, prefix, first, sigma)

@@ -205,8 +205,9 @@ class MeasuresPanel(QWidget):
         used = {y_key, coloring} | ({x_key} if kind not in ('time', 'index') else set())
         used.discard(SUBCYCLE_COLORS)
         parameters = (state.parameters_of(state.color_key), *(state.parameters_of(m) for m in sorted(used)))
+        contexts = tuple(state.context_of(k) for k in sorted(used | {state.color_key}))
         base = (kind, x_key, y_key, coloring, depth, scope, state.color_key, state.model, state.names, parameters,
-                self.sized.isChecked())
+                contexts, self.sized.isChecked())
         if base != self._base:
             self._draw_base(depth, scope)
             self._base = base
@@ -247,10 +248,12 @@ class MeasuresPanel(QWidget):
         self._x = self._y = None
         self._indices = indices
         self._highlights = []
-        missing = [MEASURES[k]['label'] for k in {x_key, y_key, self.color_by.currentData()} - {SUBCYCLE_COLORS}
-                   if state.measure_values(depth, k) is None and (k != x_key or kind not in ('time', 'index'))]
+        missing = [f"{MEASURES[k]['label']} {state.missing_for(k)}"
+                   for k in sorted({x_key, y_key, self.color_by.currentData()} - {SUBCYCLE_COLORS})
+                   if not state.can_color(k) and (k != x_key or kind not in ('time', 'index'))]
         if missing:
-            self.info.setText(f"{', '.join(missing)} needs a cycle model (choose one in the toolbar).")
+            self.info.setText('; '.join(missing) + ' (a cycle model is chosen in the toolbar, the ephemeris in the '
+                                                   'Sky panel).')
             return
         y = np.asarray(state.measure_values(depth, y_key), dtype=float)[indices]
         coloring = self.color_by.currentData()

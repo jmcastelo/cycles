@@ -46,7 +46,24 @@ for k in ('vernal_sign', 'vernal_element'):
     cols[k] = vernal_colors(model.ayanamsa(y0), k.split('_')[1])
 cols['duration_class'] = level_colors(lv)['duration_class']
 keys = ('duration_class',) + MEASURE_COLOR_KEYS + MODEL_COLOR_KEYS
-fig, ax = plt.subplots(figsize=(9, 4.9))
+# the sky, if the ephemeris is here (sandbox/data/tabla70k70k): the gathering and the trigon of the great conjunctions
+from pathlib import Path
+EPHEMERIS = Path(__file__).resolve().parents[3] / 'sandbox' / 'data' / 'tabla70k70k'
+if EPHEMERIS.exists():
+    import cycles.functions.nbody_ephemeris as nbe
+    from cycles.functions.color import ELEMENT_COLORS
+    from cycles.functions.events import CLASSICAL, around_point, cached_conjunctions, table_span, tdb_years, trigon_in_force
+    from cycles.gui.sky import ephemeris_parts
+    tables = [nbe.load_ephemeris(part) for part in ephemeris_parts(EPHEMERIS)]
+    grid = np.linspace(y0.min() - 1, y0.max() + 1, 2001)
+    t0 = y0 + np.interp(y0, grid, tdb_years(grid) - grid)
+    cols['gathering'] = measure_colors(1 - around_point(tables, t0, CLASSICAL)['spread'] / 360, 'gathering')[0]
+    a, b = table_span(tables)
+    great = cached_conjunctions(tables, EPHEMERIS, 'jupiter', 'saturn', a + 1, b - 1)
+    for z in ('sidereal', 'tropical'):
+        cols[f"trigon_{z}"] = ELEMENT_COLORS[trigon_in_force(great, z, t0)]
+    keys += ('gathering', 'trigon_sidereal', 'trigon_tropical')
+fig, ax = plt.subplots(figsize=(9, 0.42 * len(keys) + 0.6))
 for r, key in enumerate(keys):
     ax.barh(-r, y1 - y0, left=y0, height=0.85, color=np.clip(cols[key], 0, 1), linewidth=0)
 ax.set_yticks([-r for r in range(len(keys))], keys); ax.set_xlim(y0[0], y1[-1])

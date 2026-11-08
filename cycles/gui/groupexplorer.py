@@ -20,7 +20,6 @@ from PySide6.QtWidgets import (
 )
 
 from cycles.functions.permutation import cycle_text, cycle_type, cycles, order, power, sign
-from cycles.functions.division import MODEL_COLOR_KEYS
 from cycles.gui.state import CycleState, children_range
 
 COLUMNS = [
@@ -240,7 +239,7 @@ class GroupExplorer(QDialog):
         state = self.state
         context = self.context()
         key = (context, state.color_key, state.parameters_of(state.color_key), state.measure_parameters_of('dharma'),
-               state.measure_parameters_of('purity'), state.model if state.color_key in MODEL_COLOR_KEYS else None)
+               state.measure_parameters_of('purity'), state.context_of(state.color_key))
         if key != self._context:
             self._context = key
             self._rebuild(context)

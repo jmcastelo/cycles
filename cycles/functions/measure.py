@@ -132,6 +132,63 @@ def balance_measure(dharmas, durations) -> np.ndarray:
     return np.cumsum((dharmas - mean) * durations)
 
 
+WHOLE_SHARES = np.array([0.4, 0.3, 0.2, 0.1])     # the ages' shares of the whole cycle
+MICROCOSM_SPAN = 1 - WHOLE_SHARES.min()             # the largest total variation from them (all Kali): 0.9
+
+
+def microcosm_measure(lcoords, weights) -> np.ndarray:
+    """
+    How closely the weighted age shares of each address (``age_shares``) match the whole cycle's 0.4, 0.3, 0.2,
+    0.1: one minus their total variation distance (half the sum of the differences) over its largest value, 0.9.
+    1 if the part reflects the whole exactly, 0 for an address all Kali.
+    """
+    p = age_shares(lcoords, weights)
+    return 1 - 0.5 * np.abs(p - WHOLE_SHARES).sum(axis=1) / MICROCOSM_SPAN
+
+
+def lempel_ziv(sequence) -> int:
+    """
+    Lempel–Ziv (1976) complexity of a sequence: the number of new phrases met when reading it from the start,
+    each the shortest piece not already seen before (Kaspar and Schuster's algorithm). Repetitive sequences have
+    few phrases, irregular ones many.
+    """
+    s = list(sequence)
+    n = len(s)
+    if n < 2:
+        return n
+    i, k, l, c, k_max = 0, 1, 1, 1, 1
+    while True:
+        if s[i + k - 1] == s[l + k - 1]:
+            k += 1
+            if l + k > n:
+                c += 1
+                break
+        else:
+            k_max = max(k, k_max)
+            i += 1
+            if i == l:
+                c += 1
+                l += k_max
+                if l + 1 > n:
+                    break
+                i, k, k_max = 0, 1, 1
+            else:
+                k = 1
+    return c
+
+
+def complexity_measure(lcoords) -> np.ndarray:
+    """
+    Lempel–Ziv complexity of each address of a whole level (``lempel_ziv``), scaled to [0, 1] between the least
+    and the most complex addresses of that depth: 0 for one age repeated, 1 for the most irregular. It sees only
+    the order of the ages, not the weights.
+    """
+    lcoords = np.atleast_2d(np.asarray(lcoords, dtype=int))
+    c = np.array([lempel_ziv(row) for row in lcoords], dtype=float)
+    low, high = c.min(), c.max()
+    return (c - low) / (high - low) if high > low else np.zeros(len(c))
+
+
 # The measures: label, nominal range (None: no fixed range), the parameter they depend on ('color_base' and
 # 'purity_base' as in division.COLOR_PARAMETER_EFFECTS, 'model' for the cycle model) and a description.
 MEASURES = {
@@ -151,11 +208,18 @@ MEASURES = {
                      description='Jump of dharma from the previous subcycle (sandhi)'),
     'balance': dict(label='Balance', range=None, parameter='color_base',
                     description='Running sum of (dharma − mean) × duration from the start of the cycle'),
+    'microcosm': dict(label='Microcosm', range=(0.0, 1.0), parameter='purity_base',
+                      description='How closely the age shares match the whole cycle\'s 0.4, 0.3, 0.2, 0.1'),
+    'complexity': dict(label='Complexity', range=(0.0, 1.0), parameter=None,
+                       description='Lempel–Ziv complexity of the address (0 repetitive, 1 most irregular)'),
     'density': dict(label='Angular density', range=None, parameter='model',
                     description='Share of the precession arc over share of the time (the local mean rate '
                                 'over the cycle\'s)'),
+    'gathering': dict(label='Gathering', range=(0.0, 1.0), parameter='sky',
+                      description='How gathered Sun to Saturn are at the start: 1 − (smallest arc holding them) '
+                                  '/ 360° (needs a cycle model and the ephemeris)'),
 }
-ADDRESS_MEASURES = tuple(key for key, m in MEASURES.items() if m['parameter'] != 'model')
+ADDRESS_MEASURES = tuple(key for key, m in MEASURES.items() if m['parameter'] not in ('model', 'sky'))
 
 
 def address_measures(lcoords, durations, dharmas, purities, bases) -> dict[str, np.ndarray]:
@@ -176,4 +240,6 @@ def address_measures(lcoords, durations, dharmas, purities, bases) -> dict[str, 
         'roughness': roughness_measure(lcoords, w1),
         'contrast': contrast_measure(dharmas),
         'balance': balance_measure(dharmas, durations),
+        'microcosm': microcosm_measure(lcoords, w2),
+        'complexity': complexity_measure(lcoords),
     }
