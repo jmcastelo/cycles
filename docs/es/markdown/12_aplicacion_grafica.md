@@ -35,6 +35,13 @@ filo claro debajo, para que se vean sobre cualquier color de celda.
 | arrastrar una etiqueta | mueve la fecha o el momento del cielo (Escape cancela) |
 | ruta de arriba (*Whole cycle › Kali*) | vuelve a cualquier nivel exterior |
 
+Las filas cuyos subciclos son más estrechos que un par de píxeles (a profundidad 9 sobre todo el ciclo, unos 375
+por píxel) se dibujan como una **tira de píxeles**: cada píxel toma el color medio de los subciclos que cubre,
+ponderado por cuánto lo cubre cada uno, y con un resaltado activo, el de los subciclos resaltados que haya en él,
+para que ninguno se pierda entre los atenuados. Pulsar en esas filas selecciona el subciclo bajo el puntero, y
+la selección, *Follow*, los marcadores y las líneas se dibujan en ellas como en las demás (un subciclo muy
+estrecho, como una línea). Así se ven las nueve profundidades a la vez sin dibujar cientos de miles de celdas.
+
 Debajo de las filas, un eje con años o fechas (con un modelo de ciclo). La descripción emergente de un subciclo
 da su nombre, sus fechas y duración, con los criterios activados la fecha en que empezaría según el otro
 criterio, y sus marcadores.
@@ -52,7 +59,7 @@ y el resaltado.
 | *Model…* | el editor del modelo (12.13) |
 | *Landscape* | abre el panel *Model landscape* |
 | *Color* y *Parameters…* | el coloreado (los veintiséis de `COLOR_KEYS`, en cuatro grupos: de la dirección, de las medidas, del modelo de ciclo y del cielo, con la descripción de cada uno al pasar por encima; los del modelo, en gris sin modelo, y los del cielo, también sin la efeméride del panel *Sky*) y sus parámetros (12.14) |
-| *Levels* | cuántas filas se dibujan bajo el zoom (1 a 6) |
+| *Levels* | cuántas filas se dibujan bajo el zoom (1 a 9, hasta la profundidad 9) |
 | *Highlight* | alrededor de la selección, los subciclos de su profundidad con la misma duración, la misma composición o su órbita bajo ⟨σ⟩ (con su imagen por σ en púrpura discontinuo); o, en todas las profundidades, los que cumplen la **consulta** (*Matching the query*, abajo); los demás se atenúan en el navegador y los resaltados se rodean en los gráficos |
 | consulta | la condición del resaltado *Matching the query*, y cuántos subciclos la cumplen |
 

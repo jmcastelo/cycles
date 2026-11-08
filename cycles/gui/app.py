@@ -265,7 +265,7 @@ class MainWindow(QMainWindow):
         bar.addSeparator()
         bar.addWidget(QLabel(' Levels '))
         self.rows_box = QSpinBox()
-        self.rows_box.setRange(1, 6)
+        self.rows_box.setRange(1, MAX_DEPTH)
         self.rows_box.setValue(state.rows)
         self.rows_box.setToolTip('Number of levels drawn below the zoomed subcycle')
         self.rows_box.valueChanged.connect(state.set_rows)
