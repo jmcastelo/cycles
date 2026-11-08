@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 from cycles.gui.export import LOGICAL_DPI, PAPER_SIZES, light_palette
+from cycles.functions.division import MEASURE_COLOR_KEYS
 from cycles.gui.state import COLOR_KEYS, CycleState, date_text, span_text
 
 SECTIONS = {
@@ -113,6 +114,8 @@ def summary_html(window, address: tuple) -> str:
 
     colors = []
     for row, key in enumerate(COLOR_KEYS):
+        if key in MEASURE_COLOR_KEYS + ('density',) and key != state.color_key:
+            continue            # the measures themselves are in the summary
         swatch = inspector.colors.item(row, 0).background().color().name()
         rgb = inspector.colors.item(row, 1).text() if inspector.colors.item(row, 1) else ''
         cmyk = inspector.colors.item(row, 2).text() if inspector.colors.item(row, 2) else ''

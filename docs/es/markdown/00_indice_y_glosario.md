@@ -14,7 +14,7 @@ explorador gráfico. Incorpora, revisados y actualizados, los documentos de `efe
 |---|---|
 | **I. La estructura** | |
 | [`01_division_fractal.md`](01_division_fractal.md) | la regla 4:3:2:1, direcciones e índices, duración e inicio, niveles, composiciones, la regla (1, 0, −2, 1) y las (*d* + 1)² duraciones |
-| [`02_medidas_y_colores.md`](02_medidas_y_colores.md) | pesos por posición, dharma, pureza, medidas por nivel, más medidas (mezcla, tensión, tendencia, aspereza, contraste, balance, densidad angular), los diez coloreados, el tetraedro de Sierpinski y los rangos de los parámetros |
+| [`02_medidas_y_colores.md`](02_medidas_y_colores.md) | pesos por posición, dharma, pureza, medidas por nivel, más medidas (mezcla, tensión, tendencia, aspereza, contraste, balance, densidad angular), los veintiún coloreados (de la dirección, de las clases de duración, de las medidas y del punto vernal), el tetraedro de Sierpinski en RGB y en OKLab y los rangos de los parámetros |
 | [`03_permutaciones.md`](03_permutaciones.md) | la acción de una permutación de las posiciones, su alcance, órbitas, puntos fijos y el lema de Burnside |
 | **II. Astronomía y tiempo** | |
 | [`04_precesion_y_ayanamsa.md`](04_precesion_y_ayanamsa.md) | precesión, zodiaco trópico y sidéreo, ayanāṃśa de Lahiri, modelos lineal y de largo plazo, la tasa variable, la inversa, el esquema |

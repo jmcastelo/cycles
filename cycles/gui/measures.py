@@ -7,16 +7,14 @@ selects that subcycle.
 """
 
 import numpy as np
-from matplotlib import colormaps
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
-from matplotlib.cm import ScalarMappable
-from matplotlib.colors import Normalize
 from matplotlib.figure import Figure
 from matplotlib.ticker import FuncFormatter, MaxNLocator
 from PySide6.QtCore import QTimer, Signal
 from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox, QToolTip, QToolButton, QVBoxLayout, QWidget
 
+from cycles.functions.color import measure_colors
 from cycles.functions.measure import MEASURES
 from cycles.gui.links import draw_links
 from cycles.gui.state import MAX_DEPTH, MOMENT_COLOR, CycleState, address_of, children_range, tcoord
@@ -40,34 +38,6 @@ VIEWS_3D = {
     'y': ('From the side: Y against the third axis', (0, 0, 0)),
 }
 SUBCYCLE_COLORS = 'subcycle'
-
-
-def measure_colors(values: np.ndarray, key: str) -> tuple[np.ndarray, ScalarMappable]:
-    """
-    RGB colors of ``values`` of the measure ``key``: a diverging map for the signed measures, a sequential one
-    otherwise, over the measure's nominal range (the values' own range if it has none). Also the mappable, for a
-    color bar.
-    """
-    lo_hi = MEASURES[key]['range']
-    finite = values[np.isfinite(values)]
-    if lo_hi is None:
-        lo_hi = (float(finite.min()), float(finite.max())) if len(finite) else (0.0, 1.0)
-        if key == 'balance':                      # signed: centre 0
-            edge = max(abs(lo_hi[0]), abs(lo_hi[1])) or 1.0
-            lo_hi = (-edge, edge)
-        elif lo_hi[0] == lo_hi[1]:
-            lo_hi = (lo_hi[0] - 0.5, lo_hi[1] + 0.5)
-    diverging = lo_hi[0] < 0 < lo_hi[1] or key == 'density'
-    cmap = colormaps['RdBu_r' if diverging else 'viridis']
-    if key == 'density':                          # centre 1, the cycle's mean rate
-        edge = max(abs(lo_hi[0] - 1), abs(lo_hi[1] - 1)) or 0.01
-        lo_hi = (1 - edge, 1 + edge)
-    mappable = ScalarMappable(Normalize(*lo_hi), cmap)
-    return mappable.to_rgba(np.nan_to_num(values, nan=lo_hi[0]))[:, :3], mappable
-
-
-PICK_RADIUS = 10    # pixels
-DRAG_THRESHOLD = 4  # pixels moved between press and release that make it a rotation, not a click
 
 
 class MeasuresPanel(QWidget):
@@ -286,7 +256,7 @@ class MeasuresPanel(QWidget):
         coloring = self.color_by.currentData()
         mappable = None
         if coloring == SUBCYCLE_COLORS:
-            colors = state.cache.colors(depth, state.color_key)[indices]
+            colors = state.colors(depth, state.color_key)[indices]
         else:
             colors, mappable = measure_colors(np.asarray(state.measure_values(depth, coloring), dtype=float)[indices],
                                               coloring)

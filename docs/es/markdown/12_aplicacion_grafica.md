@@ -41,7 +41,7 @@ criterio, y sus marcadores.
 | *Cycle* | el modelo de ciclo (un preset, uno modificado, o tiempo normalizado) |
 | *Model…* | el editor del modelo (12.13) |
 | *Landscape* | abre el panel *Model landscape* |
-| *Color* y *Parameters…* | el coloreado (los diez de `COLOR_KEYS`) y sus parámetros (12.14) |
+| *Color* y *Parameters…* | el coloreado (los veintiuno de `COLOR_KEYS`, en tres grupos: de la dirección, de las medidas y del modelo de ciclo, con la descripción de cada uno al pasar por encima; los del modelo, en gris sin modelo) y sus parámetros (12.14) |
 | *Levels* | cuántas filas se dibujan bajo el zoom (1 a 6) |
 | *Widths* | anchura por duración (el eje es el tiempo) o igual para todos (el eje es el índice) |
 | *Names* | yugas (Satya…) o edades (Golden…) |
@@ -58,8 +58,9 @@ Todo lo que se sabe del subciclo seleccionado: dirección, índice, inicio, dura
 modelo, fechas de inicio y fin, duración en años, ayanāṃśa al inicio y al final, arco (y su lugar en el arco del
 ciclo) y tasa media de precesión; composición; cuántos subciclos comparten su duración y su composición (y su
 lugar en el tiempo entre estos); su imagen por la σ del panel de permutaciones y el tamaño de su órbita; dharma y
-pureza, y en una línea (*More measures*) las demás medidas de 2.4 (la densidad angular, solo con un modelo). La tabla *Measures by level* desglosa ambas medidas (capítulo 2). Al final, su color en las diez
-variantes, con RGB y CMYK; doble clic en una fila usa ese coloreado.
+pureza, y en una línea (*More measures*) las demás medidas de 2.4 (la densidad angular, solo con un modelo). La tabla *Measures by level* desglosa ambas medidas (capítulo 2). Al final, su color en los veintiún
+coloreados, con RGB y CMYK (los del modelo de ciclo dicen *needs a cycle model* sin él); doble clic en una fila usa
+ese coloreado.
 
 ## 12.3 *Date*
 
@@ -275,7 +276,8 @@ desviación de las cuotas. *Apply* lo aplica; *Save preset* y *Delete preset* ge
 *Parameters…* ajusta las bases y escalas de los coloreados y las medidas, y los cuatro colores del tetraedro,
 dentro de los rangos que mantienen distintos los colores de cada nivel (capítulo 2): los valores fuera de rango
 no se aplican y se explica por qué. A la derecha, para una profundidad, cuántos colores son distintos y cuántos
-se distinguen en una pantalla (redondeados a 256 niveles por canal). Los cambios se aplican al momento;
+se distinguen en una pantalla (redondeados a 256 niveles por canal), para los doce coloreados de la dirección (los de
+medidas y del modelo no buscan colores únicos). Los cambios se aplican al momento;
 *Revert* vuelve a los valores con que se abrió y *Defaults* a los de por defecto.
 
 ## 12.15 Guardar gráficos

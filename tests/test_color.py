@@ -3,18 +3,21 @@
 import numpy as np
 import pytest
 
-from cycles.functions.color import color_parameter_problems, tetrahedron_volume
+from cycles.functions.color import color_parameter_problems, srgb_to_oklab, tetrahedron_volume
 from cycles.functions.division import (
-    COLOR_KEYS, DEFAULT_BASES, DEFAULT_SCALES, TETRAHEDRON_COLORS, compute_level, level_colors,
+    LEVEL_COLOR_KEYS, DEFAULT_BASES, DEFAULT_SCALES, TETRAHEDRON_COLORS, compute_level, level_colors,
 )
 
 # colorings not meant to give each subcycle its own color
-SHARED = {'cmyk_composition', 'lrgb', 'dharma', 'purity'}
-UNIQUE = [key for key in COLOR_KEYS if key not in SHARED]
+SHARED = {'cmyk_composition', 'lrgb', 'dharma', 'purity', 'duration_class'}
+UNIQUE = [key for key in LEVEL_COLOR_KEYS if key not in SHARED]
 
 
 def distinct_colors(depth, bases=DEFAULT_BASES, scales=DEFAULT_SCALES, colors=TETRAHEDRON_COLORS):
     level_rgb = level_colors(compute_level(depth, list(bases), list(scales), np.asarray(colors)))
+    # the OKLab tetrahedron is compared in OKLab: near black its RGB values crowd below 1e-10 for steps near 1
+    # (sRGB is a cube law there), though the conversion is one-to-one
+    level_rgb['tetrahedron_oklab'] = srgb_to_oklab(level_rgb['tetrahedron_oklab'])
     return {key: len(np.unique(np.round(np.asarray(level_rgb[key])[:, :3], 10), axis=0)) for key in UNIQUE}
 
 

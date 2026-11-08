@@ -16,7 +16,7 @@ import numpy as np
 from PySide6.QtCore import QObject, Signal
 
 from cycles.functions.division import (
-    CMYK_KEYS, COLOR_KEYS, DEFAULT_BASES, DEFAULT_COLOR_KEY, DEFAULT_SCALES, TETRAHEDRON_COLORS, Level, compute_level,
+    CMYK_KEYS, COLOR_KEYS, MEASURE_COLOR_KEYS, MODEL_COLOR_KEYS, DEFAULT_BASES, DEFAULT_COLOR_KEY, DEFAULT_SCALES, TETRAHEDRON_COLORS, Level, compute_level,
     level_colors,
 )
 from cycles.functions.color import color_parameter_problems
@@ -37,6 +37,7 @@ NAME_SETS = {'Yugas': YUGA_NAMES, 'Ages': AGE_NAMES}
 MOMENT_COLOR = '#ff7f0e'
 # How subcycles are labelled in the navigator
 LABEL_MODES = {'names': 'Names', 'dots': 'Dots (4, 3, 2, 1)', 'both': 'Names and dots', 'none': 'None'}
+NO_MODEL_GRAY = 0.85     # the colorings of the cycle model without one
 MONTHS = ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
 
 
@@ -140,10 +141,17 @@ class LevelCache:
         return self._levels[depth]
 
     def colors(self, depth: int, key: str) -> np.ndarray:
-        """RGB colors (N, 3) of the subcycles of ``depth`` for the color name ``key``."""
+        """
+        RGB colors (N, 3) of the subcycles of ``depth`` for the coloring ``key`` (those of ``LEVEL_COLOR_KEYS``
+        and ``MEASURE_COLOR_KEYS``; the cycle model's are in ``CycleState.colors``).
+        """
         if depth not in self._colors:
             self._colors[depth] = level_colors(self.level(depth))
-        return self._colors[depth][key]
+        colors = self._colors[depth]
+        if key not in colors and key in MEASURE_COLOR_KEYS:
+            from cycles.functions.color import measure_colors
+            colors[key] = measure_colors(self.measure(depth, key), key)[0]
+        return colors[key]
 
     def measure(self, depth: int, key: str) -> np.ndarray:
         """Values (N,) of the measure ``key`` of ``measure.ADDRESS_MEASURES`` for the subcycles of ``depth``."""
@@ -246,7 +254,7 @@ def subcycle_info(cache: LevelCache, address: tuple) -> dict:
         dharma=float(level.dharmas[index]),
         purity=float(level.purities[index]),
         cmyk={key: level.cmyks[index, k] for k, key in enumerate(CMYK_KEYS)},
-        rgb={key: cache.colors(depth, key)[index] for key in COLOR_KEYS},
+        rgb={key: cache.colors(depth, key)[index] for key in COLOR_KEYS if key not in MODEL_COLOR_KEYS},
     )
 
 
@@ -398,6 +406,27 @@ class CycleState(QObject):
             self._criteria[key] = {name: dict(years=y, normalized=np.asarray(time_map.to_normalized(y), dtype=float))
                                    for name, y in years.items()}
         return self._criteria[key]
+
+    def colors(self, depth: int, key: str) -> np.ndarray:
+        """
+        RGB colors (N, 3) of the subcycles of ``depth`` for the coloring ``key``: those of the cycle model
+        (``MODEL_COLOR_KEYS``: the angular density, the sign and the element of the vernal point at each start)
+        here, light gray without a model; the others from the level cache.
+        """
+        if key not in MODEL_COLOR_KEYS:
+            return self.cache.colors(depth, key)
+        if self.model is None or self.time_map is None:
+            return np.full((4 ** depth, 3), NO_MODEL_GRAY)
+        cached = ('colors', self.model, depth, key)          # apart from the measure values of the same name
+        if cached not in self._criteria:
+            from cycles.functions.color import measure_colors, vernal_colors
+            if key == 'density':
+                colors = measure_colors(self.measure_values(depth, 'density'), 'density')[0]
+            else:
+                starts = np.asarray(self.time_map.to_physical(self.cache.level(depth).starts), dtype=float)
+                colors = vernal_colors(self.model.ayanamsa(starts), key.split('_')[1])
+            self._criteria[cached] = colors
+        return self._criteria[cached]
 
     def measure_values(self, depth: int, key: str) -> np.ndarray | None:
         """

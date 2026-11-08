@@ -9,7 +9,9 @@ from PySide6.QtWidgets import (
     QToolBar, QToolButton, QVBoxLayout, QWidget,
 )
 
-from cycles.functions.division import COLOR_KEYS
+from cycles.functions.division import (
+    COLOR_DESCRIPTIONS, COLOR_KEYS, LEVEL_COLOR_KEYS, MEASURE_COLOR_KEYS, MODEL_COLOR_KEYS,
+)
 from cycles.gui.colordialog import ColorDialog
 from cycles.gui.colorspace import ColorSpacePanel
 from cycles.gui.compositions import CompositionsPanel
@@ -232,7 +234,15 @@ class MainWindow(QMainWindow):
 
         bar.addWidget(QLabel('  Color '))
         self.color_box = QComboBox()
-        self.color_box.addItems(COLOR_KEYS)
+        # in groups: of the address, of a measure, of the cycle model
+        for group in (LEVEL_COLOR_KEYS, MEASURE_COLOR_KEYS, MODEL_COLOR_KEYS):
+            if self.color_box.count():
+                self.color_box.insertSeparator(self.color_box.count())
+            for key in group:
+                self.color_box.addItem(key)
+                self.color_box.setItemData(self.color_box.count() - 1, COLOR_DESCRIPTIONS[key],
+                                           Qt.ItemDataRole.ToolTipRole)
+        self.color_box.setMaxVisibleItems(len(COLOR_KEYS) + 2)
         self.color_box.setCurrentText(state.color_key)
         self.color_box.currentTextChanged.connect(state.set_color_key)
         bar.addWidget(self.color_box)

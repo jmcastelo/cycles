@@ -159,18 +159,22 @@ negro**. Cada dígito añade su peso a la tinta de su edad, y de esas sumas sale
 | `cmyk_composition` | recuentos de dígitos sin pesos, divididos por la profundidad: depende solo de la composición |
 | `wcmy` | normalizadas y desplazadas una tinta: Satya → blanco, Treta → cian, Dvapara → magenta, Kali → amarillo, sin negro |
 
-Además hay cuatro coloreados más (`division.level_colors`):
+Además hay seis coloreados más que solo dependen de la dirección (`division.level_colors`):
 
 | Coloreado | Definición |
 |---|---|
 | `tetrahedron` | «juego del caos» en el espacio RGB (2.6) |
+| `tetrahedron_oklab` | el mismo juego en OKLab, un espacio perceptual (2.6) |
 | `lrgb` | la tinta pura de la edad del último nivel |
 | `dharma`, `purity` | gris con el valor de la medida |
+| `duration_class` | un color por clase de igual duración (2.7) |
 
-En total, `COLOR_KEYS` tiene diez nombres. Ejemplo, Kali › Treta › Dvapara › Satya: `cmyk` = (0,0625; 0,25;
-0,125; 0,5); `cmyk_normalised` = (0,0667; 0,2667; 0,1333; 0,5333); `cmyk_composition` = (¼, ¼, ¼, ¼).
+Estos doce son `division.LEVEL_COLOR_KEYS`. Con los seis de las medidas y los tres del modelo de ciclo (2.7),
+`COLOR_KEYS` tiene **veintiún** coloreados, con una descripción de cada uno en `division.COLOR_DESCRIPTIONS`.
+Ejemplo, Kali › Treta › Dvapara › Satya: `cmyk` = (0,0625; 0,25; 0,125; 0,5); `cmyk_normalised` = (0,0667;
+0,2667; 0,1333; 0,5333); `cmyk_composition` = (¼, ¼, ¼, ¼).
 
-![Las diez variantes de color de los 64 subciclos de profundidad 3](figuras/variantes_color.png)
+![Los doce coloreados de la dirección para los 64 subciclos de profundidad 3](figuras/variantes_color.png)
 
 ## 2.6 El tetraedro de Sierpinski
 
@@ -179,15 +183,74 @@ magenta y negro, el mayor tetraedro que cabe en el cubo RGB, de volumen 1/3) y p
 dígito acerca el punto una fracción `scales[2]` hacia el vértice de su edad:
 
 $$
-c_0 = \bar v = \tfrac14 \sum_e v_e, \qquad c_k = c_{k-1} + s\,\left(v_{a_k} - \bar v\right)
+c_0 = \bar v = \tfrac14 \sum_e v_e, \qquad c_k = c_{k-1} + s\,\left(v_{a_k} - c_{k-1}\right)
 $$
 
 (`color.lcoords_to_rgb_tetrahedron`, con $v_e$ los colores-vértice). Con $s = 1/2$, los colores de todas las
-direcciones llenan un **tetraedro de Sierpinski**.
+direcciones llenan un **tetraedro de Sierpinski**. El último dígito es el que más pesa: decide en cuál de los
+cuatro tetraedros de mitad de tamaño cae el color.
 
 ![Colores `tetrahedron` de los 4 096 subciclos de profundidad 6 en el cubo RGB: un tetraedro de Sierpinski](figuras/sierpinski_tetraedro.png)
 
-## 2.7 Cuándo los colores no se repiten
+### La variante perceptual: `tetrahedron_oklab`
+
+En RGB, pasos iguales no se ven iguales: cerca del negro las diferencias se aprecian menos que cerca del
+amarillo. **OKLab** (Ottosson, 2020) es un espacio de color construido para que las distancias correspondan a lo
+que se percibe (`color.srgb_to_oklab`, `color.oklab_to_srgb`). `tetrahedron_oklab` juega el mismo juego del caos
+con los vértices llevados a OKLab, de modo que la diferencia que se ve entre dos colores refleja por igual, en
+todas las esquinas, la diferencia entre sus direcciones.
+
+La gama de sRGB no es convexa en OKLab: la recta de un color de la gama a otro puede salirse de ella (la de
+amarillo a magenta lo hace). Por eso los vértices se encogen hacia su centroide por el mayor factor que mantiene
+dentro de la gama los colores de todos los subciclos hasta la profundidad 8 (`color.oklab_tetrahedron`, por
+bisección; 0,966 con los vértices por defecto). Encoger conserva la geometría exacta, cosa que recortar no haría.
+
+| | `tetrahedron` | `tetrahedron_oklab` |
+|---|---|---|
+| tamaño percibido de las regiones de las cuatro edades a profundidad 6 (mayor / menor) | 1,26 | **1,00** |
+| colores distintos en pantalla a profundidad 8 (de 65 536) | **65 536** | 56 689 |
+
+Es un intercambio, no una mejora: la variante perceptual hace iguales a la vista las regiones de las cuatro
+edades, pero la pantalla separa menos colores, porque sRGB codifica los tonos oscuros con pocos niveles y el
+reparto uniforme pone muchos colores en ellos (a profundidad 8, 64 subciclos de la esquina del Kali quedan en
+negro puro). Para distinguir subciclos profundos conviene `tetrahedron`; para comparar a simple vista regiones
+del ciclo, `tetrahedron_oklab`.
+
+## 2.7 Coloreados por clase, por medida y por el punto vernal
+
+Otros diez coloreados miran más allá de la dirección: el nivel entero, los pesos de las medidas o el modelo de
+ciclo.
+
+- **`duration_class`**: un color por clase de igual duración (capítulo 1). Las clases, de la más larga a la más
+  corta, toman tonos separados por el ángulo áureo (137,5°, cada uno lejos de los anteriores) y tres
+  luminosidades alternas, en OKLab para que todos se vean igual de intensos (`color.duration_class_colors`). Los
+  subciclos del mismo color son intercambiables en duración; a profundidad *d* hay $(d + 1)^2$ colores.
+- **Las medidas** de 2.4 (`MEASURE_COLOR_KEYS`): `mixture`, `tension`, `trend`, `roughness`, `contrast` y
+  `balance`, con el mapa *viridis* para las medidas de 0 a 1 y uno divergente (azul negativo, blanco 0, rojo
+  positivo) para las que tienen signo, sobre el rango fijo de cada medida (`color.measure_colors`, el mismo del
+  panel *Measures*). El color de un subciclo no depende del zoom: el balance, sin rango fijo, se escala con el
+  nivel entero.
+
+Los tres últimos dependen del **modelo de ciclo** (`MODEL_COLOR_KEYS`) y se ven en gris claro sin él:
+
+- `density`: la densidad angular de 2.4, azul donde la precesión va más despacio que la media y rojo donde va más
+  deprisa;
+- `vernal_sign`: el signo sidéreo en el que está el **punto vernal** al empezar el subciclo (doce tonos, Aries
+  rojo). El punto vernal está en 0° trópico, así que su longitud sidérea es $-\text{ayanāṃśa}$
+  (`color.vernal_point_longitude`); hoy, unos 336°: Piscis;
+- `vernal_element`: el elemento de ese signo: fuego rojo, tierra verde, aire amarillo, agua azul.
+
+![Los coloreados de clases, medidas y modelo para los 256 subciclos de profundidad 4, en años del modelo por defecto](figuras/variantes_color_medidas.png)
+
+Lo que muestran los coloreados del punto vernal con el modelo por defecto (2,5 vueltas):
+
+- El Satya ocupa exactamente una vuelta, así que el Treta empieza con el punto vernal **en el mismo signo** que
+  el Satya (fuego los dos). Los yugas siguientes empiezan un número entero de cuartos de vuelta más allá: el
+  Dvapara en agua y el Kali en tierra (Tauro, 3102 a. C.).
+- Más abajo, los elementos se suceden **al revés** (fuego → agua → aire → tierra), porque la precesión recorre el
+  zodiaco hacia atrás; cada franja dura lo que el punto vernal tarda en cruzar un signo (unos 2 150 años).
+
+## 2.8 Cuándo los colores no se repiten
 
 Que cada subciclo de un nivel tenga un color distinto exige mantener los parámetros en ciertos rangos,
 comprobados por `color.color_parameter_problems` (y por el diálogo de parámetros del explorador, que no aplica
@@ -199,7 +262,7 @@ valores fuera de ellos):
 | `scales[0]` | (0, 1] | la conversión CMYK → RGB de colores con tintas que suman *s* es entonces biyectiva |
 | `scales[1]` | [0; 0,25] o [0,5; 1] | entre medias la conversión a RGB puede tener dos preimágenes (no se han encontrado repeticiones, pero no está garantizado) |
 | `scales[2]` | [0,5; 1) | el último dígito pesa más que todos los anteriores; por debajo de 1/2 hay repeticiones en pasos aislados (0,382 desde la profundidad 3); con 1 solo cuenta el último |
-| vértices | cuatro colores RGB no coplanarios | un color devuelve entonces sus coordenadas baricéntricas; conjuntos planos pueden repetir (cuatro alineados, desde la profundidad 2) |
+| vértices | cuatro colores RGB no coplanarios, ni en RGB ni en OKLab | un color devuelve entonces sus coordenadas baricéntricas; conjuntos planos pueden repetir (cuatro alineados, desde la profundidad 2) |
 
 `bases[2]` (pureza) no necesita cota: con 1 pesa igual todos los niveles. Dentro de los rangos, bases y pasos
 mayores mantienen los colores distintos pero acercan los niveles profundos más de lo que una pantalla puede
@@ -209,9 +272,13 @@ separar: a profundidad 7, la base 2 da 15 764 colores distinguibles en pantalla 
 Los efectos de cada parámetro sobre los coloreados están en `division.COLOR_PARAMETER_EFFECTS`: la base de
 color cambia las variantes CMYK salvo `cmyk_composition`, el dharma y las medidas hechas de virtudes (tensión,
 tendencia, aspereza, contraste, balance); la de pureza, la pureza y la mezcla; las
-escalas, cada una su variante; paso y vértices, el tetraedro.
+escalas, cada una su variante; paso y vértices, los dos tetraedros.
 
-## 2.8 Resumen
+En `tetrahedron_oklab` la unicidad es exacta (la conversión de OKLab a sRGB es biyectiva), pero con pasos cerca de
+1 los colores de la esquina negra quedan a menos de $10^{-10}$ en RGB: las pruebas los comparan en OKLab. Los
+coloreados de clases, medidas y modelo no buscan colores únicos.
+
+## 2.9 Resumen
 
 - Pesos `b^−k`: los niveles exteriores cuentan más.
 - Dharma: media ponderada de las virtudes (1 a 1/4). Pureza: cuota mayor menos cuota menor.
@@ -219,5 +286,7 @@ escalas, cada una su variante; paso y vértices, el tetraedro.
   información propia son la tendencia, el contraste y la densidad angular; la mezcla repite casi la pureza y la
   aspereza casi la tensión.
 - Las medidas distinguen las ordenaciones de una composición, que tienen la misma duración.
-- Diez coloreados; los CMYK asocian cada edad a una tinta, el del tetraedro dibuja un Sierpinski.
+- Veintiún coloreados: doce de la dirección (los CMYK asocian cada edad a una tinta, el del tetraedro dibuja un
+  Sierpinski, en RGB o en OKLab), uno por clase de duración, seis de medidas y tres del modelo (la densidad
+  angular y el signo y el elemento del punto vernal).
 - Los parámetros tienen rangos que garantizan colores distintos dentro de cada nivel.

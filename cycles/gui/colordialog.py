@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 
 from cycles.functions.color import MAX_TETRAHEDRON_VOLUME, color_parameter_problems, tetrahedron_volume
 from cycles.functions.division import (
-    COLOR_KEYS, DEFAULT_BASES, DEFAULT_SCALES, TETRAHEDRON_COLORS, compute_level, level_colors,
+    LEVEL_COLOR_KEYS, DEFAULT_BASES, DEFAULT_SCALES, TETRAHEDRON_COLORS, compute_level, level_colors,
 )
 from cycles.gui.navigator import rgb_to_qcolor, text_color
 from cycles.gui.state import CycleState
@@ -26,6 +26,7 @@ SHARED_COLORS = {
     'lrgb': 'the ink of the innermost age',
     'dharma': 'gray level of dharma',
     'purity': 'gray level of purity',
+    'duration_class': 'one color per class of equal duration',
 }
 CHECK_MAX_DEPTH = 7
 
@@ -118,9 +119,9 @@ class ColorDialog(QDialog):
         row.addWidget(self.depth)
         row.addStretch(1)
         check.addLayout(row)
-        self.table = QTableWidget(len(COLOR_KEYS), 2)
+        self.table = QTableWidget(len(LEVEL_COLOR_KEYS), 2)
         self.table.setHorizontalHeaderLabels(['Different', 'Apart on screen'])
-        self.table.setVerticalHeaderLabels(list(COLOR_KEYS))
+        self.table.setVerticalHeaderLabels(list(LEVEL_COLOR_KEYS))
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -220,7 +221,7 @@ class ColorDialog(QDialog):
         finally:
             QApplication.restoreOverrideCursor()
         count = 4 ** depth
-        for row, key in enumerate(COLOR_KEYS):
+        for row, key in enumerate(LEVEL_COLOR_KEYS):
             rgb = np.clip(colors[key], 0, 1)
             different = len(np.unique(np.round(rgb, 10), axis=0))
             on_screen = len(np.unique(np.round(rgb * 255), axis=0))

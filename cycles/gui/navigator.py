@@ -170,7 +170,7 @@ class Navigator(QWidget):
         border = QPen(QColor(0, 0, 0, 45), 0)    # hairline
 
         for rect, address, depth, index in cells:
-            color = rgb_to_qcolor(state.cache.colors(depth, state.color_key)[index])
+            color = rgb_to_qcolor(state.colors(depth, state.color_key)[index])
             painter.fillRect(rect, color)
             if state.borders and rect.width() >= 3:
                 painter.setPen(border)
@@ -466,7 +466,7 @@ class Navigator(QWidget):
         state = self.state
         strip = self._overview_rect()
         level = state.cache.level(1)
-        colors = state.cache.colors(1, state.color_key)
+        colors = state.colors(1, state.color_key)
         for k in range(4):
             rect = QRectF(strip.left() + level.starts[k] * strip.width(), strip.top(),
                           level.durations[k] * strip.width(), strip.height())

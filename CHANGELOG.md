@@ -45,6 +45,13 @@ Planetary events and significance tests.
   orbit of the selection in order, with arrows, or the swaps of neighbouring digits between the orderings of its
   ages (Same composition). The swaps of one position are parallel in the plane of two measures linear in the
   virtues, such as trend against dharma.
+- **New colorings** (21 in all, grouped in the toolbar with a description of each): `tetrahedron_oklab`, the chaos
+  game of the tetrahedron coloring in OKLab, a perceptual color space (the regions of the four ages look equally
+  large; the vertices are shrunk to keep every color in the sRGB gamut; screens tell fewer of its colors apart, so
+  it is an alternative, not a replacement); `duration_class`, one color per class of equal duration; the
+  measures (mixture, tension, trend, roughness, contrast, balance) with viridis or a diverging map; and, with a
+  cycle model, the angular density and the sign and element of the vernal point at the start of each subcycle.
+  `CycleState.colors` gives every coloring to the panels.
 - **README**: a short introduction with installation, a quick start, the chapters of the documentation and the
   references; everything else lives in `docs/es` (the VS Code tasks are now described in chapter 11).
 - The panel arrangements put Events with the sky panels; the eleventh panel has no `Alt` shortcut.

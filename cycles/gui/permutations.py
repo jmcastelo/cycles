@@ -328,7 +328,7 @@ class PermutationsPanel(QWidget):
         else:
             edges = np.arange(len(indices) + 1, dtype=float) + span.start
             xlabel = 'Index'
-        colors = np.clip(np.asarray(state.cache.colors(depth, state.color_key))[indices][:, :3], 0, 1)
+        colors = np.clip(np.asarray(state.colors(depth, state.color_key))[indices][:, :3], 0, 1)
         return dict(depth=depth, prefix=prefix, first=first, sigma=sigma, order=o, indices=indices,
                     slots=slots, edges=edges, centers=(edges[:-1] + edges[1:]) / 2, colors=colors, xlabel=xlabel,
                     occupants=None)

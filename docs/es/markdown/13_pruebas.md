@@ -26,7 +26,7 @@ pendientes y `ephemeris` localiza las tablas.
 
 ## 13.2 Qué se comprueba
 
-En total hay **244 pruebas** en 23 ficheros.
+En total hay **251 pruebas** en 24 ficheros.
 
 ### Cálculo
 
@@ -38,6 +38,7 @@ En total hay **244 pruebas** en 23 ficheros.
 | `test_color.py` | 20 | los valores por defecto y otros dentro de los rangos dan colores únicos; los de fuera se avisan; vértices coplanarios se rechazan y cuatro colores alineados repiten colores |
 | `test_cycle_model.py` | 13 | los presets, sus mapas de tiempo y fronteras (por ejemplo, el inicio del Kali el 17 de febrero de 3102 a. C. a las 18:57 UT) |
 | `test_events.py` | 12 | distancia al acontecimiento más cercano, rotaciones que conservan el espaciado, contrastes con acontecimientos en las fronteras (p pequeño) y sin relación (p uniforme), Holm; grandes conjunciones y de planetas exteriores frente a fechas conocidas; cambios de trígono asentados (1603, 2020); la reunión de planetas al inicio del Kali |
+| `test_colorings.py` | 7 | los coloreados nuevos: OKLab (blanco, negro y rojo de referencia, ida y vuelta); el tetraedro en OKLab encogido por un mismo factor, dentro de la gama y con regiones de las cuatro edades iguales (en RGB no); un color por clase de duración (36 a profundidad 5); los mapas de las medidas (0 neutro, densidad centrada en 1); el punto vernal (hoy en Piscis, agua; en 3102 a. C., tierra); y en el explorador: medidas, modelo (gris sin él), el inspector y todos los coloreados en el navegador (una de ellas) |
 | `test_measures.py` | 6 | las medidas de 2.4: cada una en su rango; una sola edad da 0 en mezcla, tensión, tendencia y aspereza; los extremos (cuatro edades iguales, mitad Satya y mitad Kali, Kali › Satya); la mezcla distingue lo que la pureza no; el contraste y el balance siguen el orden temporal y el balance cierra en 0; la densidad angular (1 para el ciclo entero y con precesión constante, media ponderada 1) |
 | `test_landscape.py` | 9 | `mismatch_grid` frente a `mismatch_by_depth`; los periodos de 41 000 y 20 000 años; el panel del paisaje |
 | `test_version.py` | 5 | la versión: formato MAJOR.MINOR.PATCH, `pyproject.toml` la lee del paquete, el `CHANGELOG.md` empieza por ella, los documentos describen esa versión (si están en el equipo) y el explorador la muestra |

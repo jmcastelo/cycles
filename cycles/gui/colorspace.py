@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox, QToolTip, QToolButton, QVBoxLayout, QWidget,
 )
 
-from cycles.functions.division import CMYK_KEYS
+from cycles.functions.division import CMYK_KEYS, MODEL_COLOR_KEYS
 from cycles.functions.view import bottom_view, camera_view_angles, top_view
 from cycles.gui.links import draw_links
 from cycles.gui.state import MOMENT_COLOR, CycleState, address_of, children_range, tcoord
@@ -171,6 +171,7 @@ class ColorSpacePanel(QWidget):
         key = state.color_key
         self.space.setEnabled(key in CMYK_KEYS)
         base = (self.plot.currentData(), self.space_key(), depth, scope, key, state.parameters_of(key),
+                state.model if key in MODEL_COLOR_KEYS else None,
                 self.sized.isChecked(), self.cube.isChecked(), self.tetrahedron.isChecked())
         if base != self._base:
             self._draw_base(depth, scope)
@@ -185,7 +186,7 @@ class ColorSpacePanel(QWidget):
         level = state.cache.level(depth)
         span = children_range(scope, depth)
         indices = np.arange(span.start, span.stop)
-        rgbs = state.cache.colors(depth, state.color_key)[indices]
+        rgbs = state.colors(depth, state.color_key)[indices]
         cmy = self.space_key() == 'cmy'
         coords = level.cmyk(state.color_key)[indices, :3] if cmy else rgbs
 
@@ -322,6 +323,6 @@ class ColorSpacePanel(QWidget):
             QToolTip.hideText()
             return
         address = address_of(int(self._indices[k]), self._depth)
-        r, g, b = np.clip(self.state.cache.colors(self._depth, self.state.color_key)[self._indices[k]], 0, 1)
+        r, g, b = np.clip(self.state.colors(self._depth, self.state.color_key)[self._indices[k]], 0, 1)
         QToolTip.showText(QCursor.pos(), ' › '.join(self.state.names[d] for d in address)
                           + f"\n#{round(r * 255):02x}{round(g * 255):02x}{round(b * 255):02x}", self.canvas)

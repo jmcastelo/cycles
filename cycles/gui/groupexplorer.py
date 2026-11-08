@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from cycles.functions.permutation import cycle_text, cycle_type, cycles, order, power, sign
+from cycles.functions.division import MODEL_COLOR_KEYS
 from cycles.gui.state import CycleState, children_range
 
 COLUMNS = [
@@ -239,7 +240,7 @@ class GroupExplorer(QDialog):
         state = self.state
         context = self.context()
         key = (context, state.color_key, state.parameters_of(state.color_key), state.parameters_of('dharma'),
-               state.parameters_of('purity'))
+               state.parameters_of('purity'), state.model if state.color_key in MODEL_COLOR_KEYS else None)
         if key != self._context:
             self._context = key
             self._rebuild(context)
@@ -299,7 +300,7 @@ class GroupExplorer(QDialog):
             tails=np.asarray(level.lcoords[indices][:, first:], dtype=np.int64),
             inverse_weights=weights[np.argsort(perms, axis=1)],     # w[σ⁻¹(j)] for each element
             starts=starts / length,
-            colors=np.clip(np.asarray(state.cache.colors(depth, state.color_key))[indices][:, :3], 0, 1),
+            colors=np.clip(np.asarray(state.colors(depth, state.color_key))[indices][:, :3], 0, 1),
             dharmas=np.asarray(level.dharmas[indices], dtype=float),
             purities=np.asarray(level.purities[indices], dtype=float),
             block=max(1, BLOCK_ENTRIES // n), next=0, total=len(perms))
