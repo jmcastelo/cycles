@@ -139,10 +139,10 @@ class Inspector(QWidget):
         for key, m in MEASURES.items():
             if key in ('dharma', 'purity'):
                 continue
-            values = state.measure_values(len(address), key)
-            if values is not None:
+            value = state.subcycle_measure(address, key)
+            if value is not None:
                 signed = m['range'] is not None and m['range'][0] < 0 or key == 'balance'
-                parts.append(f"{m['label'].lower()} {values[index]:{'+' if signed else ''}.4f}".replace('-', '−'))
+                parts.append(f"{m['label'].lower()} {value:{'+' if signed else ''}.4f}".replace('-', '−'))
         return ' · '.join(parts)
 
     def _show_levels(self, address: tuple) -> None:
@@ -239,7 +239,7 @@ class Inspector(QWidget):
         bold.setBold(True)
         for row, key in enumerate(COLOR_KEYS):
             missing = state.missing_for(key) if key in STATE_COLOR_KEYS else ''
-            rgb = None if missing else (state.colors(len(address), key)[info['index']] if key in STATE_COLOR_KEYS
+            rgb = None if missing else (state.subcycle_color(address, key) if key in STATE_COLOR_KEYS
                                         else info['rgb'][key])
             swatch = QTableWidgetItem('')
             if not missing:

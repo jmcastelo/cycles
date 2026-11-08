@@ -333,16 +333,17 @@ class MeasuresPanel(QWidget):
         if moment is not None:
             self._highlights.append(self._ring([moment], s=200, color=MOMENT_COLOR, width=2.0))
         selection = state.selection
-        if selection is None or len(selection) != depth:
-            return
-        if self.join.isChecked():
+        at_selection = selection is not None and len(selection) == depth
+        if at_selection and self.join.isChecked():
             points = np.column_stack([self._x, self._y] + ([self._z] if self._z is not None else []))
             self._highlights += draw_links(self.ax, state.highlight_links(selection), positions, points)
-        bright = state.highlight_indices(selection)
+        bright = state.highlighted(depth)             # the class of the selection, or the matches of the query
         if bright is not None:
             equal = [positions[int(i)] for i in bright if int(i) in positions]
             if equal:
                 self._highlights.append(self._ring(equal, s=90, color='black', width=0.8))
+        if not at_selection:
+            return
         k = positions.get(tcoord(selection))
         if k is not None:
             self._highlights.append(self._ring([k], s=260, color='#1f77b4', width=2.5))

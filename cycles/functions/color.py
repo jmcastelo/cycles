@@ -177,6 +177,11 @@ def _chaos_game(lcoords: np.ndarray, vertices: np.ndarray, scale: float) -> np.n
     return points
 
 
+def level_rgb_tetrahedron(lcoords, colors, scale: float) -> np.ndarray:
+    """The ``tetrahedron`` coloring (``lcoords_to_rgb_tetrahedron``) of a whole level at once: (N, 3)."""
+    return _chaos_game(lcoords, np.asarray(colors, dtype=float), scale)
+
+
 OKLAB_CHECK_DEPTH = 8      # the deepest level of the explorer: the shrunk tetrahedron fits the gamut down to it
 
 

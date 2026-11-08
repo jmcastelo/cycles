@@ -36,7 +36,7 @@ tienen docstrings (`help(compute_level)`).
 
 | Módulo | Contenido principal |
 |---|---|
-| `division.py` | proporciones y desplazamientos; `Level` y `compute_level`; `compute_duration`, `compute_start`, `find_lcoords`, `select_subcycle`, `partition_level`, `fill_partition`; colores (`level_colors`, `COLOR_KEYS`), parámetros por defecto y sus efectos (capítulos 1 y 2) |
+| `division.py` | proporciones y desplazamientos; `Level` y `compute_level` (vectorizado: un nivel de una vez), `level_lcoords`; `compute_duration`, `compute_start`, `find_lcoords`, `select_subcycle`, `partition_level`, `fill_partition`; colores (`level_colors`, `COLOR_KEYS`), parámetros por defecto y sus efectos (capítulos 1 y 2) |
 | `conversion.py` | dirección ↔ índice ↔ fracción en base *b* |
 | `composition.py` | composiciones, clases de igual duración, enumeración de una composición, `analyse_level` |
 | `duration.py` | `count_digits`, `same_duration`, `duration_quotient`, distancias entre inicios |
@@ -45,7 +45,8 @@ tienen docstrings (`help(compute_level)`).
 | `permutation.py` | matriz de una permutación sobre un nivel; composición, potencias, ciclos, orden, signo, tipo, notación, `parse_permutation`, `permute_digits`, `tcoords_of` (capítulo 3) |
 | `timescale.py` | `TimeMap` (lineal, por fronteras de edades, por funciones), `address_label`, nombres de las edades |
 | `cycle_model.py` | `CycleModel`, presets y su fichero, `mean_rate` (capítulo 8) |
-| `cycle_analysis.py` | cuotas de tiempo, desviaciones, `mismatch_by_depth`, `mismatch_grid`, `fit_anchor`, `precession_rate` |
+| `cycle_analysis.py` | cuotas de tiempo, desviaciones, `mismatch_by_depth`, `mismatch_grid`, `fit_anchor`, `precession_rate`; `angular_density`; `dense_years` y `dense_ayanamsa` (los años y el ayanāṃśa de muchos momentos, interpolados en una rejilla fina: el mapa del arco invierte la precesión punto a punto) |
+| `query.py` | consultas: una condición sobre los subciclos (`parse`, que admite solo una parte de las expresiones de Python, y `evaluate`, de una vez sobre el nivel) |
 | `events.py` | acontecimientos planetarios: conjunciones exactas y sus series, signos y elementos en ambos zodiacos, cambios de trígono, cuerpos alrededor de un punto (capítulo 15); el trígono vigente en cada momento (`trigon_periods`, `trigon_in_force`) |
 | `significance.py` | contrastes: distancia al acontecimiento más cercano, rotaciones rígidas, valores p, corrección de Holm |
 | `astro_dates.py` | calendarios, día juliano, año decimal, ΔT, UT ↔ TDB (capítulo 5) |

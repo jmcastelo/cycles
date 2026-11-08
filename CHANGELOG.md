@@ -62,6 +62,18 @@ Planetary events and significance tests.
   in force** at each start, sidereal and tropical (`events.trigon_periods`, `events.trigon_in_force`). The
   correlation study finds microcosm close to dharma, complexity close to mixture, and gathering independent of
   the address measures.
+- **Queries**: a condition on the subcycles typed in a second toolbar row (`trend > 0.3 and dharma < 0.5`,
+  `last == Kali and count(Satya) >= 2`, `year > 0`…) for a new highlight, *Matching the query*: at every depth the
+  navigator keeps the matches bright and the Measures and Color space panels ring them; the number of matches is
+  shown, and the query is kept in sessions. `cycles.functions.query` accepts only a small, checked part of
+  Python's expressions (measures, time, digits, ages, comparisons, arithmetic, `count`, `abs`).
+- **Faster levels**: `compute_level` computes a whole level at once with numpy (depth 8 in 0.06 s instead of
+  5 s; identical results), so the explorer goes down to **depth 9** (262,144 subcycles). For many moments the
+  time map and the ayanamsa are interpolated on a fine grid (`cycle_analysis.dense_years`, `dense_ayanamsa`; well
+  under a day), and the inspector computes the measures of the sky for the selected subcycle alone. The group
+  explorer lists up to S_8.
+- **Tests in parallel**: `pytest-xdist` in the `test` extra; `pytest -n 8` runs the suite in under a minute instead
+  of nine.
 - **README**: a short introduction with installation, a quick start, the chapters of the documentation and the
   references; everything else lives in `docs/es` (the VS Code tasks are now described in chapter 11).
 - The panel arrangements put Events with the sky panels; the eleventh panel has no `Alt` shortcut.

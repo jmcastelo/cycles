@@ -4,11 +4,16 @@
 
 ```bash
 pip install -e ".[test]"        # o ".[all,test]" para las del explorador
-pytest                          # todas (unos 3 minutos)
+pytest -n 8                     # todas, en 8 procesos a la vez (pytest-xdist; menos de un minuto)
+pytest                          # todas, en un solo proceso (unos 9 minutos)
 pytest -m "not gui"             # solo las de cálculo (segundos)
 pytest -m "not ephemeris"       # sin las que necesitan las tablas de efemérides
 pytest tests/test_landscape.py  # un fichero
 ```
+
+`-n` reparte las pruebas entre varios procesos (`pytest-xdist`, en el extra `test`); cada uno abre su propio
+explorador sin pantalla y con sus ajustes, así que no se estorban. Conviene no pasar de la mitad de los núcleos
+(`nproc`), para que el equipo siga respondiendo; `-n auto` los usa todos.
 
 La configuración está en `pyproject.toml` (`[tool.pytest.ini_options]`): carpeta `tests`, el proyecto en el
 `sys.path` y dos marcas:
@@ -26,19 +31,20 @@ pendientes y `ephemeris` localiza las tablas.
 
 ## 13.2 Qué se comprueba
 
-En total hay **259 pruebas** en 24 ficheros.
+En total hay **278 pruebas** en 25 ficheros.
 
 ### Cálculo
 
 | Fichero | Pruebas | Qué comprueba |
 |---|---:|---|
-| `test_division.py` | 18 | duraciones, inicios y conversiones entre formas de dirección |
+| `test_division.py` | 21 | duraciones, inicios y conversiones entre formas de dirección; `compute_level`, vectorizado, igual que las funciones de un subciclo (dos juegos de parámetros) y la profundidad 9 en segundos |
 | `test_durations_compositions.py` | 20 | la regla (1, 0, −2, 1): las composiciones de igual duración y nada más |
 | `test_permutation.py` | 28 | las permutaciones frente a `symmetry-math` y el estudio; conservan las duraciones; lema de Burnside; notaciones |
 | `test_color.py` | 20 | los valores por defecto y otros dentro de los rangos dan colores únicos; los de fuera se avisan; vértices coplanarios se rechazan y cuatro colores alineados repiten colores |
 | `test_cycle_model.py` | 13 | los presets, sus mapas de tiempo y fronteras (por ejemplo, el inicio del Kali el 17 de febrero de 3102 a. C. a las 18:57 UT) |
 | `test_events.py` | 13 | distancia al acontecimiento más cercano, rotaciones que conservan el espaciado, contrastes con acontecimientos en las fronteras (p pequeño) y sin relación (p uniforme), Holm; grandes conjunciones y de planetas exteriores frente a fechas conocidas; cambios de trígono asentados (1603, 2020); la reunión de planetas al inicio del Kali; el trígono vigente con un catálogo de prueba (una racha de paso no cuenta) |
 | `test_colorings.py` | 12 | los coloreados nuevos: OKLab (blanco, negro y rojo de referencia, ida y vuelta); el tetraedro en OKLab encogido por un mismo factor, dentro de la gama y con regiones de las cuatro edades iguales (en RGB no); un color por clase de duración (36 a profundidad 5); los mapas de las medidas (0 neutro, densidad centrada en 1); el punto vernal (hoy en Piscis, agua; en 3102 a. C., tierra); y en el explorador: medidas, modelo (gris sin él), el inspector y todos los coloreados en el navegador; los mapas de las medidas: el dharma y la pureza siguen al secuencial (en gris, grises), mapas desconocidos rechazados, cambiar de mapa solo recolorea las medidas (los niveles se conservan) y el diálogo los elige; el cielo: la reunión al inicio del Kali (más de 0,85), el trígono vigente al inicio de los yugas (agua, tierra, agua, fuego en el trópico), y el inspector y el panel *Measures* sin la efeméride (cinco de ellas, del explorador) |
+| `test_query.py` | 15 | las consultas: condiciones con medidas, dígitos, edades, `count` y `abs`, comparaciones encadenadas; lo que se rechaza (importaciones, atributos, índices, textos, otras funciones); en el explorador: el estado (nombres desconocidos, dígitos que no existen, sin modelo), la barra (el resaltado, la cuenta, una consulta en rojo, vaciarla), los anillos del panel *Measures* y las sesiones |
 | `test_measures.py` | 8 | las medidas de 2.4: cada una en su rango; una sola edad da 0 en mezcla, tensión, tendencia y aspereza; los extremos (cuatro edades iguales, mitad Satya y mitad Kali, Kali › Satya); la mezcla distingue lo que la pureza no; el contraste y el balance siguen el orden temporal y el balance cierra en 0; la densidad angular (1 para el ciclo entero y con precesión constante, media ponderada 1); el microcosmos (1 para las cuotas del ciclo, 0 para todo Kali) y la complejidad de Lempel–Ziv (el ejemplo de Kaspar y Schuster, 0 para una edad repetida) |
 | `test_landscape.py` | 9 | `mismatch_grid` frente a `mismatch_by_depth`; los periodos de 41 000 y 20 000 años; el panel del paisaje |
 | `test_version.py` | 5 | la versión: formato MAJOR.MINOR.PATCH, `pyproject.toml` la lee del paquete, el `CHANGELOG.md` empieza por ella, los documentos describen esa versión (si están en el equipo) y el explorador la muestra |
@@ -54,7 +60,7 @@ En total hay **259 pruebas** en 24 ficheros.
 | `test_gui_measures.py` | 8 | el panel Measures con dos medidas cualesquiera (2D, tiempo, 3D), coloreado por una medida con su barra, la densidad angular sin modelo, la línea de medidas del inspector, sesiones; las uniones de los resaltados (36 intercambios entre las 24 ordenaciones de cuatro edades distintas, los pasos de la órbita en orden) en Measures y Color space |
 | `test_gui_highlight.py` | 5 | los resaltados alrededor de la selección y el momento con *Follow* |
 | `test_gui_export.py` | 10 | guardar gráficos: tamaños, formatos, resolución; los paneles conservan su tamaño en pantalla |
-| `test_gui_permutations.py` | 12 | el panel de permutaciones y el explorador de grupo |
+| `test_gui_permutations.py` | 13 | el panel de permutaciones y el explorador de grupo; el explorador de grupo llega hasta S₈ |
 | `test_gui_compositions.py` | 8 | el tetraedro de composiciones y las medidas por nivel |
 | `test_gui_sky_colors.py` | 4 | el gráfico del cielo (tamaño fijo, leyenda) y el diálogo de colores |
 | `test_gui_criteria_skycompare.py` | 21 | los dos criterios en el navegador; el panel Sky comparison (conjuntos, orden por parecido, franja, concentración, ajuste de las cartas al tamaño); posiciones vectorizadas frente a escalares |

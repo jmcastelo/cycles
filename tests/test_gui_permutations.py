@@ -184,3 +184,14 @@ def test_explorer_follows_the_panel_depth(panel, explorer, spin, qapp):
     assert explorer.model.rowCount() == 120
     finish(explorer, qapp)
     assert not np.isnan(explorer.model.values['purity']).any()
+
+
+def test_the_explorer_stops_at_s8(explorer):
+    from cycles.gui.groupexplorer import MAX_DIGITS
+    from cycles.gui.state import MAX_DEPTH
+    assert MAX_DEPTH == 9 and MAX_DIGITS == 8
+    explorer._rebuild((9, (), 0))           # σ on all 9 digits: S_9 is too large to list
+    assert explorer.model.rowCount() == 0 and 'S_9 has 362,880 elements' in explorer.heading.text()
+    explorer._rebuild((7, (), 0))           # below it the group is listed (S_7 here, quicker than S_8)
+    explorer.stop()
+    assert explorer.model.rowCount() == 5040

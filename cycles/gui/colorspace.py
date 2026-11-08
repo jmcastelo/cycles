@@ -265,17 +265,18 @@ class ColorSpacePanel(QWidget):
             self._highlights.append(self.ax.scatter([c[0]], [c[1]], [c[2]], s=170, facecolors='none',
                                                     edgecolors=MOMENT_COLOR, linewidths=2.0, depthshade=False))
         selection = state.selection
-        if selection is None or len(selection) != self._depth:
-            return
-        if self.join.isChecked():
+        at_selection = selection is not None and len(selection) == self._depth
+        if at_selection and self.join.isChecked():
             self._highlights += draw_links(self.ax, state.highlight_links(selection), positions, self._coords)
-        bright = state.highlight_indices(selection)
+        bright = state.highlighted(self._depth)       # the class of the selection, or the matches of the query
         if bright is not None:
             equal = [positions[int(i)] for i in bright if int(i) in positions]
             if equal:
                 c = self._coords[equal]
                 self._highlights.append(self.ax.scatter(c[:, 0], c[:, 1], c[:, 2], s=70, facecolors='none',
                                                         edgecolors='black', linewidths=0.8, depthshade=False))
+        if not at_selection:
+            return
         k = positions.get(tcoord(selection))
         if k is not None:
             c = self._coords[k]

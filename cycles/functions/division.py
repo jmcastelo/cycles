@@ -15,7 +15,7 @@ from typing import NamedTuple
 from cycles.functions.conversion import tcoord_to_lcoords
 from cycles.functions.color import (
     DEFAULT_COLOR_MAPS, cmyk_to_rgb, duration_class_colors, lcoords_to_cmyk, lcoords_to_lrgb,
-    lcoords_to_rgb_tetrahedron, level_rgb_oklab_tetrahedron, measure_colors,
+    lcoords_to_rgb_tetrahedron, level_rgb_oklab_tetrahedron, level_rgb_tetrahedron, measure_colors,
 )
 from cycles.functions.duration import count_digits
 from cycles.functions.measure import dharma_measure, purity_measure
@@ -140,7 +140,8 @@ def level_colors(level: Level, maps=DEFAULT_COLOR_MAPS) -> dict[str, np.ndarray]
     and ``purity`` on the sequential map of ``maps`` (``color.measure_colors``).
     """
     colors = {key: level.rgb(key) for key in RGB_KEYS}
-    colors['lrgb'] = np.array([lcoords_to_lrgb(lcoords)[-1] for lcoords in level.lcoords])
+    inks = np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0], [0, 0, 0]], dtype=float)    # pure cyan, magenta, yellow, black
+    colors['lrgb'] = inks[level.lcoords[:, -1]]
     colors['dharma'] = measure_colors(level.dharmas, 'dharma', maps)[0]
     colors['purity'] = measure_colors(level.purities, 'purity', maps)[0]
     colors['duration_class'] = duration_class_colors(level.durations)
@@ -171,6 +172,11 @@ def compute_start(lcoords: np.ndarray) -> float:
     return np.dot(offsets[lcoords], np.insert(np.cumprod(proportions[lcoords][:-1]), 0, 1))
 
 
+def level_lcoords(depth: int, base: int = 4) -> np.ndarray:
+    """The addresses of all ``base^depth`` subcycles of ``depth``, in time order: (N, depth) digits."""
+    return (np.arange(base ** depth)[:, None] // base ** np.arange(depth - 1, -1, -1)) % base
+
+
 def compute_level(depth: int, bases: list[int] = DEFAULT_BASES, scales: list[float] = DEFAULT_SCALES,
                   colors: np.ndarray = TETRAHEDRON_COLORS) -> Level:
     """
@@ -189,21 +195,31 @@ def compute_level(depth: int, bases: list[int] = DEFAULT_BASES, scales: list[flo
     Returns a ``Level``: addresses, durations, starts, all CMYK and RGB color
     variants, dharma and purity of each subcycle.
     """
-    lcoords = np.array([tcoord_to_lcoords(i, bases[0], depth) for i in range(bases[0] ** depth)], dtype=int)
-
-    durations = np.apply_along_axis(compute_duration, 1, lcoords)
-    starts = np.apply_along_axis(compute_start, 1, lcoords)
+    lcoords = level_lcoords(depth, bases[0])
+    n = len(lcoords)
+    shares = proportions[lcoords]                                   # (N, depth)
+    durations = np.prod(shares, axis=1) if depth else np.ones(n)
+    # the start: each digit's offset scaled by the product of the shares of the levels above it
+    above = np.hstack([np.ones((n, 1)), np.cumprod(shares, axis=1)[:, :-1]]) if depth else np.ones((n, 0))
+    starts = np.sum(offsets[lcoords] * above, axis=1)
 
     w1 = weights(bases[1], depth)
-    cmyks = np.array([lcoords_to_cmyk(lcoord, w1, scales) for lcoord in lcoords], dtype=float)
-    rgbs = np.apply_along_axis(cmyk_to_rgb, 2, cmyks)
-    rgbs_tetrahedron = np.array([[lcoords_to_rgb_tetrahedron(lcoord, colors, scales[2])] for lcoord in lcoords])
+    ink = lcoords[:, :, None] == np.arange(4)                       # (N, depth, 4): the ink of each digit
+    sums = np.einsum('nki,k->ni', ink, w1)                          # weighted ink sums (lcoords_to_cmyk)
+    normalised = sums / w1.sum()
+    composition = ink.sum(axis=1) / max(depth, 1)
+    cmyks = np.stack([sums, normalised, normalised * scales[0], normalised * [1, 1, 1, scales[1]], composition,
+                      np.hstack([normalised[:, 1:], np.zeros((n, 1))])], axis=1)
+    rgbs = (1 - cmyks[:, :, :3]) * (1 - cmyks[:, :, 3:])           # cmyk_to_rgb for every variant
+    colors = np.asarray(colors, dtype=float)
+    rgbs_tetrahedron = level_rgb_tetrahedron(lcoords, colors, scales[2])[:, None]
     rgbs_oklab = level_rgb_oklab_tetrahedron(lcoords, colors, scales[2])[:, None]
     all_rgbs = np.concatenate((rgbs, rgbs_tetrahedron, rgbs_oklab), axis=1)
-    dharmas = np.array([dharma_measure(lcoord, w1) for lcoord in lcoords])
+    dharmas = (4 - lcoords) @ w1 / (4 * w1.sum())                   # dharma_measure
 
     w2 = weights(bases[2], depth)
-    purities = np.array([purity_measure(lcoord, w2) for lcoord in lcoords])
+    purity_shares = np.einsum('nki,k->ni', ink, w2)                 # purity_measure
+    purities = (purity_shares.max(axis=1) - purity_shares.min(axis=1)) / w2.sum()
 
     return Level(lcoords, durations, starts, cmyks, all_rgbs, dharmas, purities)
 

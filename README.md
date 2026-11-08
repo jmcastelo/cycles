@@ -27,7 +27,7 @@ pip install -e ".[all]"        # or ".[all,test]" to run the tests
 
 The core needs only NumPy, Matplotlib, `papersize` and `symmetry-math`. The
 extras add `astro` (REBOUND, REBOUNDx: building the ephemeris), `sound`
-(PyWavelets, sounddevice), `gui` (PySide6) and `test` (pytest); `all` is the
+(PyWavelets, sounddevice), `gui` (PySide6) and `test` (pytest, pytest-xdist); `all` is the
 first three. For example, `pip install -e ".[astro]"` installs the core and the
 ephemeris builder.
 
@@ -37,7 +37,7 @@ ephemeris builder.
 cycles-gui                                     # the explorer (or: python -m cycles.gui)
 python sandbox/study_of_durations.py --list    # the studies of a script (* = default)
 python sandbox/study_of_measures.py --save     # run its default studies, saving the figures
-pytest -m "not gui"                            # the computation tests (pytest: all of them)
+pytest -n 8                                    # all the tests, in 8 processes (under a minute)
 ```
 
 The sky charts and the planetary events need the ephemeris tables, which are

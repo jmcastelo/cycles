@@ -158,10 +158,18 @@ class Navigator(QWidget):
         self._cells = [(rect, address) for rect, address, _, _ in cells]
 
         selection = state.selection
-        equal = set()
-        bright = state.highlight_indices(selection)
-        if bright is not None:
-            equal = {address_of(int(i), len(selection)) for i in bright}
+        bright = {}           # depth -> mask of the subcycles kept bright (the highlight), where there is one
+
+        def bright_at(depth: int):
+            if depth not in bright:
+                indices = state.highlighted(depth)
+                if indices is None:
+                    bright[depth] = None
+                else:
+                    mask = np.zeros(4 ** depth, dtype=bool)
+                    mask[indices] = True
+                    bright[depth] = mask
+            return bright[depth]
 
         font = QFont(self.font())
         metrics = painter.fontMetrics()
@@ -175,7 +183,8 @@ class Navigator(QWidget):
             if state.borders and rect.width() >= 3:
                 painter.setPen(border)
                 painter.drawRect(rect)
-            if equal and depth == len(selection) and address not in equal:
+            mask = bright_at(depth)
+            if mask is not None and not mask[index]:
                 painter.fillRect(rect, dim)
                 continue
             self._draw_label(painter, metrics, rect, address[-1], text_color(color))

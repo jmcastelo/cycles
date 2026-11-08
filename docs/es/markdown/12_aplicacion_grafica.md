@@ -36,6 +36,9 @@ criterio, y sus marcadores.
 
 ### La barra de herramientas
 
+La barra tiene dos filas: la primera elige el modelo y cómo se dibuja el ciclo; la segunda, qué se resalta (con la
+consulta) y la comparación de los criterios.
+
 | Control | Qué elige |
 |---|---|
 | *Cycle* | el modelo de ciclo (un preset, uno modificado, o tiempo normalizado) |
@@ -47,8 +50,37 @@ criterio, y sus marcadores.
 | *Names* | yugas (Satya…) o edades (Golden…) |
 | *Labels* | nombres (verticales en celdas altas y estrechas), puntos (4 Satya, 3 Treta, 2 Dvapara, 1 Kali), ambos o ninguno |
 | *Borders* | borde en cada celda |
-| resaltado | alrededor de la selección, los subciclos de su profundidad con la misma duración, la misma composición o su órbita bajo ⟨σ⟩ (con su imagen por σ en púrpura discontinuo); los demás se atenúan en el navegador y los resaltados se rodean en los gráficos |
-| *Criteria* | dibuja dónde pondría las fronteras el criterio que no es la división del modelo (4:3:2:1 del arco o de los años): discontinuas, con el hueco hasta la frontera propia sombreado, en las filas cuyas celdas tienen unos píxeles de ancho (capítulo 8) |
+| *Highlight* (segunda fila) | alrededor de la selección, los subciclos de su profundidad con la misma duración, la misma composición o su órbita bajo ⟨σ⟩ (con su imagen por σ en púrpura discontinuo); o, en todas las profundidades, los que cumplen la **consulta** (*Matching the query*, abajo); los demás se atenúan en el navegador y los resaltados se rodean en los gráficos |
+| consulta (segunda fila) | la condición del resaltado *Matching the query*, y cuántos subciclos la cumplen |
+| *Criteria* (segunda fila) | dibuja dónde pondría las fronteras el criterio que no es la división del modelo (4:3:2:1 del arco o de los años): discontinuas, con el hueco hasta la frontera propia sombreado, en las filas cuyas celdas tienen unos píxeles de ancho (capítulo 8) |
+
+### Resaltar con una consulta
+
+El campo de la segunda fila de la barra admite una **condición** sobre los subciclos, como
+`trend > 0.3 and dharma < 0.5`. Con Intro se aplica y el resaltado pasa a *Matching the query*: en cada fila
+del navegador quedan vivos los subciclos que la cumplen y los demás se atenúan; en los paneles *Measures* y *Color
+space* se rodean, a la profundidad que muestren. Al lado se lee cuántos la cumplen a la profundidad de la
+selección o, sin selección, de la fila más honda. Vaciar el campo quita el resaltado.
+
+![Los subciclos del Kali con tendencia mayor que 0,3 y dharma menor que 0,5: 40 de 1 024 a profundidad 5](figuras/consulta.png)
+
+La condición es una expresión de Python restringida (`cycles.functions.query`), que se comprueba nodo a nodo antes
+de evaluarla, de una vez, sobre el nivel entero:
+
+| Qué | Nombres |
+|---|---|
+| medidas | `dharma`, `purity`, `mixture`, `tension`, `trend`, `roughness`, `contrast`, `balance`, `microcosm`, `complexity`, `density` (con modelo), `gathering` (con modelo y efeméride) |
+| tiempo | `duration`, `start` (fracciones del ciclo), `year` (del inicio) y `years` (la duración), con modelo |
+| posición | `index` (en el nivel), `depth` |
+| dígitos | `a1`, `a2`, … (la edad de cada nivel), `first`, `last`; las edades `Satya`, `Treta`, `Dvapara`, `Kali` (o `Golden`, `Silver`, `Bronze`, `Iron`), de 0 a 3 |
+| operadores | `and`, `or`, `not`; `<`, `<=`, `>`, `>=`, `==`, `!=` (también encadenados: `0.2 < trend <= 0.6`); `+ - * /`; paréntesis |
+| funciones | `count(edad)` (cuántos dígitos de esa edad), `abs(x)` |
+
+No se admite nada más: ni atributos, ni índices, ni otras llamadas, ni textos. Una condición que no se puede leer
+se muestra en rojo y no se aplica. Un dígito que no existe a esa profundidad (`a7` a profundidad 5) no lo cumple
+nadie; si falta lo que una medida necesita (un modelo, la efeméride), no se resalta nada y se dice por qué.
+Ejemplos: `last == Kali and count(Satya) >= 2`; `abs(trend) < 0.05 and tension > 0.6`; `year > 0 and
+microcosm > 0.7`. La consulta se guarda con la sesión.
 
 ## 12.2 *Subcycle*: el inspector
 
@@ -189,7 +221,8 @@ en el inspector), aunque el panel esté oculto.
 cualquier columna y se filtra por tipo y paridad. Además de la estructura, da medias sobre los subciclos: qué
 porcentaje mueve σ, cuánto en el tiempo (% del tramo), cómo conserva el orden temporal (correlación entre el
 orden de los subciclos y el de sus imágenes) y cuánto cambia el color, el dharma y la pureza. Las columnas se
-llenan poco a poco (S₈ a profundidad 8 tarda en torno a minuto y medio; *Stop* lo interrumpe). Una línea
+llenan poco a poco (S₈ a profundidad 8 tarda en torno a minuto y medio; *Stop* lo interrumpe); S₉, con 362 880
+elementos, ya no se lista (σ puede actuar por debajo del zoom). Una línea
 comprueba el lema de Burnside: la media de los fijos es el número de composiciones. Pulsar una fila carga ese
 elemento en el panel.
 

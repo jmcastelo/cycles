@@ -173,6 +173,7 @@ def capture(window, layout: bool = True) -> dict:
             'labels': state.labels,
             'borders': state.borders,
             'highlight': state.highlight,
+            'query': state.query,
             'compare_criteria': state.compare_criteria,
             'date': state.date,
             'sky_time': state.sky_time,
@@ -227,6 +228,8 @@ def apply(window, data: dict, layout: bool = True) -> list[str]:
     if 'names' in saved:
         names = saved['names']
         attempt('names', lambda: state.set_names(tuple(NAME_SETS[names] if isinstance(names, str) else names)))
+    if saved.get('query'):
+        attempt('query', lambda: state.set_query(saved['query']))
     for key in ('color_key', 'rows', 'spacing', 'labels', 'borders', 'highlight', 'compare_criteria'):
         if key in saved:
             attempt(key.replace('_', ' '), lambda key=key: getattr(state, f"set_{key}")(saved[key]))

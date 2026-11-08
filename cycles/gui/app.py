@@ -5,7 +5,7 @@ import sys
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
-    QApplication, QCheckBox, QComboBox, QDockWidget, QLabel, QMainWindow, QMessageBox, QSpinBox,
+    QApplication, QCheckBox, QComboBox, QDockWidget, QLabel, QLineEdit, QMainWindow, QMessageBox, QSpinBox,
     QToolBar, QToolButton, QVBoxLayout, QWidget,
 )
 
@@ -34,6 +34,14 @@ from cycles.gui.state import HIGHLIGHTS, LABEL_MODES, MAX_DEPTH, NAME_SETS, Cycl
 
 
 # Version of the saved panel layout (increase when the panels change)
+QUERY_HELP = (
+    'A condition on the subcycles, for the highlight "Matching the query" (Enter applies it):\n'
+    '  the measures: dharma, purity, mixture, tension, trend, roughness, contrast, balance, microcosm,\n'
+    '    complexity, density (with a model), gathering (with a model and the ephemeris);\n'
+    '  duration, start (fractions of the cycle), year, years (with a model), index, depth;\n'
+    '  a1, a2, … (the age of each level), first, last; the ages Satya, Treta, Dvapara, Kali;\n'
+    '  and, or, not, < <= > >= == !=, + - * /, count(age), abs(x).\n'
+    'Examples: trend > 0.3 and dharma < 0.5   |   last == Kali and count(Satya) >= 2   |   year > 0')
 LAYOUT_VERSION = 8
 
 
@@ -291,7 +299,12 @@ class MainWindow(QMainWindow):
         self.borders_box.toggled.connect(state.set_borders)
         bar.addWidget(self.borders_box)
 
-        bar.addSeparator()
+        # a second row: what to highlight, the query, and the comparison of the division criteria
+        self.addToolBarBreak()
+        bar = QToolBar('Highlight')
+        bar.setObjectName('highlight')
+        self.addToolBar(bar)
+        bar.addWidget(QLabel('Highlight '))
         self.highlight_box = QComboBox()
         for key, label in HIGHLIGHTS.items():
             self.highlight_box.addItem(label, key)
@@ -299,9 +312,21 @@ class MainWindow(QMainWindow):
             'Around the selection, keep bright (and ring in the plots) the subcycles of its depth with the same '
             'duration,\nthe same composition (the orderings of its ages, a class inside the equal durations), or '
             'its orbit under the powers\nof the σ of the Permutations panel (its image under σ outlined in purple); '
-            'dim the others.')
+            'or, at every depth, those matching the query;\ndim the others.')
         self.highlight_box.currentIndexChanged.connect(lambda i: state.set_highlight(self.highlight_box.itemData(i)))
         bar.addWidget(self.highlight_box)
+        self.query_edit = QLineEdit()
+        self.query_edit.setPlaceholderText('query, e.g. trend > 0.3 and dharma < 0.5')
+        self.query_edit.setClearButtonEnabled(True)
+        self.query_edit.setMinimumWidth(240)
+        self.query_edit.setToolTip(QUERY_HELP)
+        self.query_edit.editingFinished.connect(self._apply_query)
+        bar.addWidget(self.query_edit)
+        self.query_info = QLabel()
+        bar.addWidget(self.query_info)
+        bar.addSeparator()
+        for signal in (state.viewChanged, state.selectionChanged, state.focusChanged, state.colorParametersChanged):
+            signal.connect(self._show_query)
         self.criteria_box = QCheckBox('Criteria')
         self.criteria_box.setToolTip(
             'Compare the two criteria for dividing the cycle, 4:3:2:1 of the precession arc and 4:3:2:1 of the '
@@ -358,6 +383,40 @@ class MainWindow(QMainWindow):
         self.model_dialog.show()
         self.model_dialog.raise_()
         self.model_dialog.activateWindow()
+
+    def _apply_query(self) -> None:
+        """Use the typed query (and its highlight); a query that cannot be read is shown in red, not applied."""
+        from cycles.functions.query import QueryError
+        state, text = self.state, self.query_edit.text()
+        try:
+            state.set_query(text)
+        except QueryError as error:
+            self.query_edit.setStyleSheet('color: #d62728;')
+            self.query_edit.setToolTip(f"{error}\n\n{QUERY_HELP}")
+            self.statusBar().showMessage(f"Query not applied: {error}", 10000)
+            return
+        self.query_edit.setStyleSheet('')
+        self.query_edit.setToolTip(QUERY_HELP)
+        if state.query and state.highlight != 'query':
+            state.set_highlight('query')
+        elif not state.query and state.highlight == 'query':
+            state.set_highlight('none')
+        self._show_query()
+
+    def _show_query(self, *_) -> None:
+        """How many subcycles match the query, at the depth of the selection or of the deepest row shown."""
+        state = self.state
+        if self.query_edit.text().strip() != state.query and not self.query_edit.hasFocus():
+            self.query_edit.setText(state.query)            # set elsewhere (a session)
+        if state.highlight != 'query' or not state.query:
+            self.query_info.setText('')
+            return
+        depth = len(state.selection) if state.selection else max(state.visible_depths(), default=1)
+        matches = state.query_matches(depth)
+        text = f" {int(matches.sum()):,} of {matches.size:,} at depth {depth} "
+        if state.query_problem:
+            text += f"({state.query_problem}) "
+        self.query_info.setText(text)
 
     def _sync_toolbar(self) -> None:
         """Keep the toolbar in step with changes made elsewhere (the inspector, a session...)."""
@@ -602,8 +661,8 @@ class MainWindow(QMainWindow):
             '  ↑  parent      ↓  first part\n'
             '  Enter  zoom into the selection\n'
             '  Backspace / Esc  zoom out\n\n'
-            f'Subcycles are computed down to depth {MAX_DEPTH}; the deepest levels take a few '
-            'seconds the first time.'))
+            f'Subcycles are computed down to depth {MAX_DEPTH} ({4 ** MAX_DEPTH:,} subcycles, under a '
+            'second the first time).'))
 
 
     def show_about(self) -> None:

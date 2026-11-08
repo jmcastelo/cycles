@@ -78,8 +78,10 @@ dentro de un subciclo dado y `partition_level(level, subprofundidad, 4)` lo part
 | 5 | 1 024 | 0,01024 | 0,00001 |
 | $d$ | $4^d$ | $0{,}4^d$ | $0{,}1^d$ |
 
-El explorador gráfico calcula los niveles bajo demanda y los guarda en caché hasta la profundidad 8
-(65 536 subciclos); el índice de un subciclo en su nivel es su `tcoord`.
+El explorador gráfico calcula los niveles bajo demanda y los guarda en caché hasta la profundidad 9 (262 144
+subciclos); el índice de un subciclo en su nivel es su `tcoord`. `compute_level` calcula el nivel entero de una
+vez, con operaciones vectorizadas de numpy: la profundidad 8 tarda unas centésimas de segundo, la 9 un cuarto de
+segundo y la 10 algo más de uno (pero ocupa más de 500 MB, y por eso el explorador se queda en la 9).
 
 ## 1.5 Composiciones
 
