@@ -29,6 +29,8 @@ explorador gráfico. Incorpora, revisados y actualizados, los documentos de `efe
 | [`12_aplicacion_grafica.md`](12_aplicacion_grafica.md) | el explorador: navegador, paneles, modelo, colores, gráficos, sesiones, dosier, disposición, atajos |
 | [`13_pruebas.md`](13_pruebas.md) | cómo se ejecutan las pruebas y qué comprueban |
 | [`14_resultados_y_preguntas_abiertas.md`](14_resultados_y_preguntas_abiertas.md) | resultados obtenidos y trabajo pendiente |
+| **IV. Contrastes** | |
+| [`15_eventos_y_significacion.md`](15_eventos_y_significacion.md) | catálogos de acontecimientos planetarios (conjunciones, cambios de trígono), contrastes de significación con rotaciones rígidas y tres hipótesis (Sūrya Siddhānta, grandes conjunciones, planetas exteriores) en los zodiacos sidéreo y trópico |
 
 Estos documentos están en `docs/es/` del repositorio: los capítulos en `markdown/`, con sus figuras en
 `markdown/figuras/`; la versión LaTeX, que reúne todos los capítulos en un solo documento, se genera en `tex/` con
@@ -49,7 +51,10 @@ regeneran las figuras, en `generar_figuras/`.
    rectificada.
 5. **El cielo en los inicios de los subciclos** no se parece al de la selección más que el de instantes al azar: los
    parecidos vienen de los periodos de los planetas.
-6. **La efeméride propia** cubre ±70 000 años; coincide con DE421 a decenas de km y con Moshier a 10″ o menos hasta
+6. **Ninguna de las 29 pruebas de acontecimientos planetarios** (Sūrya Siddhānta, grandes conjunciones y sus
+   cambios de trígono, conjunciones de los planetas exteriores) es significativa tras la corrección de Holm; la
+   reunión de planetas en 0° de Aries sidéreo al inicio del Kali es la del ancla del modelo.
+7. **La efeméride propia** cubre ±70 000 años; coincide con DE421 a decenas de km y con Moshier a 10″ o menos hasta
    −3000, salvo Marte (discrepancia abierta). Más allá de −3000 no hay referencia independiente.
 
 ## Convenciones

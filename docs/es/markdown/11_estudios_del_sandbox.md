@@ -126,6 +126,19 @@ Usa las tablas de `sandbox/data/` (capítulo 6) y el modelo de ciclo (constante 
 | `criteria_by_depth` | desviación de las cuotas de tiempo por profundidad, dividiendo el arco |
 | `best_fit` | ancla (y arco) que mejor cumplen ambos criterios, con los barridos |
 
+### `study_of_events.py`: acontecimientos planetarios y significación
+
+Usa las tablas de la efeméride y el modelo de ciclo (o el de una sesión); los catálogos se guardan en
+`sandbox/data/events/` (capítulo 15).
+
+| Estudio | Qué hace |
+|---|---|
+| `event_catalog`* | calcula (o carga) las conjunciones de Júpiter–Saturno, Urano–Neptuno y Neptuno–Plutón, y los cambios de trígono |
+| `surya_siddhanta`* | H1: los planetas en 0° de Aries en las fronteras de los yugas, con y sin el ancla, en ambos zodiacos |
+| `great_conjunctions`* | H2: distancia de las fronteras (profundidad 1 a 5) a las grandes conjunciones y a los cambios de trígono |
+| `outer_conjunctions`* | H3: lo mismo con las conjunciones de los planetas exteriores |
+| `summary`* | las 29 pruebas con la corrección de Holm; con `--save`, `summary.csv` |
+
 ### `study_of_sound.py`: sonido
 
 Necesita el extra `sound`.

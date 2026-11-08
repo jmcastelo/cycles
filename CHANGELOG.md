@@ -8,6 +8,15 @@ current one: `tests/test_version.py` checks it, and the docs' LaTeX converter re
 When releasing a version: describe it here, raise `__version__`, update the docs (and their version line), and tag
 the commit `vX.Y.Z`.
 
+## Unreleased (0.3.0)
+
+- **Planetary events and significance tests** (`cycles.functions.events`, `cycles.functions.significance`,
+  `sandbox/study_of_events.py`): exact conjunctions over the whole cycle from the ephemeris, grouped into series;
+  the trigon (element) changes of the great conjunctions in the sidereal and the tropical zodiac; the planets
+  around a point of the zodiac; tests against rigid rotations of the subcycle boundaries, with Holm's correction.
+  Three hypotheses: the Sūrya Siddhānta gathering at 0° Aries, the great conjunctions and their trigon changes,
+  the outer-planet conjunctions.
+
 ## 0.2.0 — 2026-11-07
 
 The graphical explorer, the cycle model and the research tools.

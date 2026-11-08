@@ -26,7 +26,7 @@ pendientes y `ephemeris` localiza las tablas.
 
 ## 13.2 Qué se comprueba
 
-En total hay **210 pruebas** en 19 ficheros.
+En total hay **218 pruebas** en 20 ficheros.
 
 ### Cálculo
 
@@ -37,6 +37,7 @@ En total hay **210 pruebas** en 19 ficheros.
 | `test_permutation.py` | 28 | las permutaciones frente a `symmetry-math` y el estudio; conservan las duraciones; lema de Burnside; notaciones |
 | `test_color.py` | 20 | los valores por defecto y otros dentro de los rangos dan colores únicos; los de fuera se avisan; vértices coplanarios se rechazan y cuatro colores alineados repiten colores |
 | `test_cycle_model.py` | 13 | los presets, sus mapas de tiempo y fronteras (por ejemplo, el inicio del Kali el 17 de febrero de 3102 a. C. a las 18:57 UT) |
+| `test_events.py` | 8 | distancia al acontecimiento más cercano, rotaciones que conservan el espaciado, contrastes con acontecimientos en las fronteras (p pequeño) y sin relación (p uniforme), Holm; grandes conjunciones y de planetas exteriores frente a fechas conocidas; cambios de trígono asentados (1603, 2020); la reunión de planetas al inicio del Kali |
 | `test_landscape.py` | 9 | `mismatch_grid` frente a `mismatch_by_depth`; los periodos de 41 000 y 20 000 años; el panel del paisaje |
 | `test_version.py` | 5 | la versión: formato MAJOR.MINOR.PATCH, `pyproject.toml` la lee del paquete, el `CHANGELOG.md` empieza por ella, los documentos describen esa versión (si están en el equipo) y el explorador la muestra |
 | `test_session_studies.py` | 3 | los estudios con `--session`: el modelo y los colores de la sesión llegan al estudio; una sesión inválida se rechaza |

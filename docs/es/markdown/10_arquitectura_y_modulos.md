@@ -46,6 +46,8 @@ tienen docstrings (`help(compute_level)`).
 | `timescale.py` | `TimeMap` (lineal, por fronteras de edades, por funciones), `address_label`, nombres de las edades |
 | `cycle_model.py` | `CycleModel`, presets y su fichero, `mean_rate` (capítulo 8) |
 | `cycle_analysis.py` | cuotas de tiempo, desviaciones, `mismatch_by_depth`, `mismatch_grid`, `fit_anchor`, `precession_rate` |
+| `events.py` | acontecimientos planetarios: conjunciones exactas y sus series, signos y elementos en ambos zodiacos, cambios de trígono, cuerpos alrededor de un punto (capítulo 15) |
+| `significance.py` | contrastes: distancia al acontecimiento más cercano, rotaciones rígidas, valores p, corrección de Holm |
 | `astro_dates.py` | calendarios, día juliano, año decimal, ΔT, UT ↔ TDB (capítulo 5) |
 | `nbody_ephemeris.py` | construir y consultar la efeméride, escalar y vectorizado (capítulo 6) |
 | `sound.py` | tonos y síntesis por ondículas a partir de los colores; escalogramas (`compute_scalogram`, `plot_scalogram`) |

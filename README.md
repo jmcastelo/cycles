@@ -211,6 +211,8 @@ cycles/
     timescale.py            normalized time <-> physical time (TimeMap)
     cycle_model.py          the yuga cycle in history: anchor, scale, division, presets
     cycle_analysis.py       agreement of the time and angle criteria; mismatch grid, best-fit anchor and arc
+    events.py               planetary events over long spans: conjunctions, trigon changes, planets around a point
+    significance.py         significance tests: rigid rotations of the boundaries, p-values, Holm's correction
     astro_dates.py          calendar dates <-> Julian Day <-> decimal year, UT <-> TDB
     nbody_ephemeris.py      long-term planetary ephemeris by N-body integration (one moment or many)
     view.py                 3D camera angles for matplotlib
@@ -261,6 +263,7 @@ sandbox/                  study scripts, one per topic
   study_of_permutations.py  permutations of the digit positions
   study_of_precession.py    the yugas against the precession, with the sky at their boundaries
   study_of_sound.py         sounds synthesised from subcycles
+  study_of_events.py        planetary events against the boundaries, with significance tests
   data/, plots/, docs/      ephemeris tables, saved figures, reference papers (not in the repository)
 docs/es/                  documentation in Spanish: the project, the astronomy, the code and the explorer
   markdown/                 the chapters (00 index and glossary to 14 results and open questions) and figuras/
@@ -274,6 +277,7 @@ tests/                    pytest tests (see Tests)
   test_color.py             color parameter ranges that keep each level's colors unique
   test_cycle_model.py       the presets, their time maps and boundaries
   test_landscape.py         the mismatch over anchor × arc, its period, the Model landscape panel
+  test_events.py            conjunctions and trigon changes against known dates; the significance tests
   test_gui_panels.py        dock arrangements and reopening closed panels
   test_gui_layouts.py       panels around the navigator: moves, arrangements, corners, named layouts
   test_gui_navigator.py     tag band, dragging the tags, Shift+click
@@ -361,6 +365,23 @@ and a batch run that saves every figure. They use the interpreter in `.venv`.
 | `study_of_fill_partitions.py`| covering a time span with subcycles                       |
 | `study_of_sound.py`          | tones, wavelets and scalograms                            |
 | `study_of_precession.py`     | yugas against precession; charts at subcycle starts       |
+| `study_of_events.py`         | planetary events (conjunctions, trigon changes, the planets at 0° Aries) against the boundaries, with significance tests |
+
+`study_of_events.py` asks whether the subcycle boundaries fall on planetary
+events more than chance would place them, in the sidereal (Lahiri) and the
+tropical zodiac: the Sūrya Siddhānta claim that the planets stand together at
+0° Aries at the yuga boundaries, the Jupiter–Saturn great conjunctions and the
+changes of their trigon (element, counted when the conjunctions settle in it:
+every 200 years in the tropical zodiac, as in the Persian doctrine of world
+ages), and the Uranus–Neptune and Neptune–Pluto conjunctions. Each test
+compares the boundaries with rigid rotations of them (same spacing, placed
+anywhere in the cycle), which keeps the periodicity of the events out of the
+result, and `summary` corrects the whole family with Holm's method. The event
+catalogues are computed once (in seconds, from the ephemeris) and cached in
+`sandbox/data/events/`. With the default model, no test is significant after
+the correction; the planets do gather near 0° sidereal Aries at the traditional
+start of Kali, but that is the model's anchor, and the other yuga boundaries do
+not share it.
 
 New studies are plain functions marked with `@study` (see
 `sandbox/runner.py`); shared paths and default parameters are in
