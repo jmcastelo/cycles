@@ -174,9 +174,13 @@ Para publicar una versión: describirla en `CHANGELOG.md`, subir `__version__`, 
 línea de versión, regenerar el LaTeX y etiquetar el commit `vX.Y.Z`. Con una instalación editable,
 `pip install -e . --no-deps` refresca la versión de los metadatos instalados.
 
+Los capítulos describen también lo que se ha añadido desde la última versión publicada (la sección
+«Unreleased» del `CHANGELOG.md`), que tendrá número al publicarse.
+
 | Versión | Fecha | Contenido |
 |---|---|---|
-| 0.3.0 | 2026-11-08 | acontecimientos planetarios y contrastes de significación: cálculo, estudio y panel *Events*; mapa sobre todos los modelos; H1 con los planetas medios; más medidas de los subciclos; fórmulas en LaTeX |
+| *sin publicar* | — | más medidas (mezcla, tensión, tendencia, aspereza, contraste, balance, microcosmos, complejidad, densidad angular, reunión), uniones de los resaltados, coloreados por medida, clase, punto vernal y trígono, OKLab, mapas de color a elegir, consultas, niveles vectorizados hasta la profundidad 9, menú *View*, pruebas en paralelo |
+| 0.3.0 | 2026-11-08 | acontecimientos planetarios y contrastes de significación: cálculo, estudio y panel *Events*; mapa sobre todos los modelos; H1 con los planetas medios; fórmulas en LaTeX |
 | 0.2.0 | 2026-11-07 | el explorador, el modelo de ciclo, sesiones, marcadores, dosier, disposición de paneles, consultas vectorizadas, pruebas, esta documentación |
 | 0.1.0 | 2026-11-05 | la biblioteca de cálculo y los estudios del sandbox |
 
