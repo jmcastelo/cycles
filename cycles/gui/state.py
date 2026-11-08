@@ -198,6 +198,7 @@ def permuted_address(address: tuple, sigma: tuple, first: int) -> tuple:
 
 PERMUTATION_COLOR = '#9467bd'   # the image of the selection under σ
 BOOKMARK_COLOR = '#2ca02c'      # bookmarked subcycles
+EVENT_COLOR = '#e377c2'         # planetary events shown in the navigator (Events panel)
 
 # What the views highlight around the selection
 HIGHLIGHTS = {
@@ -257,6 +258,7 @@ class CycleState(QObject):
     permutationChanged = Signal()       # the σ of the Permutations panel
     bookmarksChanged = Signal()
     notesChanged = Signal()             # the notes of the session
+    eventsChanged = Signal()            # the planetary events shown in the navigator
 
     def __init__(self, cache: LevelCache | None = None, presets: dict[str, CycleModel] | None = None):
         super().__init__()
@@ -281,6 +283,7 @@ class CycleState(QObject):
         self.labels: str = 'none'       # 'names', 'dots' (4, 3, 2, 1 for the four ages), 'both' or 'none'
         self.bookmarks: list[dict] = []    # {'address': tuple, 'label': str, 'note': str}
         self.notes: str = ''
+        self.event_marks: tuple | None = None   # (years in UT, label) of the Events panel, or None
 
     # -- focus and selection
 
@@ -508,6 +511,16 @@ class CycleState(QObject):
             return None
         address = self.subcycle_at(self.sky_time, depth)
         return None if address is None else tcoord(address)
+
+    # -- planetary events
+
+    def set_event_marks(self, years, label: str = '') -> None:
+        """Show the events at ``years`` (UT) in the navigator, or none with ``None``."""
+        marks = None if years is None else (np.asarray(years, dtype=float), str(label))
+        if marks is None and self.event_marks is None:
+            return
+        self.event_marks = marks
+        self.eventsChanged.emit()
 
     # -- notes and bookmarks
 

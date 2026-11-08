@@ -26,7 +26,7 @@ pendientes y `ephemeris` localiza las tablas.
 
 ## 13.2 Qué se comprueba
 
-En total hay **218 pruebas** en 20 ficheros.
+En total hay **224 pruebas** en 21 ficheros.
 
 ### Cálculo
 
@@ -56,6 +56,7 @@ En total hay **218 pruebas** en 20 ficheros.
 | `test_gui_sky_colors.py` | 4 | el gráfico del cielo (tamaño fijo, leyenda) y el diálogo de colores |
 | `test_gui_criteria_skycompare.py` | 21 | los dos criterios en el navegador; el panel Sky comparison (conjuntos, orden por parecido, franja, concentración, ajuste de las cartas al tamaño); posiciones vectorizadas frente a escalares |
 | `test_gui_session.py` | 8 | sesiones: ida y vuelta completa, restaurar al arrancar, ficheros inválidos, partes que no encajan, σ al azar, marcadores, recientes, el lanzador con la sesión |
+| `test_gui_events.py` | 6 | el panel Events: la prueba coincide con el cálculo directo, cambios de trígono y planetas en 0° de Aries, solo dentro del zoom, pulsar un acontecimiento, la capa del navegador, sesiones, sin efeméride |
 | `test_gui_dossier.py` | 3 | el dosier: el resumen, todas las secciones, papel y orientación en el PDF, opciones recordadas |
 
 ## 13.3 Comprobaciones notables

@@ -145,7 +145,7 @@ de color actuales.
 | `state.py` | estado compartido, caché de niveles, utilidades (fechas, clases, órbitas, desglose de medidas) |
 | `navigator.py` | navegador: franja del ciclo, filas de subdivisiones, marcadores, criterios, marcadores de usuario |
 | `inspector.py`, `datepanel.py`, `notes.py` | paneles de texto: subciclo, fecha, notas y marcadores |
-| `sky.py`, `skycompare.py` | cielo de un instante; comparación de cielos |
+| `sky.py`, `skycompare.py`, `eventspanel.py` | cielo de un instante; comparación de cielos; acontecimientos planetarios y su significación |
 | `measures.py`, `colorspace.py`, `permutations.py`, `groupexplorer.py`, `compositions.py`, `landscape.py` | paneles de gráficos |
 | `modeldialog.py`, `colordialog.py`, `export.py`, `studies.py`, `dossier.py` | diálogos: modelo, colores, guardar gráfico, estudios, dosier |
 | `session.py`, `layouts.py` | sesiones; colocación de los paneles |
@@ -175,6 +175,7 @@ línea de versión, regenerar el LaTeX y etiquetar el commit `vX.Y.Z`. Con una i
 
 | Versión | Fecha | Contenido |
 |---|---|---|
+| 0.3.0 | 2026-11-08 | acontecimientos planetarios y contrastes de significación: cálculo, estudio y panel *Events* |
 | 0.2.0 | 2026-11-07 | el explorador, el modelo de ciclo, sesiones, marcadores, dosier, disposición de paneles, consultas vectorizadas, pruebas, esta documentación |
 | 0.1.0 | 2026-11-05 | la biblioteca de cálculo y los estudios del sandbox |
 

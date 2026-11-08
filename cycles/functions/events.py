@@ -11,6 +11,10 @@ The moments are found by sampling the angular separation every ``step_days`` and
 bisection, all at once (``planet_positions_many``), to a few seconds of time.
 """
 
+import hashlib
+import warnings
+from pathlib import Path
+
 import numpy as np
 
 from cycles.plotting.equinoctial_precession import planet_positions_many
@@ -23,6 +27,9 @@ ELEMENTS = ('fire', 'earth', 'air', 'water')          # of the signs in order: A
 CLASSICAL = ('sun', 'mercury', 'venus', 'mars', 'jupiter', 'saturn')   # the visible planets but the Moon
 DAYS_PER_YEAR = 365.25
 CHUNK = 200_000                                       # moments per call to the ephemeris
+# Where the catalogues of conjunctions are kept (shared by the explorer and study_of_events.py)
+DEFAULT_CACHE = Path(__file__).resolve().parents[2] / 'sandbox' / 'data' / 'events'
+CACHE_VERSION = 'v1'
 
 
 def wrap180(angle):
@@ -141,3 +148,38 @@ def around_point(tables, years, bodies=CLASSICAL, point: float = 0.0, zodiac: st
     gaps = np.diff(np.vstack([ordered, ordered[:1] + 360.0]), axis=0)
     spread = 360.0 - gaps.max(axis=0)
     return {'mean_distance': distance, 'spread': spread, 'longitudes': lon}
+
+
+# -- time scales and the cache
+
+def tdb_years(years_ut) -> np.ndarray:
+    """Decimal years in UT to TDB (with the DeltaT of ``astro_dates``; its warnings far from the present silenced)."""
+    from cycles.plotting.equinoctial_precession import _tdb_year
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        return np.array([_tdb_year(float(y), 'UT') for y in np.atleast_1d(years_ut)])
+
+
+def ut_years(years_tdb) -> np.ndarray:
+    """Decimal years in TDB to UT (the inverse of ``tdb_years``)."""
+    from cycles.functions.astro_dates import julian_day_to_year, tdb_to_ut, year_to_julian_day
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        return np.array([julian_day_to_year(tdb_to_ut(year_to_julian_day(float(y))))
+                         for y in np.atleast_1d(years_tdb)])
+
+
+def cached_conjunctions(tables, table_path, a: str, b: str, start: float, end: float,
+                        cache_dir=DEFAULT_CACHE) -> dict:
+    """
+    ``conjunctions`` of ``a`` and ``b`` in [start, end] (TDB years), kept in ``cache_dir`` under a name that
+    depends on the ephemeris folder ``table_path`` and the span: computed once (seconds), then read.
+    """
+    key = hashlib.sha1(f"{Path(table_path).resolve()}|{a}|{b}|{start:.3f}|{end:.3f}|{CACHE_VERSION}".encode())
+    path = Path(cache_dir) / f"{a}_{b}_{key.hexdigest()[:16]}.npz"
+    if path.exists():
+        return dict(np.load(path))
+    data = conjunctions(tables, a, b, start, end)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(path, **data)
+    return data

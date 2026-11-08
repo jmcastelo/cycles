@@ -25,7 +25,7 @@ AREAS = {
 # Kinds of panels, for the arrangements around the navigator
 KINDS = {
     'text': ('inspector', 'date', 'notes'),
-    'sky': ('sky', 'skycompare'),
+    'sky': ('sky', 'skycompare', 'events'),
     'graphs': ('measures', 'colorspace', 'permutations', 'compositions', 'landscape'),
 }
 # Arrangements: side -> kinds of panels there (a group of tabs per side)

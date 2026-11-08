@@ -8,7 +8,10 @@ current one: `tests/test_version.py` checks it, and the docs' LaTeX converter re
 When releasing a version: describe it here, raise `__version__`, update the docs (and their version line), and tag
 the commit `vX.Y.Z`.
 
-## Unreleased (0.3.0)
+## 0.3.0 — 2026-11-08
+
+Planetary events and significance tests.
+
 
 - **Planetary events and significance tests** (`cycles.functions.events`, `cycles.functions.significance`,
   `sandbox/study_of_events.py`): exact conjunctions over the whole cycle from the ephemeris, grouped into series;
@@ -16,6 +19,10 @@ the commit `vX.Y.Z`.
   around a point of the zodiac; tests against rigid rotations of the subcycle boundaries, with Holm's correction.
   Three hypotheses: the Sūrya Siddhānta gathering at 0° Aries, the great conjunctions and their trigon changes,
   the outer-planet conjunctions.
+- **Events panel** in the explorer: each test interactively (catalogue, depth, whole cycle or the zoom,
+  rotations), the null distribution with the observed value, the events of the zoomed span (click one to show
+  its sky) and a layer of event marks in the navigator. Sessions and dossiers include it.
+- The panel arrangements put Events with the sky panels; the eleventh panel has no `Alt` shortcut.
 
 ## 0.2.0 — 2026-11-07
 

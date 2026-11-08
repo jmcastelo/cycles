@@ -57,7 +57,7 @@ de Aries sidéreo al inicio del Kali (ángulo medio 15°, arco 41°), pero es el
 
 | Tema | Estado |
 |---|---|
-| **Eventos y significación** (idea 4) | hecho para tres hipótesis astronómicas (capítulo 15); pendientes: otras familias de acontecimientos, el mapa de significación sobre el paisaje del modelo, el nulo de las permutaciones de dígitos, los acontecimientos históricos con fecha (falta un conjunto de datos) y el panel *Events* del explorador |
+| **Eventos y significación** (idea 4) | hecho para tres hipótesis astronómicas, con estudio y panel *Events* (capítulo 15); pendientes: otras familias de acontecimientos, el mapa de significación sobre el paisaje del modelo, el nulo de las permutaciones de dígitos y los acontecimientos históricos con fecha (falta un conjunto de datos) |
 | **Sonido en el explorador** (idea 7) | reproducir el tramo ampliado con un cursor ligado al momento del cielo, y oír el efecto de σ |
 | **Animación de permutaciones** | reproducir el panel de permutaciones a través de σ⁰, σ¹, σ², … |
 | **Acoplamiento con QtAds** (opcional) | destinos de soltado al arrastrar paneles y paneles que se ocultan en un borde, si los menús de colocación se quedan cortos |

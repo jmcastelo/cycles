@@ -1,6 +1,6 @@
 # 15. Eventos planetarios y significación
 
-*Nuevo en la versión 0.3.0 (sin publicar): cálculo y estudio; el panel del explorador vendrá después.*
+*Nuevo en la versión 0.3.0: cálculo, estudio y el panel* Events *del explorador.*
 
 ## 15.1 La pregunta
 
@@ -135,9 +135,17 @@ python sandbox/study_of_events.py summary --save         # las 29 pruebas con Ho
 python sandbox/study_of_events.py --all --session sandbox/sessions/otro_modelo.cycles.json
 ```
 
-## 15.9 Pendiente
+## 15.9 En el explorador
+
+El panel *Events* (capítulo 12) hace cada una de estas pruebas de forma interactiva: elige el catálogo, la
+profundidad, todo el ciclo o solo el zoom y el número de rotaciones; dibuja la distribución nula con el valor
+observado, lista los acontecimientos del tramo (y lleva el momento del cielo a cualquiera de ellos) y los marca en
+el navegador. Usa los mismos catálogos guardados que el estudio. Cada resultado del panel es una sola prueba: la
+corrección de la familia está en `summary`.
+
+## 15.10 Pendiente
 
 Otras familias de acontecimientos (aspectos, ingresos en signos y nakṣatras, estaciones, reuniones de planetas, el
 punto vernal entrando en un signo), el Sol y Júpiter en Puṣya al final del Kali, el modelo nulo de las
-permutaciones de dígitos, el mapa de significación sobre el paisaje del modelo, los acontecimientos históricos con
-fecha (los mismos contrastes con otro catálogo) y el panel *Events* del explorador.
+permutaciones de dígitos, el mapa de significación sobre el paisaje del modelo y los acontecimientos históricos
+con fecha (los mismos contrastes con otro catálogo).

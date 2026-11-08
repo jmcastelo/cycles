@@ -243,6 +243,7 @@ cycles/
     groupexplorer.py        group explorer: every element of S_m in a sortable table
     compositions.py         Compositions panel: the tetrahedron of compositions
     landscape.py            Model landscape panel: the criteria mismatch over anchor × arc
+    eventspanel.py          Events panel: planetary events against the boundaries, with a significance test
     notes.py                Notes panel: the notes and bookmarks of the session
     layouts.py              placing the panels around the navigator: moves, arrangements, corners, named layouts
     session.py              sessions: saving and opening everything shown, restoring the last one
@@ -289,6 +290,7 @@ tests/                    pytest tests (see Tests)
   test_gui_criteria_skycompare.py  criteria overlay and Sky comparison panel
   test_gui_session.py       sessions, restoring the last one, bookmarks, the launcher's session
   test_gui_dossier.py       the dossier: summary, paper, sections, dialog
+  test_gui_events.py        the Events panel: the test, the zoom, the navigator layer, sessions
   test_session_studies.py   studies run with a session (--session)
   test_version.py           the version: pyproject, changelog, docs and explorer in step
 pyproject.toml            package metadata, dependencies, the cycles-gui command, pytest settings
@@ -595,14 +597,27 @@ name it; double-click a label or a note to edit it, and a subcycle to go to
 it. Bookmarked subcycles have a green corner in the navigator and a tick on
 the overview strip, and their label and note in its tooltip.
 
-The ten panels (Subcycle, Date, Sky, Measures, Color space, Permutations, Compositions, Sky comparison,
-Model landscape, Notes) can be open at the same
+The *Events* tab tests whether the subcycle boundaries fall on planetary
+events more than chance would place them (see `study_of_events.py` below):
+Jupiter–Saturn, Uranus–Neptune or Neptune–Pluto conjunctions, the trigon
+changes of the great conjunctions in the sidereal or the tropical zodiac, or
+the planets Sun to Saturn at 0° Aries (sidereal, the Sūrya Siddhānta claim, or
+tropical). For the boundaries of a chosen depth, over the whole cycle or inside
+the zoom, it draws the distribution of the statistic for rigid rotations of the
+boundaries with the observed value and its p, lists the events of the zoomed
+span (clicking one shows its sky and selects its subcycle), and marks them in
+the navigator, just above the first row. The catalogues are computed once from
+the Sky tab's ephemeris and kept in `sandbox/data/events/`, shared with the
+study; each result is a single test, and the study corrects the whole family.
+
+The eleven panels (Subcycle, Date, Sky, Measures, Color space, Permutations, Compositions, Sky comparison,
+Model landscape, Notes, Events) can be open at the same
 time, to compare a chart with a measure plot and the inspector. The
-*Panels* menu shows or hides each one (`Alt+1` to `Alt+9`, and `Alt+0`) and arranges the
+*Panels* menu shows or hides each one (`Alt+1` to `Alt+9`, and `Alt+0`; Events has no shortcut) and arranges the
 open ones as tabs, side by side, stacked, in a 2 × 2 grid, or side by side
 below the navigator. Panels can go on any side of the navigator: *Panels →
 Arrange around the navigator* puts each kind of panel on its side, in tabs
-(information — Subcycle, Date, Notes — on the left; the sky and the graphs on
+(information — Subcycle, Date, Notes — on the left; the sky (with Events) and the graphs on
 the right, or the sky on the right and the graphs below, or the sky on the
 left too and the graphs below), and *Panels → Move a panel*, or a right
 click on a panel's title bar or tab, puts one panel left of, right of, above

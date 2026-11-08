@@ -15,9 +15,6 @@ Each test compares the boundaries with rigid rotations of them (the same spacing
 ``sandbox/data/events/``.
 """
 
-import hashlib
-import warnings
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -26,7 +23,9 @@ from common import DATA_DIR, PLOTS_DIR, save_figure
 
 from cycles.functions.cycle_analysis import boundary_fractions
 from cycles.functions.cycle_model import DEFAULT_PRESET, load_presets
-from cycles.functions.events import CLASSICAL, ZODIACS, around_point, conjunctions, first_of_series, trigon_changes
+from cycles.functions.events import (
+    CLASSICAL, ZODIACS, around_point, cached_conjunctions, first_of_series, tdb_years, trigon_changes,
+)
 from cycles.functions.significance import holm, proximity_test, rotations, value_test
 
 BASE_DIR = PLOTS_DIR / "study_of_events"
@@ -45,15 +44,11 @@ def setup():
     import common
     import cycles.functions.nbody_ephemeris as nbe
     from cycles.gui.sky import ephemeris_parts
-    from cycles.plotting.equinoctial_precession import _tdb_year
     model = common.MODEL or load_presets()[PRESET]
     print(f"Cycle model: {model.name}")
     tables = [nbe.load_ephemeris(part) for part in ephemeris_parts(TABLE)]
     time_map = model.time_map()
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')          # DeltaT extrapolation far from the present
-        boundaries = {d: np.array([_tdb_year(float(y), 'UT')
-                                   for y in time_map.to_physical(boundary_fractions(d))]) for d in DEPTHS}
+    boundaries = {d: tdb_years(time_map.to_physical(boundary_fractions(d))) for d in DEPTHS}
     start, end = boundaries[1][0], boundaries[1][-1]
     print(f"Boundaries in TDB years, from {start:.1f} to {end:.1f}; depths {DEPTHS[0]} to {DEPTHS[-1]}")
     return dict(model=model, tables=tables, boundaries=boundaries, start=start, end=end, catalogs={}, results={})
@@ -62,22 +57,13 @@ def setup():
 # -- the event catalogues
 
 def catalog(ctx, name: str) -> dict:
-    """The conjunctions of a pair over the cycle, from the cache or computed (and cached)."""
-    if name in ctx.catalogs:
-        return ctx.catalogs[name]
-    a, b = PAIRS[name]
-    start, end = ctx.start - MARGIN, ctx.end + MARGIN
-    key = hashlib.sha1(f"{TABLE.resolve()}|{a}|{b}|{start:.3f}|{end:.3f}|v1".encode()).hexdigest()[:16]
-    path = CACHE_DIR / f"{name}_{key}.npz"
-    if path.exists():
-        data = dict(np.load(path))
-    else:
-        print(f"Computing the {a}–{b} conjunctions from {start:.0f} to {end:.0f}…", flush=True)
-        data = conjunctions(ctx.tables, a, b, start, end)
-        CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        np.savez(path, **data)
-    ctx.catalogs[name] = data
-    return data
+    """The conjunctions of a pair over the cycle (with a margin), from the shared cache or computed once."""
+    if name not in ctx.catalogs:
+        a, b = PAIRS[name]
+        start, end = ctx.start - MARGIN, ctx.end + MARGIN
+        print(f"{a}–{b} conjunctions from {start:.0f} to {end:.0f} (cached in {CACHE_DIR})…", flush=True)
+        ctx.catalogs[name] = cached_conjunctions(ctx.tables, TABLE, a, b, start, end, CACHE_DIR)
+    return ctx.catalogs[name]
 
 
 def series_times(data: dict) -> np.ndarray:

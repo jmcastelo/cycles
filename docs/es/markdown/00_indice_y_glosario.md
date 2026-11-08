@@ -1,6 +1,6 @@
 # Ciclos: documentación del proyecto
 
-Versión del programa documentada: **0.2.0** (ver `CHANGELOG.md` en la raíz del proyecto y el capítulo 10, «Versiones»).
+Versión del programa documentada: **0.3.0** (ver `CHANGELOG.md` en la raíz del proyecto y el capítulo 10, «Versiones»).
 
 Este conjunto de documentos describe con detalle el proyecto **cycles**: el análisis matemático de un ciclo
 dividido fractalmente en cuatro edades en razón 4 : 3 : 2 : 1 (Satya, Treta, Dvapara y Kali), su colocación en la
@@ -26,11 +26,11 @@ explorador gráfico. Incorpora, revisados y actualizados, los documentos de `efe
 | **III. El software** | |
 | [`10_arquitectura_y_modulos.md`](10_arquitectura_y_modulos.md) | organización del código, instalación, guía de los módulos de cálculo, figuras y explorador, y versiones |
 | [`11_estudios_del_sandbox.md`](11_estudios_del_sandbox.md) | el ejecutor de estudios, sus opciones (`--session`) y cada estudio |
-| [`12_aplicacion_grafica.md`](12_aplicacion_grafica.md) | el explorador: navegador, paneles, modelo, colores, gráficos, sesiones, dosier, disposición, atajos |
+| [`12_aplicacion_grafica.md`](12_aplicacion_grafica.md) | el explorador: navegador, los once paneles, modelo, colores, gráficos, sesiones, dosier, disposición, atajos |
 | [`13_pruebas.md`](13_pruebas.md) | cómo se ejecutan las pruebas y qué comprueban |
 | [`14_resultados_y_preguntas_abiertas.md`](14_resultados_y_preguntas_abiertas.md) | resultados obtenidos y trabajo pendiente |
 | **IV. Contrastes** | |
-| [`15_eventos_y_significacion.md`](15_eventos_y_significacion.md) | catálogos de acontecimientos planetarios (conjunciones, cambios de trígono), contrastes de significación con rotaciones rígidas y tres hipótesis (Sūrya Siddhānta, grandes conjunciones, planetas exteriores) en los zodiacos sidéreo y trópico |
+| [`15_eventos_y_significacion.md`](15_eventos_y_significacion.md) | catálogos de acontecimientos planetarios (conjunciones, cambios de trígono), contrastes de significación con rotaciones rígidas, tres hipótesis (Sūrya Siddhānta, grandes conjunciones, planetas exteriores) en los zodiacos sidéreo y trópico, y el panel *Events* |
 
 Estos documentos están en `docs/es/` del repositorio: los capítulos en `markdown/`, con sus figuras en
 `markdown/figuras/`; la versión LaTeX, que reúne todos los capítulos en un solo documento, se genera en `tex/` con

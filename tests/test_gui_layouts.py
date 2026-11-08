@@ -126,9 +126,11 @@ def test_the_menus_of_a_panel(window, spin, monkeypatch):
     window.placement.fill_move_menu(move)
     assert len(move.actions()) == len(window.docks)
     # right-click on a tab gives that panel's menu
+    from PySide6.QtTest import QTest
     window.reset_layout()
-    spin()
-    bar = next(b for b in window.findChildren(QTabBar) if b.isVisible() and b.count() > 1)
+    QTest.qWait(400)                        # the docks are laid out again with an animation
+    bar = next(b for b in window.findChildren(QTabBar)
+               if b.isVisible() and any(b.tabText(i) == 'Notes' for i in range(b.count())))
     index = next(i for i in range(bar.count()) if bar.tabText(i) == 'Notes')
     centre = bar.mapToGlobal(bar.tabRect(index).center())
     monkeypatch.setattr(layouts.QCursor, 'pos', staticmethod(lambda: QPoint(centre)))

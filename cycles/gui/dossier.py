@@ -44,13 +44,15 @@ SECTIONS = {
     'permutations': ('Permutations panel', False),
     'skycompare': ('Sky comparison panel', False),
     'landscape': ('Model landscape panel', False),
+    'events': ('Events panel', False),
     'notes': ('Notes and bookmarks of the session', True),
 }
 PANELS = {'measures': 'measures_panel', 'colorspace': 'colorspace_panel', 'compositions': 'compositions_panel',
-          'permutations': 'permutations_panel', 'skycompare': 'skycompare_panel', 'landscape': 'landscape_panel'}
+          'permutations': 'permutations_panel', 'skycompare': 'skycompare_panel', 'landscape': 'landscape_panel',
+          'events': 'events_panel'}
 # Largest height / width of each graph on the page (it is laid out again at that size)
 ASPECTS = {'measures': 0.8, 'colorspace': 1.0, 'compositions': 1.0, 'permutations': 0.7, 'skycompare': 1.25,
-           'landscape': 0.85}
+           'landscape': 0.85, 'events': 0.6}
 SETTINGS = 'dossier'
 BODY_POINTS = 9.0
 HEADER_POINTS = 8.0
