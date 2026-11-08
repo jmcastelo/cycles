@@ -14,7 +14,12 @@ La interfaz está en inglés. Este capítulo describe cada parte con los nombres
 El área central muestra las subdivisiones del subciclo ampliado (el **zoom**), una fila por profundidad, cada
 subciclo con su color. Arriba, una franja con el **ciclo completo**, con la parte ampliada enmarcada, la fecha
 marcada y el momento del cielo; pulsar una edad en ella amplía esa edad. Entre la franja y las filas hay una
-**banda de etiquetas** con las de la fecha (*now* o la fecha, en rojo) y el momento del cielo (*sky*, en azul).
+**banda de etiquetas** con las de la fecha (*now* o la fecha, en rojo) y el momento del cielo (*sky*, en naranja).
+
+Cada papel tiene un solo color, en el navegador y en todos los gráficos: la **selección** en azul (un borde de
+2 píxeles; sus padres, de 1), el **momento del cielo** en naranja (su línea, su etiqueta y, con *Follow*, los
+subciclos que lo contienen) y la **fecha marcada** en rojo. Las líneas son continuas, y bordes y líneas llevan un
+filo claro debajo, para que se vean sobre cualquier color de celda.
 
 | Acción | Efecto |
 |---|---|
@@ -118,7 +123,7 @@ inicio, su fin y su duración; pulsar una fila lo selecciona.
 ![El panel Sky](figuras/panel_cielo.png)
 
 El zodiaco con los planetas (como en `study_of_precession`) en un **momento** del tramo ampliado, con una tabla de
-longitudes sidéreas, signos y nakṣatras. El momento es la línea azul discontinua del navegador:
+longitudes sidéreas, signos y nakṣatras. El momento es la línea naranja del navegador:
 
 - el deslizador lo mueve por el tramo; Mayús + clic en el navegador o arrastrar la etiqueta *sky* lo llevan a
   cualquier sitio;

@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from cycles.gui.state import (
-    CycleState, address_of, children_range, date_text, equal_duration_indices,
+    SELECTION_COLOR, CycleState, address_of, children_range, date_text, equal_duration_indices,
     same_composition_indices, tcoord,
 )
 
@@ -49,7 +49,6 @@ RANDOM_MOMENTS = 20_000     # random moments of the span, for the reference dist
 BODY_NAMES = {'sun': 'Sun', 'mercury': 'Mercury', 'venus': 'Venus', 'mars': 'Mars', 'jupiter': 'Jupiter',
               'saturn': 'Saturn', 'uranus': 'Uranus', 'neptune': 'Neptune', 'pluto': 'Pluto'}
 SIGNS = ['Ari', 'Tau', 'Gem', 'Can', 'Leo', 'Vir', 'Lib', 'Sco', 'Sag', 'Cap', 'Aqu', 'Pis']
-SELECTION_COLOR = '#1f77b4'
 MARKED_COLOR = '#d62728'    # members highlighted in the navigator, on the strip
 CHART_PAD = 6.0             # pixels between neighbouring charts
 STRIP_SHARE, STRIP_MIN, STRIP_MAX = 0.2, 50.0, 150.0     # height of the strip: share of the canvas, in pixels

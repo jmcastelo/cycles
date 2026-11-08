@@ -33,8 +33,10 @@ from cycles.functions.timescale import AGE_NAMES, YUGA_NAMES, TimeMap
 MAX_DEPTH = 9
 # Name sets for the four ages
 NAME_SETS = {'Yugas': YUGA_NAMES, 'Ages': AGE_NAMES}
-# Color of the highlight of the subcycles that contain the sky moment
-MOMENT_COLOR = '#ff7f0e'
+# One color per role, in the navigator and in every plot
+SELECTION_COLOR = '#1f77b4'     # the selected subcycle (and, thinner, its parents): blue
+MOMENT_COLOR = '#ff7f0e'        # the moment of the sky chart: its cursor and tag, and the subcycles with Follow
+DATE_COLOR = '#d62728'          # the marked date: its cursor and tag
 # How subcycles are labelled in the navigator
 LABEL_MODES = {'names': 'Names', 'dots': 'Dots (4, 3, 2, 1)', 'both': 'Names and dots', 'none': 'None'}
 NO_MODEL_GRAY = 0.85     # the colorings of the cycle model without one

@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 from cycles.functions.composition import compositions_grouped_by_duration
 from cycles.functions.view import top_view
 from cycles.gui.state import (
-    MAX_DEPTH, MOMENT_COLOR, CycleState, address_of, children_range, tcoord,
+    MAX_DEPTH, MOMENT_COLOR, SELECTION_COLOR, CycleState, address_of, children_range, tcoord,
 )
 
 PICK_RADIUS = 9          # pixels
@@ -45,7 +45,6 @@ VIEWS = {
     'kali': ('From the Kali vertex', top_view(VERTICES[3])),
 }
 COLORS = {'duration': 'Duration', 'coloring': 'Composition coloring', 'count': 'Number of subcycles'}
-SELECTION_COLOR = '#1f77b4'
 
 
 class CompositionsPanel(QWidget):

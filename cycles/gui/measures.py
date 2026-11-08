@@ -17,7 +17,7 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBo
 from cycles.functions.color import measure_colors
 from cycles.functions.measure import MEASURES
 from cycles.gui.links import draw_links
-from cycles.gui.state import MAX_DEPTH, MOMENT_COLOR, CycleState, address_of, children_range, tcoord
+from cycles.gui.state import MAX_DEPTH, MOMENT_COLOR, SELECTION_COLOR, CycleState, address_of, children_range, tcoord
 from cycles.plotting.generic import plot_y_vs_x
 
 # Plot kinds: key -> label; Y against X, against time or index, or X and Y with time or index as a third axis
@@ -346,7 +346,7 @@ class MeasuresPanel(QWidget):
             return
         k = positions.get(tcoord(selection))
         if k is not None:
-            self._highlights.append(self._ring([k], s=260, color='#1f77b4', width=2.5))
+            self._highlights.append(self._ring([k], s=260, color=SELECTION_COLOR, width=2.5))
 
     def _ring(self, points: list[int], s: float, color: str, width: float):
         """Hollow markers around the plotted points at positions ``points`` (2D or 3D)."""

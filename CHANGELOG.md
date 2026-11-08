@@ -51,6 +51,10 @@ the commit `vX.Y.Z`.
 - **A tidier toolbar**: one row, grouped by topic with separators (the cycle model; the coloring; the levels; the
   highlight and the query). The drawing options set once moved to the *View* menu as checkable items: *Widths*,
   *Names*, *Labels*, *Borders* (`Ctrl+Shift+B`) and *Compare the division criteria* (`Ctrl+Shift+C`).
+- **One color per role**, in the navigator and the plots (`state.SELECTION_COLOR`, `MOMENT_COLOR`, `DATE_COLOR`):
+  the selection blue (a thinner border, 2 px, its parents 1 px), the sky moment orange (its cursor and tag, as the
+  Follow boxes already were), the marked date red. The cursors are solid lines, and borders and cursors have a
+  light edge so that they stand out over cells of any color.
 - **Tests in parallel**: `pytest-xdist` in the `test` extra; `pytest -n 8` runs the suite in under a minute instead
   of nine.
 - **README**: a short introduction with installation, a quick start, the chapters of the documentation and the

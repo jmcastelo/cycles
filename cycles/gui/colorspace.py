@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 from cycles.functions.division import CMYK_KEYS
 from cycles.functions.view import bottom_view, camera_view_angles, top_view
 from cycles.gui.links import draw_links
-from cycles.gui.state import MOMENT_COLOR, CycleState, address_of, children_range, tcoord
+from cycles.gui.state import MOMENT_COLOR, SELECTION_COLOR, CycleState, address_of, children_range, tcoord
 from cycles.plotting.color import draw_color_path_3d, draw_colors_3d, draw_rgb_cube, setup_color_axes_3d
 
 MAX_PLOT_DEPTH = 7
@@ -281,7 +281,7 @@ class ColorSpacePanel(QWidget):
         if k is not None:
             c = self._coords[k]
             self._highlights.append(self.ax.scatter([c[0]], [c[1]], [c[2]], s=220, facecolors='none',
-                                                    edgecolors='#1f77b4', linewidths=2.5, depthshade=False))
+                                                    edgecolors=SELECTION_COLOR, linewidths=2.5, depthshade=False))
 
     # -- interaction
 

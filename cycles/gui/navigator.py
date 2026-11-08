@@ -18,7 +18,7 @@ from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QSizePolicy, QToolButton, QToolTip, QWidget
 
 from cycles.gui.state import (
-    BOOKMARK_COLOR, EVENT_COLOR, MAX_DEPTH, MOMENT_COLOR, PERMUTATION_COLOR, CycleState, address_of, children_range, current_year,
+    BOOKMARK_COLOR, DATE_COLOR, EVENT_COLOR, MAX_DEPTH, MOMENT_COLOR, SELECTION_COLOR, PERMUTATION_COLOR, CycleState, address_of, children_range, current_year,
     date_text, span_text, tcoord, time_text,
 )
 
@@ -29,6 +29,20 @@ TAG_GAP = 3          # around the band of the marker tags, between the overview 
 ROW_GAP = 2          # between rows
 # the two criteria for dividing the cycle, when the navigator compares them
 CRITERIA_COLORS = {'angle': '#8c564b', 'time': '#17becf'}
+SELECTION_WIDTH = 2.0      # border of the selected subcycle (and of those that contain the sky moment, with Follow)
+PARENT_WIDTH = 1.0         # border of its parents
+CURSOR_WIDTH = 1.5         # the lines of the marked date and the sky moment
+ZOOM_COLOR = '#404040'     # the frame of the zoomed part on the overview strip
+HALO = QColor(255, 255, 255, 210)    # the light edge under borders and cursors, to stand out over any color
+
+
+def stroke(painter: QPainter, color: QColor, width: float, draw) -> None:
+    """Draw (``draw()``) a line or border in ``color`` over a light edge a pixel wider on each side."""
+    painter.setPen(QPen(HALO, width + 2))
+    draw()
+    painter.setPen(QPen(color, width))
+    draw()
+
 CRITERIA_NAMES = {'angle': '4:3:2:1 of the precession arc', 'time': '4:3:2:1 of the years'}
 CRITERIA_MIN_CELL = 3.0    # mean cell width (px) of the rows where they are compared (finer: zoom in)
 CRITERIA_TICK_CELL = 8.0   # ... and where the other boundaries are also drawn as dashed lines
@@ -194,12 +208,11 @@ class Navigator(QWidget):
 
         # Selection and its ancestors
         if selection:
-            highlight = palette.highlight().color()
             for rect, address, depth, _ in cells:
                 if address == selection[:depth]:
-                    width = 3 if address == selection else 1.5
-                    painter.setPen(QPen(highlight, width))
-                    painter.drawRect(rect.adjusted(width / 2, width / 2, -width / 2, -width / 2))
+                    width = SELECTION_WIDTH if address == selection else PARENT_WIDTH
+                    inner = rect.adjusted(width / 2 + 1, width / 2 + 1, -width / 2 - 1, -width / 2 - 1)
+                    stroke(painter, QColor(SELECTION_COLOR), width, lambda r=inner: painter.drawRect(r))
             # its image under the σ of the Permutations panel, with the orbit highlighted
             orbit = state.permutation_orbit(selection) if state.highlight == 'orbit' else None
             if orbit and len(orbit) > 1:
@@ -211,10 +224,10 @@ class Navigator(QWidget):
         # The subcycles that contain the sky moment (Follow)
         if state.follow and state.sky_time is not None:
             moment = {depth: state.moment_index(depth) for depth in self._rows()}
-            painter.setPen(QPen(QColor(MOMENT_COLOR), 2))
             for rect, _, depth, index in cells:
                 if moment.get(depth) == index:
-                    painter.drawRect(rect.adjusted(1, 1, -1, -1))
+                    inner = rect.adjusted(2, 2, -2, -2)
+                    stroke(painter, QColor(MOMENT_COLOR), SELECTION_WIDTH, lambda r=inner: painter.drawRect(r))
 
         self._draw_bookmarks(painter, cells)
 
@@ -499,15 +512,14 @@ class Navigator(QWidget):
             shade.setAlphaF(0.6)
             painter.fillRect(QRectF(strip.left(), strip.top(), x0 - strip.left(), strip.height()), shade)
             painter.fillRect(QRectF(x1, strip.top(), strip.right() - x1, strip.height()), shade)
-            painter.setPen(QPen(self.palette().highlight().color(), 2))
-            painter.drawRect(QRectF(x0 - 1, strip.top() + 1, x1 - x0 + 2, strip.height() - 2))
-        for year, color, style in ((state.date, QColor('#d62728'), Qt.PenStyle.SolidLine),
-                                   (state.sky_time, QColor('#1f77b4'), Qt.PenStyle.DashLine)):
+            frame = QRectF(x0 - 1, strip.top() + 1, x1 - x0 + 2, strip.height() - 2)
+            stroke(painter, QColor(ZOOM_COLOR), PARENT_WIDTH, lambda: painter.drawRect(frame))
+        for year, color in ((state.date, QColor(DATE_COLOR)), (state.sky_time, QColor(MOMENT_COLOR))):
             u = state.position(year)
             if u is not None:
                 x = strip.left() + u * strip.width()
-                painter.setPen(QPen(color, 2, style))
-                painter.drawLine(QPointF(x, strip.top()), QPointF(x, strip.bottom()))
+                stroke(painter, color, CURSOR_WIDTH,
+                       lambda x=x: painter.drawLine(QPointF(x, strip.top()), QPointF(x, strip.bottom())))
 
     def _overview_yuga(self, pos: QPointF) -> int | None:
         strip = self._overview_rect()
@@ -553,7 +565,7 @@ class Navigator(QWidget):
                 last_right = left + width
 
     def _draw_markers(self, painter: QPainter, cells) -> None:
-        """The marked date (red) and the moment of the sky chart (dashed blue)."""
+        """The marked date (red) and the moment of the sky chart (orange), solid lines with a light edge."""
         state = self.state
         self._tags = {}
         dragged = self._drag[0] if self._drag else None
@@ -561,14 +573,12 @@ class Navigator(QWidget):
         if state.date is not None:
             date_label = ('now' if abs(state.date - current_year()) < 1 / 365.25 and dragged != 'date'
                           else date_text(state.date))
-        self._draw_marker(painter, cells, 'date', state.date, QColor('#d62728'), Qt.PenStyle.SolidLine,
-                          date_label, 0)
+        self._draw_marker(painter, cells, 'date', state.date, QColor(DATE_COLOR), date_label, 0)
         if state.sky_time is not None:
-            self._draw_marker(painter, cells, 'sky', state.sky_time, QColor('#1f77b4'), Qt.PenStyle.DashLine,
+            self._draw_marker(painter, cells, 'sky', state.sky_time, QColor(MOMENT_COLOR),
                               date_text(state.sky_time) if dragged == 'sky' else 'sky', 1)
 
-    def _draw_marker(self, painter: QPainter, cells, kind: str, year, color: QColor, style, label,
-                     line: int) -> None:
+    def _draw_marker(self, painter: QPainter, cells, kind: str, year, color: QColor, label, line: int) -> None:
         """
         Line at ``year`` through every row (also with equal widths), with its tag on line ``line``
         of the tag band, joined to the line in the first row.
@@ -580,7 +590,6 @@ class Navigator(QWidget):
         start, end = self._focus_extent()
         if not start <= u <= end:
             return
-        painter.setPen(QPen(color, 2, style))
         top = None
         for rect, address, depth, index in cells:
             # the cell of each row that contains the time
@@ -588,7 +597,8 @@ class Navigator(QWidget):
             c_start, c_duration = float(level.starts[index]), float(level.durations[index])
             if c_start <= u < c_start + c_duration or (u == 1.0 and c_start + c_duration >= 1.0 - 1e-12):
                 x = rect.left() + (u - c_start) / c_duration * rect.width()
-                painter.drawLine(QPointF(x, rect.top()), QPointF(x, rect.bottom()))
+                stroke(painter, color, CURSOR_WIDTH,
+                       lambda x=x, r=rect: painter.drawLine(QPointF(x, r.top()), QPointF(x, r.bottom())))
                 top = x if top is None else top
         if top is not None and label:
             metrics = painter.fontMetrics()
@@ -596,7 +606,8 @@ class Navigator(QWidget):
             height = self._tag_height()
             y = band.top() + line * (height + 2)
             # the line goes on up through the band to the tag
-            painter.drawLine(QPointF(top, y + height / 2), QPointF(top, band.bottom() + TAG_GAP))
+            stroke(painter, color, CURSOR_WIDTH,
+                   lambda: painter.drawLine(QPointF(top, y + height / 2), QPointF(top, band.bottom() + TAG_GAP)))
             width = metrics.horizontalAdvance(label) + 8
             left = top if top + width < self.width() - 8 else top - width
             tag = QRectF(left, y, width, height)

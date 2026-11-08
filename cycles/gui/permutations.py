@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
 from cycles.functions.permutation import (
     cycle_text, cycle_type, cycles, identity, order, parse_permutation, permute_digits, power, sign, tcoords_of,
 )
-from cycles.gui.state import MAX_DEPTH, MOMENT_COLOR, CycleState, address_of, children_range, tcoord
+from cycles.gui.state import MAX_DEPTH, MOMENT_COLOR, SELECTION_COLOR, CycleState, address_of, children_range, tcoord
 
 VIEWS = {
     'timeline': 'Powers timeline',
@@ -39,7 +39,6 @@ LINES = {'auto': 'Lines: auto', 'all': 'Lines: all', 'none': 'Lines: none'}
 MATRIX_IMAGE = 1024       # largest matrix drawn as an image (larger: as points)
 AUTO_LINES = 1024          # largest number of subcycles whose lines are drawn in auto
 ROW_GAP = 1.4              # between the rows of the timeline, in row heights
-SELECTION_COLOR = '#1f77b4'
 SUPERSCRIPTS = str.maketrans('0123456789', '⁰¹²³⁴⁵⁶⁷⁸⁹')
 
 
