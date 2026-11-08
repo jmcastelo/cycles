@@ -179,7 +179,7 @@ Los capítulos describen también lo que se ha añadido desde la última versió
 
 | Versión | Fecha | Contenido |
 |---|---|---|
-| *sin publicar* | — | más medidas (mezcla, tensión, tendencia, aspereza, contraste, balance, microcosmos, complejidad, densidad angular, reunión), uniones de los resaltados, coloreados por medida, clase, punto vernal y trígono, OKLab, mapas de color a elegir, consultas, niveles vectorizados hasta la profundidad 9, menú *View*, pruebas en paralelo |
+| 0.4.0 | 2026-11-09 | más medidas (mezcla, tensión, tendencia, aspereza, contraste, balance, microcosmos, complejidad, densidad angular, reunión), uniones de los resaltados, coloreados por medida, clase, punto vernal y trígono, OKLab, mapas de color a elegir, consultas, niveles vectorizados hasta la profundidad 9, menú *View*, pruebas en paralelo, una barra más ordenada, un color por papel y todos los niveles en el navegador |
 | 0.3.0 | 2026-11-08 | acontecimientos planetarios y contrastes de significación: cálculo, estudio y panel *Events*; mapa sobre todos los modelos; H1 con los planetas medios; fórmulas en LaTeX |
 | 0.2.0 | 2026-11-07 | el explorador, el modelo de ciclo, sesiones, marcadores, dosier, disposición de paneles, consultas vectorizadas, pruebas, esta documentación |
 | 0.1.0 | 2026-11-05 | la biblioteca de cálculo y los estudios del sandbox |

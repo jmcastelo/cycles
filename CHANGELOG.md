@@ -8,7 +8,9 @@ current one: `tests/test_version.py` checks it, and the docs' LaTeX converter re
 When releasing a version: describe it here, raise `__version__`, update the docs (and their version line), and tag
 the commit `vX.Y.Z`.
 
-## Unreleased
+## 0.4.0 — 2026-11-09
+
+New measures and colorings, queries, and every level down to depth 9.
 
 - **More measures of the subcycles** (`measure.MEASURES`): mixture (entropy of the age shares), tension (weighted
   spread of the virtues), trend (inner levels better or worse than the outer ones), roughness (jumps between
@@ -59,6 +61,10 @@ the commit `vX.Y.Z`.
   and the label of the planetary events moved from between the overview and the rows to a band under the rows,
   above the time axis (one line per tag shown), so the rows start right under the overview; the event ticks are
   under the last row.
+- **Every level in the navigator**: *Levels* goes up to 9, the deepest. Rows of subcycles narrower than a couple of
+  pixels are drawn as a strip of pixels, each the width-weighted mean color of the subcycles under it (with a
+  highlight, the bright ones, so that no match is lost); clicking, the selection, Follow, bookmarks, cursors and
+  events work in them as in the others. Nine levels of the whole cycle repaint in about 30 ms.
 - **Tests in parallel**: `pytest-xdist` in the `test` extra; `pytest -n 8` runs the suite in under a minute instead
   of nine.
 - **README**: a short introduction with installation, a quick start, the chapters of the documentation and the

@@ -1,6 +1,6 @@
 # Ciclos: documentación del proyecto
 
-Versión del programa documentada: **0.3.0** (ver `CHANGELOG.md` en la raíz del proyecto y el capítulo 10, «Versiones»).
+Versión del programa documentada: **0.4.0** (ver `CHANGELOG.md` en la raíz del proyecto y el capítulo 10, «Versiones»).
 
 Este conjunto de documentos describe con detalle el proyecto **cycles**: el análisis matemático de un ciclo
 dividido fractalmente en cuatro edades en razón 4 : 3 : 2 : 1 (Satya, Treta, Dvapara y Kali), su colocación en la
