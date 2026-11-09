@@ -67,7 +67,7 @@ def test_the_view_menu_draws_the_navigator(window, selected, spin):
 
 
 def test_the_measures_plot_rings_the_highlighted_class(window, selected, spin):
-    window.docks['measures'].raise_()
+    window.show_panel('measures')
     spin()
     panel = window.measures_panel
     selected.set_highlight('none')
@@ -83,7 +83,7 @@ def test_the_measures_plot_rings_the_highlighted_class(window, selected, spin):
 
 def test_follow_rings_the_moment(window, selected, spin):
     state = selected
-    window.docks['measures'].raise_()
+    window.show_panel('measures')
     state.set_sky_time(float(np.mean(state.time_map.interval((3, 2, 1)))))
     spin()
     panel = window.measures_panel

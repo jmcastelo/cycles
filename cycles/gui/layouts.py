@@ -1,33 +1,25 @@
 """
-Where the panels go around the navigator: moving one panel to a side (or
-floating, or into a tab with another), arrangements that place the kinds of
-panels on different sides, which docks own the corners of the window, and
-named layouts to switch between.
+Where the panels go around the navigator, with the Qt Advanced Docking System (QtAds): the dock manager, the
+ready-made arrangements (as tabs, side by side, stacked, in a grid, below the navigator, or each kind of panel on
+its side), and named layouts (QtAds perspectives).
 
-The window's docks can be on any of its four sides; these are the shortcuts
-to put them there without dragging (dragging still works: a panel, or a whole
-group of tabs, dropped on an edge of the window or on another panel).
+The navigator is the central widget of the dock manager. The panels can be dragged anywhere, with drop targets
+showing where they will go: beside or around another panel, into its tabs, or floating; and pinned to a side bar
+of the window (auto-hide), from where they slide out when their tab is pointed at.
 """
 
-import base64
-import json
+from PySide6.QtCore import QSettings
+from PySide6.QtWidgets import QInputDialog, QMenu, QWidget
 
-from PySide6.QtCore import QByteArray, QObject, QSettings, Qt
-from PySide6.QtGui import QAction, QActionGroup, QCursor
-from PySide6.QtWidgets import QDockWidget, QInputDialog, QMenu, QTabBar
+import PySide6QtAds as ads
 
-AREAS = {
-    'left': (Qt.DockWidgetArea.LeftDockWidgetArea, 'Left of the navigator'),
-    'right': (Qt.DockWidgetArea.RightDockWidgetArea, 'Right of the navigator'),
-    'top': (Qt.DockWidgetArea.TopDockWidgetArea, 'Above the navigator'),
-    'bottom': (Qt.DockWidgetArea.BottomDockWidgetArea, 'Below the navigator'),
-}
 # Kinds of panels, for the arrangements around the navigator
 KINDS = {
     'text': ('inspector', 'date', 'notes'),
     'sky': ('sky', 'skycompare', 'events'),
     'graphs': ('measures', 'colorspace', 'permutations', 'compositions', 'landscape'),
 }
+SIDES = {'left': ads.LeftDockWidgetArea, 'right': ads.RightDockWidgetArea, 'bottom': ads.BottomDockWidgetArea}
 # Arrangements: side -> kinds of panels there (a group of tabs per side)
 AROUND = {
     'sides': ('Left and right (information | sky and graphs)', 'Ctrl+Alt+L',
@@ -37,257 +29,228 @@ AROUND = {
     'left_below': ('Left and below (information and sky | graphs)', 'Ctrl+Alt+D',
                    {'left': ('text', 'sky'), 'bottom': ('graphs',)}),
 }
-CORNERS = {
-    'columns': 'Side columns full height',
-    'rows': 'Top and bottom rows full width',
-}
-LAYOUTS_KEY = 'panels/layouts'
-CORNERS_KEY = 'panels/corners'
+ARRANGEMENTS = ('tabs', 'side', 'stacked', 'grid', 'below') + tuple(AROUND)
+PERSPECTIVES_GROUP = 'panels/perspectives'
+PANEL_SHARE = 0.34          # of the window's width for the panels beside the navigator (as tabs)
+
+
+def configure() -> None:
+    """The QtAds options, set before the dock manager is made."""
+    M = ads.CDockManager
+    for flag in (M.eConfigFlag.OpaqueSplitterResize, M.eConfigFlag.FocusHighlighting,
+                 M.eConfigFlag.DockAreaHasTabsMenuButton, M.eConfigFlag.DockAreaHasUndockButton,
+                 M.eConfigFlag.AllTabsHaveCloseButton, M.eConfigFlag.MiddleMouseButtonClosesTab):
+        M.setConfigFlag(flag, True)
+    # side bars: each group of panels has a pin button; a pinned panel slides out when its tab is pointed at
+    M.setAutoHideConfigFlags(M.eAutoHideFlag.DefaultAutoHideConfig | M.eAutoHideFlag.AutoHideShowOnMouseOver)
+
+
+def make_manager(window, central: QWidget):
+    """The dock manager of ``window``, with ``central`` (the navigator) as its central widget."""
+    configure()
+    manager = ads.CDockManager(window)
+    dock = ads.CDockWidget(manager, 'Navigator')
+    dock.setObjectName('navigator')
+    dock.setWidget(central)
+    dock.setFeature(ads.CDockWidget.DockWidgetFeature.NoTab, True)
+    manager.setCentralWidget(dock)
+    return manager
+
+
+def central_area(window):
+    """The dock area of the navigator (looked up each time: restoring a layout makes the areas anew)."""
+    return window.dock_manager.centralWidget().dockAreaWidget()
+
+
+def make_dock(manager, title: str, name: str, widget: QWidget):
+    dock = ads.CDockWidget(manager, title)
+    dock.setObjectName(name)
+    # the text panels scroll when their group is short (a form is not squeezed); the others resize with their
+    # dock, so that their plots refit
+    mode = ads.CDockWidget.eInsertMode
+    dock.setWidget(widget, mode.ForceScrollArea if name in KINDS['text'] else mode.ForceNoScrollArea)
+    return dock
 
 
 def kind_of(name: str) -> str:
     return next((kind for kind, names in KINDS.items() if name in names), 'graphs')
 
 
-def set_corners(window, mode: str) -> None:
-    """Which docks take the corners of the window: the side columns, or the top and bottom rows."""
-    if mode not in CORNERS:
-        raise ValueError(f"corners must be one of {list(CORNERS)}")
-    C, A = Qt.Corner, Qt.DockWidgetArea
-    if mode == 'columns':
-        corners = ((C.TopLeftCorner, A.LeftDockWidgetArea), (C.BottomLeftCorner, A.LeftDockWidgetArea),
-                   (C.TopRightCorner, A.RightDockWidgetArea), (C.BottomRightCorner, A.RightDockWidgetArea))
+def _clear(window) -> None:
+    for dock in window.docks.values():
+        if dock.isAutoHide():
+            dock.setAutoHide(False)
+        window.dock_manager.removeDockWidget(dock)
+
+
+def _give_navigator(window, width: float, height: float = 0.62) -> None:
+    """
+    Give the navigator ``width`` of the window's width and ``height`` of its height, in each splitter that holds
+    it (up from its area); the panels beside it share the rest evenly.
+    """
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QSplitter
+    widget = central_area(window)
+    splitter = widget.parentWidget()
+    while isinstance(splitter, QSplitter):
+        horizontal = splitter.orientation() == Qt.Orientation.Horizontal
+        total = sum(splitter.sizes()) or (window.width() if horizontal else window.height())
+        index, count = splitter.indexOf(widget), splitter.count()
+        if count > 1:
+            own = int(total * (width if horizontal else height))
+            rest = (total - own) // (count - 1)
+            splitter.setSizes([own if k == index else rest for k in range(count)])
+        widget, splitter = splitter, splitter.parentWidget()
+
+
+def arrange(window, layout: str) -> None:
+    """
+    Arrange the open panels (all of them if none is open): ``'tabs'``, ``'side'`` (side by side), ``'stacked'``,
+    ``'grid'`` (2 × 2 and on), ``'below'`` (side by side under the navigator), or each kind of panel on its side of
+    the navigator (a key of ``AROUND``). The closed panels are placed too, in the same arrangement, and stay
+    closed: opening one later puts it where the arrangement continues.
+    """
+    if layout not in ARRANGEMENTS:
+        raise ValueError(f"unknown arrangement {layout!r}")
+    manager, docks = window.dock_manager, window.docks
+    open_names = [name for name, dock in docks.items() if not dock.isClosed()] or list(docks)
+    _clear(window)
+    if layout in AROUND:
+        for side, kinds in AROUND[layout][2].items():
+            members = sorted((n for n in docks if kind_of(n) in kinds), key=lambda n: n not in open_names)
+            if not members:
+                continue
+            area = manager.addDockWidget(SIDES[side], docks[members[0]])
+            for name in members[1:]:
+                manager.addDockWidgetTabToArea(docks[name], area)
     else:
-        corners = ((C.TopLeftCorner, A.TopDockWidgetArea), (C.TopRightCorner, A.TopDockWidgetArea),
-                   (C.BottomLeftCorner, A.BottomDockWidgetArea), (C.BottomRightCorner, A.BottomDockWidgetArea))
-    for corner, area in corners:
-        window.setCorner(corner, area)
-    window.corner_mode = mode
+        order = open_names + [n for n in docks if n not in open_names]
+        first = docks[order[0]]
+        side = ads.BottomDockWidgetArea if layout == 'below' else ads.RightDockWidgetArea
+        areas = [manager.addDockWidget(side, first)]
+        for k, name in enumerate(order[1:], 1):
+            dock = docks[name]
+            if layout == 'tabs':
+                manager.addDockWidgetTabToArea(dock, areas[0])
+            elif layout in ('side', 'below'):
+                areas.append(manager.addDockWidget(ads.RightDockWidgetArea, dock, areas[-1]))
+            elif layout == 'stacked':
+                areas.append(manager.addDockWidget(ads.BottomDockWidgetArea, dock, areas[-1]))
+            elif layout == 'grid':
+                # 0 | 1 on top, 2 under 0, 3 under 1, and so on down the two columns
+                where = ads.RightDockWidgetArea if k == 1 else ads.BottomDockWidgetArea
+                areas.append(manager.addDockWidget(where, dock, areas[0] if k == 1 else areas[k - 2]))
+    if layout in AROUND:
+        _give_navigator(window, 0.42, 0.6)
+    elif layout == 'below':
+        _give_navigator(window, 1.0, 0.55)
+    else:
+        _give_navigator(window, 0.4 if layout in ('side', 'grid') else 1 - PANEL_SHARE)
+    for name, dock in docks.items():
+        dock.toggleView(name in open_names)
+    shown = [docks[n] for n in open_names]
+    for dock in reversed(shown):              # the first open panel of each group of tabs in front
+        dock.setAsCurrentTab()
 
 
-def side_of(window, dock: QDockWidget) -> str | None:
-    """'left', 'right', 'top', 'bottom', 'float', or None (not placed)."""
-    if dock.isFloating():
-        return 'float'
-    area = window.dockWidgetArea(dock)
-    return next((key for key, (value, _) in AREAS.items() if value == area), None)
-
-
-def move_panel(window, name: str, where: str, other: str | None = None) -> None:
-    """
-    Put the panel ``name`` on a side of the navigator (``'left'``, ``'right'``,
-    ``'top'``, ``'bottom'``, beside the panels already there), floating
-    (``'float'``), or in a tab with the panel ``other`` (``'tab'``); it is
-    opened and brought to the front.
-    """
+def show_panel(window, name: str) -> None:
+    """Open the panel ``name`` (it goes back where it was) and bring it to the front."""
     dock = window.docks[name]
-    if where == 'tab':
-        target = window.docks[other]
-        if target is dock:
-            return
-        if target.isFloating() or side_of(window, target) is None:
-            move_panel(window, other, 'right')
-        target.show()
-        dock.setFloating(False)
-        window.tabifyDockWidget(target, dock)
-    elif where == 'float':
-        dock.show()
-        dock.setFloating(True)
-        geometry = window.geometry()
-        width, height = max(dock.width(), 420), max(dock.height(), 360)
-        dock.resize(width, height)
-        dock.move(geometry.center().x() - width // 2, geometry.center().y() - height // 2)
-    elif where in AREAS:
-        area = AREAS[where][0]
-        dock.setFloating(False)
-        window.removeDockWidget(dock)
-        orientation = (Qt.Orientation.Horizontal if where in ('top', 'bottom') else Qt.Orientation.Vertical)
-        window.addDockWidget(area, dock, orientation)
+    dock.toggleView(True)
+    if dock.isAutoHide():
+        dock.autoHideDockContainer().collapseView(False)
     else:
-        raise ValueError(f"unknown place {where!r}")
-    dock.show()
+        dock.setAsCurrentTab()
     dock.raise_()
 
 
-def arrange_around(window, layout: str) -> None:
-    """
-    Put each kind of panel on its side of the navigator (``AROUND``), a group
-    of tabs per side; closed panels are placed too, and stay closed.
-    """
-    sides = AROUND[layout][2]
-    docks = window.docks
-    open_names = [name for name, dock in docks.items() if dock.isVisible()] or list(docks)
-    groups = {}
-    for side, kinds in sides.items():
-        members = [name for name in docks if kind_of(name) in kinds]
-        # the open ones first, so that a group starts with a panel that is shown
-        groups[side] = sorted(members, key=lambda name: name not in open_names)
-    for dock in docks.values():
-        dock.setFloating(False)
-        window.removeDockWidget(dock)
-    for side, members in groups.items():
-        if not members:
-            continue
-        area = AREAS[side][0]
-        first = docks[members[0]]
-        window.addDockWidget(area, first)
-        first.show()
-        for name in members[1:]:
-            window.tabifyDockWidget(first, docks[name])
-        for name in members:
-            docks[name].setVisible(name in open_names)
-        shown = [name for name in members if name in open_names]
-        if shown:
-            docks[shown[0]].raise_()
-    width, height = window.width(), window.height()
-    sized = {side: [docks[n] for n in members if n in open_names] for side, members in groups.items()}
-    for side, size in (('left', int(width * 0.24)), ('right', int(width * 0.34))):
-        if sized.get(side):
-            window.resizeDocks([sized[side][0]], [size], Qt.Orientation.Horizontal)
-    if sized.get('bottom'):
-        window.resizeDocks([sized['bottom'][0]], [int(height * 0.4)], Qt.Orientation.Vertical)
+def float_panel(window, name: str, size: tuple[int, int] | None = None) -> None:
+    """Open the panel ``name`` in a window of its own (floating), of ``size`` (width, height) if given."""
+    dock = window.docks[name]
+    dock.toggleView(True)
+    if not dock.isFloating():
+        dock.setFloating()
+    container = dock.floatingDockContainer()
+    if container is not None and size is not None:
+        container.resize(*size)
 
 
-# -- named layouts
-
-def _encode(data: QByteArray) -> str:
-    return base64.b64encode(bytes(data)).decode('ascii')
-
-
-def saved_layouts() -> dict:
-    try:
-        layouts = json.loads(QSettings().value(LAYOUTS_KEY, '{}') or '{}')
-    except (TypeError, ValueError):
-        return {}
-    return layouts if isinstance(layouts, dict) else {}
+def pin_to_side(window, name: str, side: str = 'left') -> None:
+    """Put the panel ``name`` in a side bar of the window (auto-hide): it slides out when its tab is pointed at."""
+    bars = {'left': ads.SideBarLeft, 'right': ads.SideBarRight, 'bottom': ads.SideBarBottom, 'top': ads.SideBarTop}
+    dock = window.docks[name]
+    dock.toggleView(True)
+    window.dock_manager.addAutoHideDockWidget(bars[side], dock)
 
 
-def _store(layouts: dict) -> None:
-    QSettings().setValue(LAYOUTS_KEY, json.dumps(layouts))
+# -- named layouts: QtAds perspectives, kept in the settings
+
+def _settings_group():
+    settings = QSettings()
+    settings.beginGroup(PERSPECTIVES_GROUP)
+    return settings
+
+
+def load_layouts(window) -> None:
+    settings = _settings_group()
+    window.dock_manager.loadPerspectives(settings)
+    settings.endGroup()
+
+
+def _store_layouts(window) -> None:
+    settings = _settings_group()
+    settings.remove('')
+    window.dock_manager.savePerspectives(settings)
+    settings.endGroup()
+
+
+def saved_layouts(window) -> list[str]:
+    return sorted(window.dock_manager.perspectiveNames(), key=str.lower)
 
 
 def save_layout(window, name: str) -> None:
-    from cycles.gui.app import LAYOUT_VERSION
     name = name.strip()
     if not name:
         raise ValueError('a layout needs a name')
-    layouts = saved_layouts()
-    layouts[name] = {'version': LAYOUT_VERSION, 'state': _encode(window.saveState(LAYOUT_VERSION)),
-                     'corners': getattr(window, 'corner_mode', 'columns')}
-    _store(layouts)
+    window.dock_manager.addPerspective(name)
+    _store_layouts(window)
 
 
 def apply_layout(window, name: str) -> bool:
-    """Arrange the panels as the layout ``name``; False if it is missing or made for other panels."""
-    from cycles.gui.app import LAYOUT_VERSION
-    layout = saved_layouts().get(name)
-    if layout is None or layout.get('version') != LAYOUT_VERSION:
+    """Arrange the panels as the layout ``name``; False if there is none of that name."""
+    if name not in window.dock_manager.perspectiveNames():
         return False
-    set_corners(window, layout.get('corners', 'columns'))
-    return window.restoreState(QByteArray(base64.b64decode(layout['state'])), LAYOUT_VERSION)
+    window.dock_manager.openPerspective(name)
+    return True
 
 
-def delete_layout(name: str) -> None:
-    layouts = saved_layouts()
-    layouts.pop(name, None)
-    _store(layouts)
+def delete_layout(window, name: str) -> None:
+    window.dock_manager.removePerspective(name)
+    _store_layouts(window)
 
 
-# -- menus
+def fill_layouts_menu(window, menu: QMenu) -> None:
+    menu.clear()
+    names = saved_layouts(window)
+    for name in names:
+        menu.addAction(name).triggered.connect(lambda _=False, name=name: _apply(window, name))
+    if names:
+        menu.addSeparator()
+    menu.addAction('Save layout as…').triggered.connect(lambda: _save_as(window))
+    if names:
+        delete = menu.addMenu('Delete')
+        for name in names:
+            delete.addAction(name).triggered.connect(lambda _=False, name=name: delete_layout(window, name))
 
-class PanelPlacement(QObject):
-    """The menus that place the panels: Panels → Move, Corners, Layouts, and the context menu of a panel."""
 
-    def __init__(self, window):
-        super().__init__(window)
-        self.window = window
-        for name, dock in window.docks.items():
-            dock.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-            dock.customContextMenuRequested.connect(lambda pos, name=name: self._title_menu(name, pos))
+def _apply(window, name: str) -> None:
+    if apply_layout(window, name):
+        window.statusBar().showMessage(f"Layout “{name}”", 4000)
+        window.session.mark_modified()
 
-    def panel_menu(self, name: str, parent=None) -> QMenu:
-        """Move ``name``: to a side, floating, or into a tab with another panel."""
-        window = self.window
-        menu = QMenu(window.docks[name].windowTitle(), parent or window)
-        current = side_of(window, window.docks[name])
-        for key, (_, label) in AREAS.items():
-            action = menu.addAction(label)
-            action.setCheckable(True)
-            action.setChecked(current == key and window.docks[name].isVisible())
-            action.triggered.connect(lambda _=False, key=key: move_panel(window, name, key))
-        action = menu.addAction('Floating')
-        action.setCheckable(True)
-        action.setChecked(current == 'float')
-        action.triggered.connect(lambda: move_panel(window, name, 'float'))
-        tabs = menu.addMenu('In a tab with')
-        for other, dock in window.docks.items():
-            if other != name:
-                tabs.addAction(dock.windowTitle()).triggered.connect(
-                    lambda _=False, other=other: move_panel(window, name, 'tab', other))
-        return menu
 
-    def _title_menu(self, name: str, pos) -> None:
-        dock = self.window.docks[name]
-        widget = dock.widget()
-        if widget is not None and widget.geometry().contains(pos):
-            return                                   # inside the panel, not on its title bar
-        self.panel_menu(name).exec(dock.mapToGlobal(pos))
-
-    def dock_under_tab(self):
-        """The panel whose tab is under the pointer, if any (tabs belong to the main window)."""
-        window = self.window
-        titles = {dock.windowTitle().replace('&', ''): name for name, dock in window.docks.items()}
-        for bar in window.findChildren(QTabBar):
-            if not bar.isVisible():
-                continue
-            index = bar.tabAt(bar.mapFromGlobal(QCursor.pos()))
-            if index >= 0:
-                return titles.get(bar.tabText(index).replace('&', ''))
-        return None
-
-    def fill_move_menu(self, menu: QMenu) -> None:
-        menu.clear()
-        for name in self.window.docks:
-            menu.addMenu(self.panel_menu(name, menu))
-
-    def fill_corners_menu(self, menu: QMenu) -> None:
-        menu.clear()
-        group = QActionGroup(menu)
-        for key, label in CORNERS.items():
-            action = QAction(label, menu)
-            action.setCheckable(True)
-            action.setChecked(getattr(self.window, 'corner_mode', 'columns') == key)
-            action.triggered.connect(lambda _=False, key=key: self.set_corners(key))
-            group.addAction(action)
-            menu.addAction(action)
-
-    def set_corners(self, mode: str) -> None:
-        set_corners(self.window, mode)
-        QSettings().setValue(CORNERS_KEY, mode)
-        self.window.session.mark_modified()
-
-    def fill_layouts_menu(self, menu: QMenu) -> None:
-        menu.clear()
-        layouts = saved_layouts()
-        for name in sorted(layouts, key=str.lower):
-            menu.addAction(name).triggered.connect(lambda _=False, name=name: self.apply(name))
-        if layouts:
-            menu.addSeparator()
-        menu.addAction('Save layout as…').triggered.connect(self.save_as)
-        if layouts:
-            delete = menu.addMenu('Delete')
-            for name in sorted(layouts, key=str.lower):
-                delete.addAction(name).triggered.connect(lambda _=False, name=name: delete_layout(name))
-
-    def apply(self, name: str) -> None:
-        if apply_layout(self.window, name):
-            self.window.statusBar().showMessage(f"Layout “{name}”", 4000)
-            self.window.session.mark_modified()
-        else:
-            self.window.statusBar().showMessage(f"The layout “{name}” was made for other panels", 8000)
-
-    def save_as(self) -> None:
-        name, ok = QInputDialog.getText(self.window, 'Save layout', 'Name of the layout:')
-        if ok and name.strip():
-            save_layout(self.window, name)
-            self.window.statusBar().showMessage(f"Saved the layout “{name.strip()}”", 4000)
+def _save_as(window) -> None:
+    name, ok = QInputDialog.getText(window, 'Save layout', 'Name of the layout:')
+    if ok and name.strip():
+        save_layout(window, name)
+        window.statusBar().showMessage(f"Saved the layout “{name.strip()}”", 4000)

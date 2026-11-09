@@ -406,24 +406,36 @@ muchos puntos). Las opciones se recuerdan; *Open it when written* lo abre al ter
 
 ![Disposición «alrededor del navegador»: información a la izquierda, cielo a la derecha, gráficos debajo](figuras/disposicion_alrededor.png)
 
-Los once paneles pueden estar abiertos a la vez. El menú *Panels*:
+Los paneles se acoplan alrededor del navegador con el **Qt Advanced Docking System** (QtAds, el paquete
+`PySide6-QtAds`): el navegador es el centro y los once paneles pueden estar abiertos a la vez, donde se quiera.
 
-- muestra u oculta cada uno (`Alt+1` a `Alt+9` y `Alt+0`; el undécimo, *Events*, sin atajo);
-- los ordena en pestañas (`Ctrl+Alt+T`), lado a lado (`Ctrl+Alt+S`), apilados (`Ctrl+Alt+V`), en rejilla 2 × 2
-  (`Ctrl+Alt+G`) o lado a lado bajo el navegador (`Ctrl+Alt+B`);
+- **Arrastrar**: un panel (por su pestaña) o un grupo de pestañas (por su barra) se suelta donde indican las
+  guías que aparecen al arrastrar: a un lado del navegador o de otro grupo, dentro de un grupo como una pestaña
+  más, o fuera de la ventana, flotante.
+- **Barras laterales** (*auto-hide*): el botón con la chincheta de un grupo lo recoge en una barra en el borde de
+  la ventana; sus paneles quedan como pestañas en esa barra y se despliegan al pasar el puntero (o al pulsar), y se
+  recogen al pulsar fuera. Así se ganan espacio para el navegador sin cerrarlos.
+- Cada grupo tiene, en su barra, el menú de sus pestañas, el botón para hacerlo flotante y el de cerrarlo; la
+  rueda central del ratón cierra una pestaña.
+
+El menú *Panels*:
+
+- muestra u oculta cada panel (`Alt+1` a `Alt+9` y `Alt+0`; el undécimo, *Events*, sin atajo); al abrirse, vuelve
+  donde estaba;
+- los ordena en pestañas (`Ctrl+Alt+T`), lado a lado (`Ctrl+Alt+S`), apilados (`Ctrl+Alt+V`), en rejilla de dos
+  columnas (`Ctrl+Alt+G`) o lado a lado bajo el navegador (`Ctrl+Alt+B`);
 - **Arrange around the navigator**: cada tipo de panel en su lado, en pestañas (información = Subcycle, Date,
   Notes; cielo = Sky, Sky comparison, Events; gráficos = el resto): *Left and right* (`Ctrl+Alt+L`), *Around the
   navigator* (`Ctrl+Alt+A`, información a la izquierda, cielo a la derecha, gráficos debajo), *Left and below*
   (`Ctrl+Alt+D`). Los paneles cerrados siguen cerrados, pero colocados en su lado;
-- **Move a panel** (también con clic derecho en la barra de título o en la pestaña de un panel): a la izquierda, la
-  derecha, encima o debajo del navegador (junto a los que ya haya allí), flotante o en una pestaña con otro;
-- **Corners**: si las columnas laterales ocupan toda la altura de la ventana o las filas de arriba y abajo toda la
-  anchura;
-- **Layouts**: disposiciones con nombre (*Save layout as…*), para cambiar entre ellas en cualquier sesión;
-- **Reset layout**: vuelve a las pestañas.
+- **Layouts**: disposiciones con nombre (*Save layout as…*, las *perspectivas* de QtAds), para cambiar entre ellas
+  en cualquier sesión; se guardan en los ajustes del programa;
+- **Reset layout**: todos los paneles abiertos, en pestañas a la derecha.
 
-Los paneles también se pueden arrastrar (un grupo de pestañas, entero, por su barra de título). El navegador
-conserva siempre un mínimo de espacio. La disposición se guarda con la sesión y entre ejecuciones.
+Los paneles de texto (Subcycle, Date, Notes) se desplazan cuando su grupo es corto; los de gráficos se ajustan a su
+tamaño. El navegador conserva siempre un mínimo de espacio. La disposición se guarda con la sesión (el estado de
+QtAds) y entre ejecuciones; las sesiones guardadas antes de la versión con QtAds se abren con la disposición por
+defecto (el resto de la sesión se recupera entero).
 
 ## 12.19 El lanzador de estudios
 

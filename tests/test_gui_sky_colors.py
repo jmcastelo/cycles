@@ -7,7 +7,7 @@ pytestmark = pytest.mark.gui
 
 @pytest.mark.ephemeris
 def test_the_sky_disk_keeps_its_size_as_the_axes_turn(window, spin, ephemeris):
-    window.docks['sky'].raise_()
+    window.show_panel('sky')
     spin()
     sky = window.sky_panel
     sizes = []
@@ -21,7 +21,7 @@ def test_the_sky_disk_keeps_its_size_as_the_axes_turn(window, spin, ephemeris):
 
 @pytest.mark.ephemeris
 def test_the_sky_chart_has_the_key_of_the_axis_glyphs(window, spin, ephemeris):
-    window.docks['sky'].raise_()
+    window.show_panel('sky')
     window.state.set_sky_time(2026.8)
     spin()
     texts = {t.get_text() for legend in window.sky_panel.ax.findobj(lambda a: hasattr(a, 'get_texts'))

@@ -380,7 +380,9 @@ class SkyPanel(QWidget):
 
     def hideEvent(self, event) -> None:
         super().hideEvent(event)
-        self.stop()
+        from shiboken6 import isValid
+        if isValid(self.play_button):            # at shutdown the buttons can go before the panel
+            self.stop()
 
     def fit_chart(self, *_) -> None:
         """

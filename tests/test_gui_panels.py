@@ -15,7 +15,6 @@ def test_all_panels_exist(window):
 @pytest.mark.parametrize('layout', LAYOUTS)
 def test_closed_panels_stay_in_the_layout(window, spin, layout):
     """Arranging removes the docks and adds them back: the closed ones too, so that opening them works."""
-    from PySide6.QtCore import Qt
     window.reset_layout()
     for name in ('date', 'sky', 'measures', 'colorspace'):
         window.docks[name].toggleViewAction().trigger()
@@ -23,16 +22,15 @@ def test_closed_panels_stay_in_the_layout(window, spin, layout):
     window.arrange_panels(layout)
     spin()
     for dock in window.docks.values():
-        assert window.dockWidgetArea(dock) != Qt.DockWidgetArea.NoDockWidgetArea, dock.objectName()
+        assert dock.dockAreaWidget() is not None, dock.objectName()
     for name in ('sky', 'colorspace'):
         window.docks[name].toggleViewAction().trigger()
     spin()
     for name in ('sky', 'colorspace'):
         dock = window.docks[name]
-        assert dock.isVisible()
-        assert window.dockWidgetArea(dock) != Qt.DockWidgetArea.NoDockWidgetArea
+        assert not dock.isClosed() and dock.dockAreaWidget() is not None
         if layout == 'tabs':
-            dock.raise_()
+            window.show_panel(name)
             spin()
         geometry = dock.geometry()
         assert geometry.x() >= 0 and geometry.y() >= 0 and geometry.width() >= 50, (name, geometry)

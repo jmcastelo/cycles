@@ -15,6 +15,13 @@ the commit `vX.Y.Z`.
   on the index line, the count on the time line), and estimated at finite depths by histograms of the classes of
   equal duration (the subcycles of one exponent). Almost all the time lies in a set of subcycles of dimension
   0.9232, and almost all the subcycles in a set of moments of dimension 0.9192; the two measures are dual.
+- **Panels docked with QtAds** (the Qt Advanced Docking System, `PySide6-QtAds`; PySide6 upgraded to 6.12.0 and
+  pinned with it): drag a panel or a group of tabs anywhere, with drop targets; float it; pin a group to a side bar
+  of the window (auto-hide, sliding out on hover). The arrangements of the Panels menu remain (tabs, side by side,
+  stacked, grid, below, and each kind on its side), and named layouts are now QtAds perspectives; *Move a panel*
+  and *Corners* are gone, dragging does that. Sessions keep the QtAds layout; layouts saved by earlier versions
+  are not translated (those sessions open with the default arrangement). Text panels scroll when short, plot
+  panels resize.
 - **Closing with unsaved changes asks** whether to save them (Save, Don't save, Cancel). Without saving, the next
   start reopens the session as last saved (or a new one); a crash still brings the unsaved changes back.
 

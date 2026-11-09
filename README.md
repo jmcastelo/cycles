@@ -27,7 +27,7 @@ pip install -e ".[all]"        # or ".[all,test]" to run the tests
 
 The core needs only NumPy, Matplotlib, `papersize` and `symmetry-math`. The
 extras add `astro` (REBOUND, REBOUNDx: building the ephemeris), `sound`
-(PyWavelets, sounddevice), `gui` (PySide6) and `test` (pytest, pytest-xdist); `all` is the
+(PyWavelets, sounddevice), `gui` (PySide6 and PySide6-QtAds, pinned together) and `test` (pytest, pytest-xdist); `all` is the
 first three. For example, `pip install -e ".[astro]"` installs the core and the
 ephemeris builder.
 

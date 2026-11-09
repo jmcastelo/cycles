@@ -189,8 +189,8 @@ def capture(window, layout: bool = True) -> dict:
     }
     if layout:
         data['layout'] = {'version': LAYOUT_VERSION, 'geometry': _bytes(window.saveGeometry()),
-                          'state': _bytes(window.saveState(LAYOUT_VERSION)),
-                          'corners': getattr(window, 'corner_mode', 'columns')}
+                          'state': _bytes(window.saveState(LAYOUT_VERSION)),                  # the toolbar
+                          'docks': _bytes(window.dock_manager.saveState(LAYOUT_VERSION))}     # the panels
     return data
 
 
@@ -266,16 +266,15 @@ def apply(window, data: dict, layout: bool = True) -> list[str]:
 
     saved_layout = data.get('layout')
     if layout and saved_layout:
-        if saved_layout.get('version') == LAYOUT_VERSION:
-            from cycles.gui.layouts import set_corners
-            attempt('corners', lambda: set_corners(window, saved_layout.get('corners', 'columns')))
+        if saved_layout.get('version') == LAYOUT_VERSION and saved_layout.get('docks'):
             window.restoreGeometry(_from_bytes(saved_layout['geometry']))
-            if not window.restoreState(_from_bytes(saved_layout['state']), LAYOUT_VERSION):
+            window.restoreState(_from_bytes(saved_layout['state']), LAYOUT_VERSION)
+            if not window.dock_manager.restoreState(_from_bytes(saved_layout['docks']), LAYOUT_VERSION):
                 problems.append('layout: could not be restored')
         else:
             problems.append('layout: saved for another set of panels; kept the current one')
     for name, camera in data.get('cameras', {}).items():
-        if name in CAMERA_PANELS and camera:
+        if name in CAMERA_PANELS:              # also no camera (a panel never drawn): forget the one there is
             attempt(f"camera of {name.replace('_panel', '')}", lambda name=name, camera=camera:
                     getattr(window, name).restore_camera(camera))
     window._sync_toolbar()
@@ -335,8 +334,12 @@ class SessionManager(QObject):
                     widget.toggled.connect(self.mark_modified)
                 elif isinstance(widget, QLineEdit):
                     widget.editingFinished.connect(self.mark_modified)
+        manager = self.window.dock_manager                # a panel moved, opened, closed, floated or pinned
+        for signal in (manager.dockAreasAdded, manager.dockAreasRemoved, manager.floatingWidgetCreated,
+                       manager.autoHideWidgetCreated, manager.perspectiveOpened):
+            signal.connect(self.mark_modified)
         for dock in self.window.docks.values():
-            dock.dockLocationChanged.connect(self.mark_modified)
+            dock.viewToggled.connect(self.mark_modified)
             dock.topLevelChanged.connect(self.mark_modified)
 
     def mark_modified(self, *_) -> None:

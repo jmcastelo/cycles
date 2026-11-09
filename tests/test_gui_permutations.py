@@ -14,7 +14,7 @@ pytestmark = pytest.mark.gui
 
 @pytest.fixture
 def panel(window, spin):
-    window.docks['permutations'].raise_()
+    window.show_panel('permutations')
     spin()
     return window.permutations_panel
 
@@ -99,7 +99,7 @@ def test_matrix_views(panel, spin, view):
 
 def test_the_panel_publishes_sigma_even_when_hidden(window, spin):
     state = window.state
-    window.docks['inspector'].raise_()
+    window.show_panel('inspector')
     state.set_focus((3,))
     state.select((3, 1, 2, 0))
     spin()

@@ -25,7 +25,7 @@ pip install -e ".[all]"            # núcleo + astro + sound + gui; ".[test]" a�
 | (núcleo) | NumPy, Matplotlib, `papersize`, `symmetry-math` | todo el cálculo y las figuras |
 | `astro` | REBOUND, REBOUNDx | construir la efeméride |
 | `sound` | PyWavelets, sounddevice | escalogramas y reproducción |
-| `gui` | PySide6 | el explorador |
+| `gui` | PySide6 6.12.0 y PySide6-QtAds 5.1.1.1 (fijados juntos: cada versión de QtAds está hecha para una de PySide6) | el explorador |
 | `test` | pytest | las pruebas |
 
 Convenciones: identificadores y salida de los programas en inglés (salvo algunos textos de los esquemas del
@@ -150,7 +150,7 @@ de color actuales.
 | `sky.py`, `skycompare.py`, `eventspanel.py` | cielo de un instante; comparación de cielos; acontecimientos planetarios y su significación |
 | `measures.py`, `colorspace.py`, `permutations.py`, `groupexplorer.py`, `compositions.py`, `landscape.py` | paneles de gráficos |
 | `modeldialog.py`, `colordialog.py`, `export.py`, `studies.py`, `dossier.py` | diálogos: modelo, colores, guardar gráfico, estudios, dosier |
-| `session.py`, `layouts.py` | sesiones; colocación de los paneles |
+| `session.py`, `layouts.py` | sesiones; los paneles alrededor del navegador con QtAds (gestor, disposiciones, flotantes, barras laterales, disposiciones con nombre) |
 
 Los paneles de Matplotlib comparten un patrón: redibujan con un temporizador que agrupa cambios, solo cuando
 están visibles (marcan `_dirty` si no), y emiten `saveRequested` desde su botón *Save…*.

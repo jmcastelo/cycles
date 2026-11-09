@@ -34,7 +34,8 @@ sound = [
 ]
 # Graphical interface (cycles.gui)
 gui = [
-    "PySide6>=6.6",
+    "PySide6==6.12.0",            # PySide6-QtAds is built for one exact PySide6 version
+    "PySide6-QtAds==5.1.1.1",
 ]
 all = ["cycles[astro,sound,gui]"]
 # Tests (pytest tests/); the GUI tests run offscreen and need the gui extra

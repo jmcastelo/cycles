@@ -99,7 +99,7 @@ def class_window(window, spin, ephemeris):
 
 @pytest.mark.ephemeris
 def test_the_class_panel_draws_only_when_visible(window, class_window, spin):
-    window.docks['skycompare'].close()
+    window.docks['skycompare'].toggleView(False)
     spin()
     assert not class_window.isVisible()
     window.state.select((3, 1, 2, 1))
@@ -108,7 +108,7 @@ def test_the_class_panel_draws_only_when_visible(window, class_window, spin):
     window.sky_panel.compareRequested.emit()        # Compare… opens it again
     spin()
     assert class_window.isVisible()
-    assert class_window.render_timer.isActive()
+    assert class_window.render_timer.isActive() or not class_window._dirty     # scheduled, or already drawn
     class_window.render()
     assert not class_window._dirty
     assert class_window.title().startswith('Sky of Kali › Treta › Dvapara › Treta')
@@ -232,11 +232,10 @@ def test_clicking_the_strip_selects(window, class_window, spin):
 
 @pytest.mark.ephemeris
 def test_the_charts_fill_the_panel_as_it_changes_size(window, class_window, spin):
-    dock = window.docks['skycompare']
-    dock.setFloating(True)
+    from cycles.gui.layouts import float_panel
     layouts = {}
     for size in ((900, 750), (500, 900), (1300, 650)):
-        dock.resize(*size)
+        float_panel(window, 'skycompare', size)
         spin()
         class_window.fit_charts()
         class_window.canvas.draw()

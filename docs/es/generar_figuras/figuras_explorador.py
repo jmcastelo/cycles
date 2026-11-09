@@ -44,7 +44,8 @@ if 'shots' in WHICH:
         end = time.time() + seconds
         while time.time() < end: app.processEvents()
     def dock_shot(name, file, size=(950, 680), prepare=None):
-        dock = w.docks[name]; dock.show(); dock.setFloating(True); dock.resize(*size); spin(60)
+        from cycles.gui.layouts import float_panel
+        float_panel(w, name, size); dock = w.docks[name]; spin(60)
         panel = dock.widget()
         if prepare: prepare(panel)
         if hasattr(panel, '_dirty') and panel._dirty: panel.render()
@@ -52,13 +53,13 @@ if 'shots' in WHICH:
         if hasattr(panel, 'canvas'): panel.canvas.draw()
         spin(30)
         panel.grab().save(f"{OUT}/{file}")
-        dock.setFloating(False); spin()
+        w.arrange_panels('tabs'); spin()
     w.reset_layout(); w.resize(1500, 900); spin()
     s.set_focus((3,)); s.select((3, 1, 2)); s.set_labels('names'); s.set_highlight('composition'); s.set_compare_criteria(True)
     s.set_sky_time(-1500.0)
     s.add_bookmark((3, 1, 2), 'Semilla', 'misma composición que el presente'); s.add_bookmark((3, 0), 'Kali › Satya', '')
     s.set_notes('Comparar el modelo por defecto con el de Abhyankar.\nMirar las subdivisiones del Kali.')
-    w.docks['inspector'].raise_(); spin(60)
+    w.show_panel('inspector'); spin(60)
     w.grab().save(f"{OUT}/ventana_principal.png")
     w.navigator.grab().save(f"{OUT}/navegador.png")
     dock_shot('inspector', 'panel_subciclo.png', (520, 960))
@@ -101,8 +102,9 @@ if 'model' in WHICH:
 if 'events' in WHICH:
     s.set_focus((3,)); s.select((3, 1)); spin()
     w.show_panel('events'); spin()
-    ep = w.events_panel; dock = w.docks['events']; dock.setFloating(True); dock.resize(900, 760); spin(60)
+    from cycles.gui.layouts import float_panel
+    ep = w.events_panel; float_panel(w, 'events', (900, 760)); dock = w.docks['events']; spin(60)
     ep.kind.setCurrentIndex(ep.kind.findData('great')); ep.depth.setValue(2); ep.render(); ep.canvas.draw(); spin(30)
     dock.widget().grab().save(f"{OUT}/panel_eventos.png")
-    dock.setFloating(False); spin()
+    w.arrange_panels('tabs'); spin()
 print('ok')

@@ -41,7 +41,7 @@ def _change_everything(window, spin):
     state.set_notes('Testing the sessions.\nSecond line.')
     state.add_bookmark((3, 1, 2), 'here', 'a note')
     state.add_bookmark((0,), 'Satya')
-    window.docks['measures'].close()
+    window.docks['measures'].toggleView(False)
     spin()
 
 
@@ -63,7 +63,7 @@ def _snapshot(window):
         'landscape': (window.landscape_panel.depth.value(), window.landscape_panel.turns_to.value()),
         'camera': window.compositions_panel.camera(), 'notes': state.notes,
         'bookmarks': [dict(b) for b in state.bookmarks],
-        'measures_open': not window.docks['measures'].isHidden(),
+        'measures_open': not window.docks['measures'].isClosed(),
         'toolbar': (window.rows_box.value(), checked(window.spacing_actions), checked(window.labels_actions),
                     window.borders_action.isChecked(), window.criteria_action.isChecked(),
                     checked(window.names_actions)),

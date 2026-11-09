@@ -10,7 +10,7 @@ pytestmark = pytest.mark.gui
 
 @pytest.fixture
 def panel(window, spin):
-    window.docks['compositions'].raise_()
+    window.show_panel('compositions')
     window.state.set_focus((3,))
     window.state.select((3, 1, 2, 0))
     spin()
