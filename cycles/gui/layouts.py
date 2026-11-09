@@ -45,10 +45,64 @@ def configure() -> None:
     M.setAutoHideConfigFlags(M.eAutoHideFlag.DefaultAutoHideConfig | M.eAutoHideFlag.AutoHideShowOnMouseOver)
 
 
+def _mix(a, b, share: float) -> str:
+    """The color ``share`` of the way from ``b`` to ``a`` (QColors), as #rrggbb."""
+    from PySide6.QtGui import QColor
+    return QColor(*(round(share * x + (1 - share) * y) for x, y in
+                    zip((a.red(), a.green(), a.blue()), (b.red(), b.green(), b.blue())))).name()
+
+
+def tab_style(palette) -> str:
+    """
+    The colors of the tab titles, from the application's ``palette``: QtAds' own style sheet leaves the inactive
+    ones nearly invisible in dark themes. Inactive: the window text blended a quarter towards the background;
+    active: the window text; focused: the highlighted text, as QtAds has it.
+    """
+    from PySide6.QtGui import QPalette
+    text, window = palette.color(QPalette.ColorRole.WindowText), palette.color(QPalette.ColorRole.Window)
+    inactive = _mix(text, window, 0.75)
+    return f"""
+ads--CDockWidgetTab QLabel {{ color: {inactive}; }}
+ads--CDockWidgetTab[activeTab="true"] QLabel {{ color: {text.name()}; }}
+ads--CDockWidgetTab[focused="true"] QLabel {{ color: palette(highlighted-text); }}
+ads--CAutoHideTab {{ color: {inactive}; }}
+ads--CAutoHideTab:hover {{ color: palette(highlight); }}
+"""
+
+
+def apply_tab_style(manager) -> None:
+    """Add ``tab_style`` (for the current palette) to QtAds' style sheet."""
+    from PySide6.QtWidgets import QApplication
+    if not hasattr(manager, '_base_style'):
+        manager._base_style = manager.styleSheet()
+    manager.setStyleSheet(manager._base_style + tab_style(QApplication.palette()))
+
+
+class _PaletteWatcher(QWidget):
+    """Follows the application's palette (a change between light and dark) to recolor the tab titles."""
+
+    def __init__(self, manager):
+        super().__init__(manager)
+        self.manager = manager
+        self.hide()
+
+    def changeEvent(self, event) -> None:
+        from PySide6.QtCore import QEvent
+        if event.type() == QEvent.Type.PaletteChange:
+            apply_tab_style(self.manager)
+            for dock in self.manager.dockWidgets():
+                action = getattr(dock, '_attach_action', None)
+                if action is not None:
+                    action.setIcon(attach_icon())
+        super().changeEvent(event)
+
+
 def make_manager(window, central: QWidget):
     """The dock manager of ``window``, with ``central`` (the navigator) as its central widget."""
     configure()
     manager = ads.CDockManager(window)
+    apply_tab_style(manager)
+    manager._palette_watcher = _PaletteWatcher(manager)
     dock = ads.CDockWidget(manager, 'Navigator')
     dock.setObjectName('navigator')
     dock.setWidget(central)
@@ -173,6 +227,109 @@ def float_panel(window, name: str, size: tuple[int, int] | None = None) -> None:
     container = dock.floatingDockContainer()
     if container is not None and size is not None:
         container.resize(*size)
+
+
+def is_floating(dock) -> bool:
+    """Whether a panel is in a floating window, alone or with others (QtAds' isFloating is only for alone)."""
+    return dock.isFloating() or dock.isInFloatingContainer()
+
+
+def attach_panel(window, name: str) -> None:
+    """
+    Put a floating panel back in the window: in the tabs of a docked panel of its kind (``KINDS``), or else
+    beside the navigator, on the right. It stays open and in front.
+    """
+    dock = window.docks[name]
+    if not is_floating(dock):
+        return
+    manager = window.dock_manager
+    partner = next((window.docks[n] for n in KINDS[kind_of(name)]
+                    if n != name and not is_floating(window.docks[n]) and not window.docks[n].isAutoHide()
+                    and window.docks[n].dockAreaWidget() is not None and not window.docks[n].isClosed()), None)
+    if partner is not None:
+        manager.addDockWidgetTabToArea(dock, partner.dockAreaWidget())
+    else:
+        manager.addDockWidget(ads.RightDockWidgetArea, dock)
+    dock.toggleView(True)
+    dock.setAsCurrentTab()
+    update_attach_buttons(window)
+
+
+def attach_window(window, name: str) -> None:
+    """Put back every panel of the floating window that holds the panel ``name`` (each with its kind)."""
+    container = window.docks[name].dockContainer()
+    together = [n for n, d in window.docks.items() if is_floating(d) and d.dockContainer() is container]
+    for n in together:
+        attach_panel(window, n)
+    if name in together:
+        window.docks[name].setAsCurrentTab()
+
+
+def attach_all(window) -> int:
+    """Attach every floating panel (``attach_panel``); how many there were."""
+    floating = [name for name, dock in window.docks.items() if is_floating(dock)]
+    for name in floating:
+        attach_panel(window, name)
+    return len(floating)
+
+
+def palette_is_dark(palette=None) -> bool:
+    from PySide6.QtGui import QPalette
+    from PySide6.QtWidgets import QApplication
+    palette = palette or QApplication.palette()
+    return palette.color(QPalette.ColorRole.Window).lightness() < 128
+
+
+def attach_icon():
+    """The icon of QtAds' detach (undock) button, for Attach too: its dark variant on a dark palette."""
+    from PySide6.QtGui import QIcon
+    return QIcon(f":/ads/images/detach-button{'_dark' if palette_is_dark() else ''}.svg")
+
+
+def add_attach_buttons(window) -> None:
+    """An Attach button in the title bar of each panel, shown while it floats."""
+    from PySide6.QtGui import QAction
+    for name, dock in window.docks.items():
+        action = QAction(attach_icon(), 'Attach', dock)
+        action.setToolTip('Attach: put the panels of this floating window back in the main window, each with its '
+                          'kind')
+        action.triggered.connect(lambda _=False, name=name: attach_window(window, name))
+        action.setVisible(False)
+        dock.setTitleBarActions([action])
+        dock._attach_action = action
+        dock.topLevelChanged.connect(lambda *_: _update_later(window))
+        dock.visibilityChanged.connect(lambda *_: _update_later(window))     # a tab to the front shows the buttons
+    manager = window.dock_manager
+    for signal in (manager.floatingWidgetCreated, manager.dockAreasAdded, manager.dockAreasRemoved,
+                   manager.stateRestored, manager.perspectiveOpened):
+        signal.connect(lambda *_: _update_later(window))
+
+
+def _update_later(window) -> None:
+    """
+    Update the Attach buttons once QtAds has finished moving the panels: it says that a floating window was made
+    before the panels are in it (and a hidden action is also disabled, so its button would stay greyed out).
+    """
+    from PySide6.QtCore import QTimer
+    QTimer.singleShot(0, lambda: update_attach_buttons(window))
+
+
+def update_attach_buttons(window) -> None:
+    """Show the Attach button of the floating panels only (QtAds does not always say when a panel docks)."""
+    from PySide6.QtWidgets import QToolButton
+    actions = {}
+    for dock in window.docks.values():
+        action = getattr(dock, '_attach_action', None)
+        if action is not None:
+            action.setVisible(is_floating(dock))
+            actions[id(action)] = action
+    # QtAds shows a hidden title bar action as a disabled button: hide the buttons themselves while docked
+    holders = [window.dock_manager] + list(window.dock_manager.floatingWidgets())
+    for holder in holders:
+        for button in holder.findChildren(QToolButton):
+            action = button.defaultAction()
+            if action is not None and id(action) in actions:
+                button.setVisible(action.isVisible())
 
 
 def pin_to_side(window, name: str, side: str = 'left') -> None:

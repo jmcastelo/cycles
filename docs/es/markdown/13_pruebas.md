@@ -31,7 +31,7 @@ pendientes y `ephemeris` localiza las tablas.
 
 ## 13.2 Qué se comprueba
 
-En total hay **287 pruebas** en 26 ficheros.
+En total hay **291 pruebas** en 26 ficheros.
 
 ### Cálculo
 
@@ -56,7 +56,7 @@ En total hay **287 pruebas** en 26 ficheros.
 | Fichero | Pruebas | Qué comprueba |
 |---|---:|---|
 | `test_gui_panels.py` | 6 | los paneles existen; al reordenarlos, los cerrados siguen colocados y se pueden abrir |
-| `test_gui_layouts.py` | 9 | los paneles con QtAds: el navegador en el centro; cada tipo de panel en su lado (los cerrados, colocados), con espacio para el navegador; flotantes y barras laterales; disposiciones con nombre (perspectivas, en los ajustes); la sesión guarda la disposición; mover marca la sesión; el menú *Panels* |
+| `test_gui_layouts.py` | 13 | los paneles con QtAds: el navegador en el centro; cada tipo de panel en su lado (los cerrados, colocados), con espacio para el navegador; flotantes y barras laterales; disposiciones con nombre (perspectivas, en los ajustes); la sesión guarda la disposición; mover marca la sesión; el menú *Panels*; volver a acoplar los paneles flotantes, solos o en grupo (el botón, pulsado, y el menú); los títulos de las pestañas legibles con una paleta oscura; el botón *Attach* solo en las ventanas flotantes, con su icono, también al cambiar de pestaña |
 | `test_gui_navigator.py` | 6 | la banda de etiquetas, arrastrar las etiquetas, Mayús + clic; las nueve profundidades a la vez: las filas densas como tiras de píxeles, pulsar en ellas, y un subciclo resaltado que no se pierde en su píxel |
 | `test_gui_measures.py` | 8 | el panel Measures con dos medidas cualesquiera (2D, tiempo, 3D), coloreado por una medida con su barra, la densidad angular sin modelo, la línea de medidas del inspector, sesiones; las uniones de los resaltados (36 intercambios entre las 24 ordenaciones de cuatro edades distintas, los pasos de la órbita en orden) en Measures y Color space |
 | `test_gui_highlight.py` | 6 | los resaltados alrededor de la selección y el momento con *Follow*; el menú *View* dibuja el navegador y sigue al estado |

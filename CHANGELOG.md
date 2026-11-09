@@ -22,6 +22,11 @@ the commit `vX.Y.Z`.
   and *Corners* are gone, dragging does that. Sessions keep the QtAds layout; layouts saved by earlier versions
   are not translated (those sessions open with the default arrangement). Text panels scroll when short, plot
   panels resize.
+- **Attach floating panels**: an *Attach* button in the title bar of a floating window (one panel, or a group of
+  tabs floated with its undock button), with the same icon as QtAds' undock button, puts its panels back in the
+  main window, each in the tabs of its kind; *Panels → Attach floating panels* (`Ctrl+Alt+F`) does it for all.
+- **Readable tab titles in dark themes**: the tab titles take their colors from the desktop's palette (QtAds'
+  style sheet left the inactive ones nearly invisible), and follow a change between light and dark.
 - **Closing with unsaved changes asks** whether to save them (Save, Don't save, Cancel). Without saving, the next
   start reopens the session as last saved (or a new one); a crash still brings the unsaved changes back.
 

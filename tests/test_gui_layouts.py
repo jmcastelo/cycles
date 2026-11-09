@@ -121,3 +121,93 @@ def test_the_panels_menu(window):
     assert texts[:11] == [d.windowTitle() for d in window.docks.values()]   # show or hide each panel
     assert 'Arrange &around the navigator' in texts and '&Layouts' in texts and '&Reset layout' in texts
     assert not any('Move' in t or 'Corners' in t for t in texts)          # dragging does that now
+
+
+def test_floating_panels_attach_again(window, spin):
+    from cycles.gui.layouts import float_panel
+    window.arrange_panels('around')
+    spin()
+    float_panel(window, 'sky', (600, 500))
+    float_panel(window, 'measures', (600, 500))
+    spin()
+    sky = window.docks['sky']
+    assert sky.isFloating() and sky._attach_action.isVisible()          # the button, only while it floats
+    assert not window.docks['events']._attach_action.isVisible()
+    sky._attach_action.trigger()                                        # back with the panels of its kind
+    spin()
+    assert not sky.isFloating() and not sky._attach_action.isVisible() and not sky.isClosed()
+    assert sky.dockAreaWidget() is window.docks['events'].dockAreaWidget()
+    window.attach_floating()                                            # Panels → Attach floating panels
+    spin()
+    assert not window.docks['measures'].isFloating()
+    assert window.docks['measures'].dockAreaWidget() is window.docks['landscape'].dockAreaWidget()
+    assert not window.dock_manager.floatingWidgets() or not any(c.isVisible()
+                                                                    for c in window.dock_manager.floatingWidgets())
+    window.attach_floating()
+    assert 'No floating panels' in window.statusBar().currentMessage()
+
+
+def test_a_floating_group_attaches_again(window, spin):
+    """The undock button floats a whole group: QtAds' isFloating is then False for its panels."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
+    from PySide6.QtWidgets import QToolButton
+    window.arrange_panels('around')
+    spin()
+    window.docks['sky'].dockAreaWidget().setFloating()           # Sky, Sky comparison, Events, in one window
+    spin()
+    container = window.dock_manager.floatingWidgets()[0]
+    button = next(b for b in container.findChildren(QToolButton)
+                  if b.defaultAction() is window.docks['sky']._attach_action)
+    assert button.isVisible() and button.isEnabled()
+    QTest.mouseClick(button, Qt.MouseButton.LeftButton)          # the whole window comes back
+    spin()
+    names = ('sky', 'skycompare', 'events')
+    assert not any(window.docks[n].isInFloatingContainer() for n in names)
+    assert len({window.docks[n].dockAreaWidget() for n in names}) == 1
+    assert not any(window.docks[n]._attach_action.isVisible() for n in names)
+    window.docks['measures'].dockAreaWidget().setFloating()      # and the menu, for a floating group
+    spin()
+    window.attach_floating()
+    spin()
+    assert not any(window.docks[n].isInFloatingContainer() for n in ('measures', 'colorspace', 'landscape'))
+    assert window.statusBar().currentMessage() == 'Attached 5 floating panels'
+
+
+def test_inactive_tab_titles_are_readable_in_a_dark_palette(window):
+    from PySide6.QtGui import QColor, QPalette
+    from cycles.gui.layouts import tab_style
+    palette = QPalette()
+    palette.setColor(QPalette.ColorRole.Window, QColor('#202326'))
+    palette.setColor(QPalette.ColorRole.WindowText, QColor('#fcfcfc'))
+    style = tab_style(palette)
+    inactive = QColor(style.split('ads--CDockWidgetTab QLabel { color: ')[1].split(';')[0])
+    assert inactive.lightness() > 170                     # light on the dark background, dimmer than the active
+    assert inactive.lightness() < QColor('#fcfcfc').lightness()
+    applied = window.dock_manager.styleSheet()                # the explorer's own palette, appended to QtAds' sheet
+    assert applied.rstrip().endswith(tab_style(window.palette()).rstrip())
+
+
+def test_the_attach_button_shows_only_on_floating_windows(window, spin):
+    from PySide6.QtWidgets import QToolButton
+    from cycles.gui.layouts import attach_icon
+
+    def attach_buttons(holder):
+        actions = {id(d._attach_action) for d in window.docks.values()}
+        return [b for b in holder.findChildren(QToolButton)
+                if b.defaultAction() is not None and id(b.defaultAction()) in actions and b.isVisible()]
+
+    window.arrange_panels('around')
+    spin()
+    window.show_panel('date')                                   # another tab of a docked group to the front
+    window.show_panel('events')
+    spin()
+    assert attach_buttons(window.dock_manager) == []            # docked: no Attach button, not even greyed out
+    window.docks['sky'].dockAreaWidget().setFloating()
+    spin()
+    window.show_panel('skycompare')                             # another tab of the floating group
+    spin()
+    container = window.dock_manager.floatingWidgets()[0]
+    shown = attach_buttons(container)
+    assert len(shown) == 1 and shown[0].isEnabled() and not shown[0].icon().isNull()
+    assert window.docks['sky']._attach_action.icon().cacheKey() is not None and not attach_icon().isNull()

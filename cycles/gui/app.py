@@ -20,7 +20,8 @@ from cycles.gui.landscape import LandscapePanel
 from cycles.gui.notes import NotesPanel
 from cycles.gui.eventspanel import EventsPanel
 from cycles.gui.layouts import (
-    AROUND, arrange, fill_layouts_menu, load_layouts, make_dock, make_manager, show_panel,
+    AROUND, add_attach_buttons, arrange, attach_all, fill_layouts_menu, load_layouts, make_dock, make_manager,
+    show_panel,
 )
 from cycles.gui.session import SessionManager
 from cycles.gui.permutations import PermutationsPanel
@@ -103,6 +104,7 @@ class MainWindow(QMainWindow):
         self.sky_panel.compareRequested.connect(lambda: self.show_panel('skycompare'))
 
         load_layouts(self)
+        add_attach_buttons(self)
         self._build_toolbar()
         self._build_menus()
         self.navigator.hovered.connect(self._show_hovered)
@@ -140,6 +142,11 @@ class MainWindow(QMainWindow):
             self.restoreState(state, LAYOUT_VERSION)         # the toolbar
         if docks is not None:
             self.dock_manager.restoreState(docks, LAYOUT_VERSION)
+
+    def attach_floating(self) -> None:
+        count = attach_all(self)
+        self.statusBar().showMessage(f"Attached {count} floating panel{'s' if count != 1 else ''}" if count
+                                     else 'No floating panels', 4000)
 
     def reset_layout(self) -> None:
         for dock in self.docks.values():
@@ -463,6 +470,11 @@ class MainWindow(QMainWindow):
             action.triggered.connect(lambda _=False, l=layout: self.arrange_panels(l))
             around.addAction(action)
         panels_menu.addSeparator()
+        attach = QAction('Attach &floating panels', self)
+        attach.setShortcut(QKeySequence('Ctrl+Alt+F'))
+        attach.setToolTip('Put every floating panel back in the window, with the panels of its kind')
+        attach.triggered.connect(self.attach_floating)
+        panels_menu.addAction(attach)
         layouts = panels_menu.addMenu('&Layouts')
         layouts.aboutToShow.connect(lambda: fill_layouts_menu(self, layouts))
         self.panels_submenus = {'around': around, 'layouts': layouts}

@@ -417,6 +417,13 @@ Los paneles se acoplan alrededor del navegador con el **Qt Advanced Docking Syst
   recogen al pulsar fuera. Así se ganan espacio para el navegador sin cerrarlos.
 - Cada grupo tiene, en su barra, el menú de sus pestañas, el botón para hacerlo flotante y el de cerrarlo; la
   rueda central del ratón cierra una pestaña.
+- **Volver a acoplar**: una ventana flotante (un panel solo, o un grupo de pestañas sacado con su botón) tiene en
+  su barra el botón *Attach* (con el mismo icono que el de sacarla, el de QtAds, en su versión clara u oscura
+  según la paleta; solo aparece en las ventanas flotantes), que devuelve sus paneles a la ventana principal, cada uno a las pestañas de los
+  paneles de su tipo (o junto al navegador, si no hay ninguno acoplado); *Panels → Attach floating panels*
+  (`Ctrl+Alt+F`) devuelve todos los flotantes. También se puede arrastrar sobre las guías.
+- Los títulos de las pestañas toman sus colores de la paleta del escritorio (las inactivas, algo atenuadas), para
+  que se lean también en modo oscuro; si se cambia de modo con el explorador abierto, se recolorean.
 
 El menú *Panels*:
 
@@ -430,6 +437,7 @@ El menú *Panels*:
   (`Ctrl+Alt+D`). Los paneles cerrados siguen cerrados, pero colocados en su lado;
 - **Layouts**: disposiciones con nombre (*Save layout as…*, las *perspectivas* de QtAds), para cambiar entre ellas
   en cualquier sesión; se guardan en los ajustes del programa;
+- **Attach floating panels** (`Ctrl+Alt+F`): devuelve a la ventana todos los paneles flotantes;
 - **Reset layout**: todos los paneles abiertos, en pestañas a la derecha.
 
 Los paneles de texto (Subcycle, Date, Notes) se desplazan cuando su grupo es corto; los de gráficos se ajustan a su
@@ -460,6 +468,7 @@ modelo y los colores que se ven), y muestra su salida. *Open plots folder* abre 
 | `Alt+1` … `Alt+9`, `Alt+0` | mostrar u ocultar cada panel |
 | `Ctrl+Alt+T/S/V/G/B` | disposiciones: pestañas, lado a lado, apilados, rejilla, debajo |
 | `Ctrl+Alt+L/A/D` | alrededor del navegador: izquierda y derecha, alrededor, izquierda y debajo |
+| `Ctrl+Alt+F` | devolver a la ventana los paneles flotantes |
 | `Ctrl+Q` | salir |
 
 *Help → Navigation* resume los controles del navegador; *Help → About* da la versión del programa y su commit de git (capítulo 10, «Versiones»).
