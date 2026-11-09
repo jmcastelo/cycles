@@ -50,6 +50,7 @@ PANEL_WIDGETS = {
     'compositions_panel': ('depth', 'inside', 'color_by', 'lines', 'labels', 'view'),
     'landscape_panel': ('depth', 'measure', 'resolution', 'anchor_from', 'anchor_to', 'turns_from', 'turns_to'),
     'events_panel': ('kind', 'view', 'depth', 'inside', 'rotations', 'show_marks'),
+    'dynamics_panel': ('plot', 'series_box', 'reading', 'surrogate', 'depth', 'inside', 'delay'),
 }
 CAMERA_PANELS = ('measures_panel', 'colorspace_panel', 'compositions_panel')
 

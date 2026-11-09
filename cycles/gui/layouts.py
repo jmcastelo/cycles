@@ -17,7 +17,7 @@ import PySide6QtAds as ads
 KINDS = {
     'text': ('inspector', 'date', 'notes'),
     'sky': ('sky', 'skycompare', 'events'),
-    'graphs': ('measures', 'colorspace', 'permutations', 'compositions', 'landscape'),
+    'graphs': ('measures', 'colorspace', 'permutations', 'compositions', 'landscape', 'dynamics'),
 }
 SIDES = {'left': ads.LeftDockWidgetArea, 'right': ads.RightDockWidgetArea, 'bottom': ads.BottomDockWidgetArea}
 # Arrangements: side -> kinds of panels there (a group of tabs per side)

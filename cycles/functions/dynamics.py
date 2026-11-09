@@ -27,22 +27,25 @@ OFFSETS = np.array([0.0, 0.4, 0.7, 0.9])
 
 # -- the series: in the index order and in physical time
 
-def time_samples(starts, values, samples: int, time_map=None) -> np.ndarray:
+def time_samples(starts, values, samples: int, time_map=None, moments: bool = False, span=(0.0, 1.0)):
     """
     ``values`` (one per subcycle of a level, in time order, starting at ``starts`` as fractions of the cycle)
-    sampled at ``samples`` moments evenly spread over the cycle: in normalized time, or in years if a
-    ``time_map`` is given (the subcycles then last their years). Each sample takes the value of the subcycle
-    that contains it.
+    sampled at ``samples`` moments evenly spread over ``span`` (the whole cycle, or the part of it the subcycles
+    fill): in normalized time, or in years if a ``time_map`` is given (the subcycles then last their years). Each
+    sample takes the value of the subcycle that contains it. With ``moments``, also the moments sampled, in
+    normalized time: (values, moments).
     """
     starts, values = np.asarray(starts, dtype=float), np.asarray(values)
-    u = (np.arange(samples) + 0.5) / samples
+    a, b = span
+    u = a + (b - a) * (np.arange(samples) + 0.5) / samples
     if time_map is not None:
         # moments evenly spread in years, back to normalized time by inverting the (monotone) map on a grid
         from cycles.functions.cycle_analysis import dense_years
-        grid = np.linspace(0.0, 1.0, 20001)
+        grid = np.linspace(a, b, 20001)
         years = dense_years(time_map, grid)
-        u = np.interp(years[0] + u * (years[-1] - years[0]), years, grid)
-    return values[np.clip(np.searchsorted(starts, u, side='right') - 1, 0, len(starts) - 1)]
+        u = np.interp(years[0] + (u - a) / (b - a) * (years[-1] - years[0]), years, grid)
+    sampled = values[np.clip(np.searchsorted(starts, u, side='right') - 1, 0, len(starts) - 1)]
+    return (sampled, u) if moments else sampled
 
 
 def scales_between(length: int, low: int = 16, count: int = 16) -> np.ndarray:
@@ -276,6 +279,96 @@ def return_times(members, durations=None) -> np.ndarray:
     return np.diff(starts[where])
 
 
+# -- delay embedding and the correlation dimension
+
+def delay_embedding(x, dimension: int, delay: int = 1) -> np.ndarray:
+    """The states (x(n), x(n + delay), …, x(n + (dimension − 1)·delay)) of ``x``, one per row (Takens)."""
+    x = np.asarray(x, dtype=float)
+    n = len(x) - (dimension - 1) * delay
+    return np.stack([x[k * delay:k * delay + n] for k in range(dimension)], axis=1)
+
+
+def correlation_sums(states, radii, max_points: int = 3000, seed: int = 0) -> np.ndarray:
+    """
+    The correlation sum C(r) of Grassberger and Procaccia: the share of pairs of states closer than r (maximum
+    norm), for each of ``radii``, from at most ``max_points`` states chosen at random. C(r) ∝ r^D₂.
+    """
+    states = np.asarray(states, dtype=float)
+    if states.ndim == 1:
+        states = states[:, None]
+    if len(states) > max_points:
+        states = states[np.random.default_rng(seed).choice(len(states), max_points, replace=False)]
+    distances = []
+    for start in range(0, len(states), 500):                      # in blocks, to keep the memory small
+        block = states[start:start + 500]
+        d = np.max(np.abs(block[:, None, :] - states[None, :, :]), axis=2)
+        rows, cols = np.nonzero(np.arange(len(states))[None, :] > np.arange(start, start + len(block))[:, None])
+        distances.append(d[rows, cols])
+    distances = np.sort(np.concatenate(distances))
+    return np.searchsorted(distances, np.asarray(radii, dtype=float), side='right') / len(distances)
+
+
+def correlation_dimensions(x, dimensions, delay: int = 1, radii=None, max_points: int = 3000,
+                           seed: int = 0) -> dict:
+    """
+    The correlation dimension D₂ of the states of ``x`` embedded in each of ``dimensions``: the slope of
+    log C(r) against log r over ``radii`` (by default from 10^−2.5 to 10^−1 of the range of x). For a
+    deterministic series D₂ stops growing with the dimension (it is the dimension of the attractor); for noise it
+    grows with it. Returns ``radii``, the ``sums`` (one row per dimension) and the ``dimensions`` D₂.
+    """
+    x = np.asarray(x, dtype=float)
+    radii = np.ptp(x) * np.logspace(-2.5, -1, 12) if radii is None else np.asarray(radii, dtype=float)
+    sums = np.array([correlation_sums(delay_embedding(x, m, delay), radii, max_points, seed) for m in dimensions])
+    return {'radii': radii, 'sums': sums, 'dimensions': np.array([fit_exponent(radii, c) for c in sums])}
+
+
+# -- change points
+
+def change_points(x, count: int) -> np.ndarray:
+    """
+    Where the mean of ``x`` changes: the first ``count`` cuts of binary segmentation, each one the cut of some
+    segment that lowers the squared error the most (the largest changes first). Returns the indices where the
+    new segments start, in the order they were found.
+    """
+    x = np.asarray(x, dtype=float)
+    total = np.concatenate([[0.0], np.cumsum(x)])
+    squares = np.concatenate([[0.0], np.cumsum(x * x)])
+
+    def best_cut(a, b):
+        """The best cut of x[a:b] and how much it lowers the squared error."""
+        if b - a < 2:
+            return None, 0.0
+        t = np.arange(a + 1, b)
+        left, right = total[t] - total[a], total[b] - total[t]
+        gain = left ** 2 / (t - a) + right ** 2 / (b - t) - (total[b] - total[a]) ** 2 / (b - a)
+        k = int(np.argmax(gain))
+        return int(t[k]), float(gain[k])
+
+    segments = {(0, len(x)): best_cut(0, len(x))}
+    cuts = []
+    while len(cuts) < count:
+        (a, b), (cut, gain) = max(segments.items(), key=lambda item: item[1][1])
+        if cut is None or gain <= 1e-12 * max(1.0, squares[-1]):
+            break
+        cuts.append(cut)
+        del segments[(a, b)]
+        segments[(a, cut)] = best_cut(a, cut)
+        segments[(cut, b)] = best_cut(cut, b)
+    return np.array(cuts, dtype=int)
+
+
+def boundary_levels(indices, depth: int) -> np.ndarray:
+    """
+    The shallowest level each start of a subcycle of ``depth`` is a boundary of (its index in time order): 1 for
+    the starts of the ages (index a multiple of 4^(d−1)), 2 for those of the subages, …, d for the rest.
+    """
+    indices = np.asarray(indices, dtype=np.int64)
+    levels = np.full(len(indices), depth)
+    for level in range(depth - 1, 0, -1):
+        levels[indices % 4 ** (depth - level) == 0] = level
+    return levels
+
+
 # -- time reversal
 
 def reversal_symmetry(x, tolerance: float = 1e-9) -> tuple[str, float] | None:
@@ -313,6 +406,22 @@ def phase_randomized(x, seed: int = 0) -> np.ndarray:
     if len(x) % 2 == 0:
         phases[-1] = 0.0
     return np.fft.irfft(np.abs(spectrum) * np.exp(1j * phases), n=len(x)) + x.mean()
+
+
+def digit_permuted(values, lcoords, seed: int = 0, permutation=None) -> np.ndarray:
+    """
+    The values of the subcycles whose addresses are those of ``lcoords`` with their digits in another order: at
+    random for each subcycle (reproducible with ``seed``), or all by the same ``permutation`` of the positions
+    (section 3). The composition, and so the duration, of every subcycle stays, so the durations are unchanged;
+    what is lost is which level each age is at. The null model of the digit order.
+    """
+    values, lcoords = np.asarray(values), np.asarray(lcoords, dtype=np.int64)
+    depth = lcoords.shape[1]
+    if permutation is None:
+        moved = np.random.default_rng(seed).permuted(lcoords, axis=1)
+    else:
+        moved = lcoords[:, list(permutation)]
+    return values[moved @ (4 ** np.arange(depth - 1, -1, -1))]
 
 
 # -- what is known exactly
@@ -384,6 +493,17 @@ def exact_dharma_steps(depth: int, base: float) -> np.ndarray:
     k = np.arange(depth)
     tails = np.concatenate([[0.0], np.cumsum(w[::-1])])[k]           # Σ of the last k weights
     return (3 * tails - w[depth - 1 - k]) / (4 * w.sum())
+
+
+def exact_dharma_dimension(base: float) -> float:
+    """
+    The dimension of the values dharma takes (all subcycles counted alike, d → ∞), which is also its correlation
+    dimension in a delay embedding of any dimension (the next value is the present one plus one of a few steps,
+    ``exact_dharma_steps``). Above base 4 the four digits do not overlap: a Cantor set of dimension
+    log 4 / log b. Up to base 4 they overlap and fill an interval: dimension 1 (at base 2 the values are spread as
+    the sum of two uniform variables, a triangle).
+    """
+    return min(1.0, math.log(4) / math.log(base))
 
 
 def zoom_dynamics(proportions=PROPORTIONS) -> dict:

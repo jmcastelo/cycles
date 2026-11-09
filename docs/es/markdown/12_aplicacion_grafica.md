@@ -56,9 +56,9 @@ y el resaltado.
 | Control | Qué elige |
 |---|---|
 | *Cycle* | el modelo de ciclo (un preset, uno modificado, o tiempo normalizado) |
-| *Model…* | el editor del modelo (12.13) |
+| *Model…* | el editor del modelo (12.14) |
 | *Landscape* | abre el panel *Model landscape* |
-| *Color* y *Parameters…* | el coloreado (los veintiséis de `COLOR_KEYS`, en cuatro grupos: de la dirección, de las medidas, del modelo de ciclo y del cielo, con la descripción de cada uno al pasar por encima; los del modelo, en gris sin modelo, y los del cielo, también sin la efeméride del panel *Sky*) y sus parámetros (12.14) |
+| *Color* y *Parameters…* | el coloreado (los veintiséis de `COLOR_KEYS`, en cuatro grupos: de la dirección, de las medidas, del modelo de ciclo y del cielo, con la descripción de cada uno al pasar por encima; los del modelo, en gris sin modelo, y los del cielo, también sin la efeméride del panel *Sky*) y sus parámetros (12.15) |
 | *Levels* | cuántas filas se dibujan bajo el zoom (1 a 9, hasta la profundidad 9) |
 | *Highlight* | alrededor de la selección, los subciclos de su profundidad con la misma duración, la misma composición o su órbita bajo ⟨σ⟩ (con su imagen por σ en púrpura discontinuo); o, en todas las profundidades, los que cumplen la **consulta** (*Matching the query*, abajo); los demás se atenúan en el navegador y los resaltados se rodean en los gráficos |
 | consulta | la condición del resaltado *Matching the query*, y cuántos subciclos la cumplen |
@@ -316,7 +316,32 @@ etiquetas. Los catálogos se calculan una vez con la efeméride del panel *Sky* 
 (`sandbox/data/events/`), compartidos con `study_of_events.py`; el resultado es una sola prueba, y el estudio
 corrige la familia completa.
 
-## 12.13 El modelo de ciclo
+## 12.13 *Dynamics*
+
+![El panel Dynamics: el mapa de retorno de las duraciones de profundidad 6, con los colores de los subciclos, la serie desordenada detrás (gris) y la selección marcada](figuras/panel_dinamica.png)
+
+La serie de las duraciones o de una medida en los subciclos de un nivel, como sistema dinámico (capítulo 16). Se
+elige:
+
+- **el gráfico**: el mapa de retorno $x(n + \tau)$ frente a $x(n)$ (con el retardo $\tau$; en escala logarítmica
+  para las duraciones), la función de fluctuación del DFA con su exponente α, el espectro en bandas logarítmicas
+  con su exponente β, el diagrama de recurrencia (radio 5 % del rango; con más de 2048 valores se toman 2048 por
+  igual) o la serie con sus siete primeros puntos de cambio, coloreados por el nivel de la frontera en que caen;
+- **la serie**: la duración o cualquier medida (las del modelo y del cielo, cuando se pueden calcular);
+- **la lectura**: en el orden de los subciclos o en el tiempo, con instantes repartidos por igual en años del
+  modelo (o en tiempo normalizado, sin modelo);
+- **una serie sustituta** dibujada detrás, en gris: desordenada, con las fases al azar, o con los dígitos de cada
+  dirección en otro orden (el modelo nulo; se conservan las composiciones, y con ellas las duraciones).
+
+La profundidad (automática: la de la selección o el nivel bajo el zoom) y *Only inside the zoom* funcionan como en
+*Measures*. Debajo, los números de la serie: el exponente del DFA, la aspereza de orden 1, la dimensión de
+Higuchi, la entropía de permutación y la complejidad (en el orden de los subciclos), la determinación del diagrama
+de recurrencia (y la de la sustituta) o los niveles de los puntos de cambio. También lo que se sabe exactamente:
+$H$ y β de las duraciones, la aspereza $\log_4 b$ del dharma y la simetría al invertir el tiempo. El subciclo
+seleccionado se marca (un anillo en el mapa de retorno, una banda en la serie y en el diagrama de recurrencia); al
+pulsar un punto se selecciona su subciclo.
+
+## 12.14 El modelo de ciclo
 
 ![El editor del modelo de ciclo](figuras/dialogo_modelo.png)
 
@@ -326,7 +351,7 @@ los inicios de los yugas (UT), sus años, cuotas de tiempo y de arco, vueltas, a
 desviación de las cuotas. *Apply* lo aplica; *Save preset* y *Delete preset* gestionan los presets del usuario;
 *Best fit* busca el ancla y/o el arco que mejor cumplen ambos criterios (capítulo 8) y carga el resultado.
 
-## 12.14 Los parámetros de color
+## 12.15 Los parámetros de color
 
 ![El diálogo de parámetros de color](figuras/dialogo_colores.png)
 
@@ -340,7 +365,7 @@ cada uno con su degradado: el secuencial (de 0 a 1: dharma, pureza, mezcla, tens
 *Color by…* del panel *Measures*, y cambiarlos solo recolorea. Los cambios se aplican al momento;
 *Revert* vuelve a los valores con que se abrió y *Defaults* a los de por defecto.
 
-## 12.15 Guardar gráficos
+## 12.16 Guardar gráficos
 
 ![El diálogo para guardar gráficos](figuras/dialogo_guardar.png)
 
@@ -350,7 +375,7 @@ Tabloid; vertical o apaisado), al tamaño de la pantalla o a medida (mm, cm, pul
 opcional; en PNG o JPEG a una resolución elegida, o en PDF, SVG o EPS (vectoriales; EPS solo para los paneles),
 con fondo blanco o transparente. El navegador se dibuja para la página con una paleta clara.
 
-## 12.16 Sesiones
+## 12.17 Sesiones
 
 Una **sesión** es todo lo que muestra el explorador, guardado en un fichero JSON (`*.cycles.json`; el proyecto los
 guarda en `sandbox/sessions/`, fuera del control de versiones):
@@ -383,7 +408,7 @@ ella. Si la carpeta de la efeméride de una sesión
 no existe en este equipo se conserva la actual, y las partes que ya no encajan se avisan en la barra de estado.
 Un fichero que no es una sesión, o de una versión posterior, se rechaza sin cambiar nada.
 
-## 12.17 El dosier de un subciclo
+## 12.18 El dosier de un subciclo
 
 ![El diálogo del dosier](figuras/dialogo_dosier.png)
 
@@ -402,12 +427,12 @@ El pie de cada página lleva el subciclo, la sesión, la fecha y la versión del
 muchos puntos). Las opciones se recuerdan; *Open it when written* lo abre al terminar. Con todo, en A4 son unas
 11 páginas, en unos 2 s.
 
-## 12.18 Disposición de los paneles
+## 12.19 Disposición de los paneles
 
 ![Disposición «alrededor del navegador»: información a la izquierda, cielo a la derecha, gráficos debajo](figuras/disposicion_alrededor.png)
 
 Los paneles se acoplan alrededor del navegador con el **Qt Advanced Docking System** (QtAds, el paquete
-`PySide6-QtAds`): el navegador es el centro y los once paneles pueden estar abiertos a la vez, donde se quiera.
+`PySide6-QtAds`): el navegador es el centro y los doce paneles pueden estar abiertos a la vez, donde se quiera.
 
 - **Arrastrar**: un panel (por su pestaña) o un grupo de pestañas (por su barra) se suelta donde indican las
   guías que aparecen al arrastrar: a un lado del navegador o de otro grupo, dentro de un grupo como una pestaña
@@ -427,7 +452,7 @@ Los paneles se acoplan alrededor del navegador con el **Qt Advanced Docking Syst
 
 El menú *Panels*:
 
-- muestra u oculta cada panel (`Alt+1` a `Alt+9` y `Alt+0`; el undécimo, *Events*, sin atajo); al abrirse, vuelve
+- muestra u oculta cada panel (`Alt+1` a `Alt+9` y `Alt+0`; los dos últimos, *Events* y *Dynamics*, sin atajo); al abrirse, vuelve
   donde estaba;
 - los ordena en pestañas (`Ctrl+Alt+T`), lado a lado (`Ctrl+Alt+S`), apilados (`Ctrl+Alt+V`), en rejilla de dos
   columnas (`Ctrl+Alt+G`) o lado a lado bajo el navegador (`Ctrl+Alt+B`);
@@ -445,7 +470,7 @@ tamaño. El navegador conserva siempre un mínimo de espacio. La disposición se
 QtAds) y entre ejecuciones; las sesiones guardadas antes de la versión con QtAds se abren con la disposición por
 defecto (el resto de la sesión se recupera entero).
 
-## 12.19 El lanzador de estudios
+## 12.20 El lanzador de estudios
 
 ![El lanzador de estudios](figuras/lanzador_estudios.png)
 
@@ -454,7 +479,7 @@ marcados. Ejecuta los marcados (o uno con doble clic) como en la línea de órde
 *Save figures* (`--save`), *Show figures* (sin `--no-show`) y *With the explorer's session* (`--session` con el
 modelo y los colores que se ven), y muestra su salida. *Open plots folder* abre `sandbox/plots/`.
 
-## 12.20 Atajos de teclado
+## 12.21 Atajos de teclado
 
 | Atajo | Acción |
 |---|---|

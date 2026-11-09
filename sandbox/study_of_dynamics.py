@@ -318,6 +318,93 @@ def return_times(ctx, opts):
     _finish(fig, opts, 'return_times.png')
 
 
+@study
+def embedding(ctx, opts):
+    """Correlation dimension in delay embeddings: it stops growing for dharma (its exact value) and not for noise."""
+    dims = [1, 2, 3, 4, 5, 6]
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.8))
+    colors = plt.get_cmap('viridis')(np.linspace(0.1, 0.85, 4))
+    for base, color in zip((2, 3, 8, 16), colors):
+        x = compute_level(8, [4, base, common.BASES[2]]).dharmas
+        d2 = dy.correlation_dimensions(x, dims)['dimensions']
+        d2s = dy.correlation_dimensions(dy.shuffled(x), dims)['dimensions']
+        exact = dy.exact_dharma_dimension(base)
+        axes[0].plot(dims, d2, 'o-', color=color, label=f"dharma, base {base} (exact {exact:.3f})")
+        axes[0].plot(dims, d2s, 'x:', color=color)
+        print(f"dharma base {base:>2}: D₂ = {', '.join(f'{v:.3f}' for v in d2)} (exact {exact:.3f}); "
+              f"shuffled {', '.join(f'{v:.2f}' for v in d2s)}")
+    axes[0].plot([], [], 'x:', color='0.4', label='shuffled')
+    axes[0].set_xlabel('embedding dimension')
+    axes[0].set_ylabel('correlation dimension D₂')
+    axes[0].set_title('Dharma, depth 8 (index): deterministic, D₂ saturates', fontsize=10)
+    axes[0].legend(fontsize=8)
+    print("The measures, depth 8 (index), embedding dimensions 1 to 6:")
+    for i, (name, v) in enumerate(_varying(ctx.values).items()):
+        d2 = dy.correlation_dimensions(v, dims)['dimensions']
+        axes[1].plot(dims, d2, 'o-', ms=3, color=plt.get_cmap('tab20')(i % 20), label=name)
+        print(f"  {name:<12}{', '.join(f'{x:.2f}' for x in d2)}")
+    axes[1].plot(dims, dims, color='0.6', ls=':', label='noise (D₂ = m)')
+    axes[1].set_xlabel('embedding dimension')
+    axes[1].set_ylabel('correlation dimension D₂')
+    axes[1].set_title('Every measure, depth 8 (index)', fontsize=10)
+    axes[1].legend(fontsize=7, ncol=2)
+    fig.tight_layout()
+    _finish(fig, opts, 'embedding.png')
+
+
+def _cut_levels(cuts, depth, subcycles=None) -> np.ndarray:
+    """The level of the boundary each cut falls on (depth + 1: inside a subcycle). ``subcycles``: the subcycle of
+    each sample, for a series sampled in time."""
+    if subcycles is None:
+        return dy.boundary_levels(cuts, depth)
+    on_boundary = subcycles[cuts] != subcycles[cuts - 1]
+    return np.where(on_boundary, dy.boundary_levels(subcycles[cuts], depth), depth + 1)
+
+
+@study
+def change_points(ctx, opts):
+    """Where the measures change regime (binary segmentation): on the boundaries of which levels, against the null
+    of the digits in another order."""
+    level, depth, count = ctx.measured, 8, 15
+    _, moments = dy.time_samples(level.starts, level.durations, ctx.samples, ctx.time_map, moments=True)
+    subcycles = np.clip(np.searchsorted(level.starts, moments, side='right') - 1, 0, len(level.starts) - 1)
+    print(f"The first {count} cuts of each series, by the shallowest level whose boundary they fall on "
+          f"(1 = an age; {depth + 1} = inside a subcycle). The share of the starts that are boundaries of levels 1–3 "
+          f"is {4 ** 3 / 4 ** depth:.4f}.")
+    print(f"{'series':<12}{'index':>34}   {'digits permuted':>34}   {'time':>34}")
+    rows = {}
+    for name, v in _varying(ctx.values).items():
+        found = _cut_levels(dy.change_points(v, count), depth)
+        null = _cut_levels(dy.change_points(dy.digit_permuted(v, level.lcoords), count), depth)
+        in_time = _cut_levels(dy.change_points(ctx.in_time[name], count), depth, subcycles)
+        rows[name] = (found, null, in_time)
+        print(f"{name:<12}{' '.join(map(str, found)):>34}   {' '.join(map(str, null)):>34}   "
+              f"{' '.join(map(str, in_time)):>34}")
+    fig, ax = plt.subplots(figsize=(10, 5))
+    names = list(rows)
+    shallow = np.array([[np.mean(r <= 3) for r in rows[n]] for n in names])
+    width = 0.27
+    for k, (label, color) in enumerate((('index', '#1f77b4'), ('digits permuted', '0.6'), ('time', '#2ca02c'))):
+        ax.bar(np.arange(len(names)) + (k - 1) * width, shallow[:, k], width, color=color, label=label)
+    ax.set_xticks(np.arange(len(names)), names, rotation=45, ha='right')
+    ax.set_ylabel(f"share of the first {count} cuts on boundaries of levels 1–3")
+    ax.set_title('Change points of the measures (depth 8) on the boundaries of the division')
+    ax.legend(fontsize=8)
+    fig.tight_layout()
+    _finish(fig, opts, 'change_points.png')
+
+
+@study
+def digit_null(ctx, opts):
+    """The estimators on each measure with the digits of every address in a random order (the durations stay):
+    what comes from which level each age is at."""
+    keys = ('DFA α', 'H(q=1)', 'Higuchi D', 'β', 'PE', 'C')
+    print(f"{'measure':<12}" + "".join(f"{k:>16}" for k in keys) + "   (original → digits permuted)")
+    for name, v in _varying(ctx.values).items():
+        a, b = _estimates(v), _estimates(dy.digit_permuted(v, ctx.measured.lcoords))
+        print(f"{name:<12}" + "".join(f"{a[k]:>8.3f}→{b[k]:<7.3f}" for k in keys))
+
+
 @study(default=False)
 def roughness_by_base(ctx, opts):
     """Dharma's roughness and graph dimension for color bases from 1.25 to 4: estimates against log₄ b."""

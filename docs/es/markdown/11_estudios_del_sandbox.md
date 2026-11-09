@@ -131,6 +131,9 @@ orden de los índices y en $2^{18}$ instantes repartidos en años (capítulo 16)
 | `complexity_plane`* | el plano complejidad–entropía |
 | `recurrences`* | diagramas de recurrencia y su cuantificación a profundidad 5; la simetría al invertir el tiempo |
 | `return_times`* | los tiempos entre los inicios de los Kali de los niveles 2 a 4, en subciclos y en años |
+| `embedding`* | la dimensión de correlación en inmersiones de 1 a 6 dimensiones: el dharma con bases 2, 3, 8 y 16 frente a lo exacto y a la serie desordenada, y todas las medidas |
+| `change_points`* | los quince primeros puntos de cambio de cada medida (índice, tiempo, dígitos permutados) y el nivel de la frontera en que caen |
+| `digit_null`* | los estimadores de cada medida con los dígitos de las direcciones en otro orden |
 | `roughness_by_base` | la aspereza del dharma para bases de 1,25 a 4, frente a $\log_4 b$ |
 
 ### `study_of_permutations.py`: permutaciones

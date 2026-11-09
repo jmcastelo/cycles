@@ -1,6 +1,6 @@
 # 16. Dinámica: la evolución en el tiempo
 
-*Nuevo, sin publicar: `cycles.functions.dynamics` y el estudio `study_of_dynamics.py`.*
+*Nuevo, sin publicar: `cycles.functions.dynamics`, el estudio `study_of_dynamics.py` y el panel* Dynamics *del explorador.*
 
 ## 16.1 La pregunta
 
@@ -168,30 +168,103 @@ En años, el mismo retorno varía mucho, porque las edades que hay entre medias 
 defecto, entre los inicios de dos Kali del nivel 2 pasan de 7170 a 19 449 años (13 466 ± 5018), del nivel 3 de
 706 a 8199, y del nivel 4 de 70 a 3205.
 
-## 16.9 Cómo se ejecuta
+## 16.9 Inmersión y dimensión de correlación
+
+Con los retardos, cada valor y los $m - 1$ siguientes forman un estado en $m$ dimensiones (Takens). La **dimensión
+de correlación** $D_2$ (Grassberger y Procaccia) es la pendiente de la proporción de pares de estados más cercanos
+que $r$ frente a $r$. En una serie determinista deja de crecer con $m$: es la dimensión del atractor. En el ruido
+crece con $m$.
+
+El dharma tiene una respuesta exacta. El valor siguiente es el actual más uno de unos pocos pasos (16.4), así que
+los estados en cualquier dimensión son copias, desplazadas, del conjunto de valores del dharma. Su dimensión es la
+de ese conjunto (`exact_dharma_dimension`):
+$$D_2 = \min\left(1, \frac{\log 4}{\log b}\right).$$
+Por encima de la base 4 los cuatro dígitos no se solapan y los valores forman un conjunto de Cantor; hasta la base
+4 llenan un intervalo. Medido a profundidad 8, en dimensiones 1 a 6: con base 16 sale entre 0,524 y 0,526 (exacto
+0,5); con base 8, 0,705–0,709 (0,667); con base 3, 0,94–0,96 (1). Con base 2 sube despacio, de 0,98 a 1,23. La
+misma serie desordenada da 0,98; 1,96; 2,92… en las dimensiones 1, 2, 3…, como el ruido.
+
+Entre las medidas, el balance (0,80) y la densidad angular (0,88) no crecen: son suaves. La tendencia y el dharma
+crecen poco (hasta 1,47 y 1,23). La tensión, la aspereza y el microcosmos llegan a 1,8–2,0, y la pureza y la
+mezcla a 2,4–2,8: cuanto más ásperas, más dimensiones ocupan. La reunión de los planetas sube hasta 3, como el
+ruido. Las duraciones, el contraste y la complejidad toman pocos valores a una profundidad dada (las
+$(d + 1)^2$ duraciones, unos pocos pasos, cinco complejidades), así que su $D_2$ es casi 0: muchos pares están a
+distancia 0.
+
+![Dimensión de correlación frente a la dimensión de inmersión: el dharma con varias bases y sus series desordenadas, y todas las medidas](figuras/dinamica_inmersion.png)
+
+## 16.10 Puntos de cambio
+
+¿Cambian las medidas de régimen en las fronteras de la división? La **segmentación binaria** corta la serie donde
+más baja el error cuadrático de ajustar una media por tramo, y sigue cortando el tramo que más gane
+(`change_points`). Cada corte se clasifica por la frontera en la que cae: la del nivel menos profundo
+(`boundary_levels`; 1 es el inicio de una edad). En el tiempo, un corte dentro de un subciclo no cae en ninguna
+frontera.
+
+A profundidad 8, solo el 0,1 % de los inicios son fronteras de los niveles 1 a 3. Entre los quince primeros
+cortes, caen en ellas:
+
+| Medida | Orden de los índices | En el tiempo | Dígitos permutados |
+|---|---:|---:|---:|
+| aspereza | 93 % | 87 % | 0 % |
+| pureza, microcosmos | 60 % | 60–73 % | 0 % |
+| mezcla | 47 % | 53 % | 0 % |
+| tensión | 40 % | 33 % | 7 % |
+| tendencia | 20 % (los tres primeros: los inicios de las edades) | 20 % | 0 % |
+| duración | 27 % | 20 % | 27 % (la misma serie) |
+| dharma | 13 % | 13 % | 20 % |
+| contraste | 7 % | 47 % | 0 % |
+| balance, complejidad, densidad, reunión | 0 % | 0–7 % | 0 % |
+
+Las medidas que dependen de qué edades hay en cada nivel (aspereza, pureza, microcosmos, mezcla) cambian de
+régimen en las fronteras de los subciclos grandes, y con los dígitos en otro orden ya no lo hacen. El dharma
+no: no salta de una media a otra, sino que baja en rampa y sube de golpe (16.4), y un corte de medias cae en
+medio de la rampa. Lo suave (balance, densidad) y lo que viene del cielo (reunión) no sigue las fronteras.
+
+![Proporción de los quince primeros puntos de cambio que caen en fronteras de los niveles 1 a 3, por medida](figuras/dinamica_puntos_de_cambio.png)
+
+## 16.11 El orden de los dígitos como modelo nulo
+
+`digit_permuted` pone a cada subciclo el valor del subciclo con sus mismos dígitos en otro orden, al azar. La
+composición se conserva, así que las duraciones no cambian. Lo que se pierde es en qué nivel está cada edad.
+Comparado con desordenar la serie, este nulo conserva lo que depende solo de la composición.
+
+Con los dígitos permutados, toda medida pierde su aspereza ($H$ de orden 1, de hasta 0,99, baja a menos de 0,01), su
+entropía de permutación llega a 1 y su complejidad a 0. La tendencia, que solo depende del orden de los dígitos,
+queda en ruido blanco (DFA 0,50). Las demás conservan algo de memoria larga (DFA 0,71–0,88), porque los subciclos
+vecinos comparten casi toda su composición. Conclusión: **la dinámica de las medidas está en la jerarquía de los
+niveles**, no en las proporciones de las edades. Las duraciones, en cambio, solo dependen de la composición.
+
+## 16.12 En el explorador
+
+El panel *Dynamics* (12.13) muestra el mapa de retorno, el DFA, el espectro, el diagrama de recurrencia y los puntos
+de cambio de la serie del nivel de la selección, en el orden de los subciclos o en años, con una sustituta detrás
+(desordenada, con fases al azar o con los dígitos permutados), y los resultados exactos que le corresponden.
+
+## 16.13 Cómo se ejecuta
 
 `cycles.functions.dynamics` (solo numpy):
 
 | Función | Qué hace |
 |---|---|
-| `time_samples` | una serie por subciclo, muestreada en el tiempo (normalizado o en años) |
+| `time_samples` | una serie por subciclo, muestreada en el tiempo (normalizado o en años, en todo el ciclo o en un tramo) |
 | `dfa`, `mfdfa`, `rescaled_range` | fluctuaciones: $H$, $h(q)$, R/S |
 | `structure_functions`, `higuchi_dimension` | aspereza por momentos y dimensión de la gráfica |
 | `power_spectrum`, `binned_spectrum` | periodograma y su media en bandas logarítmicas |
 | `ordinal_distribution`, `permutation_entropy`, `statistical_complexity` | patrones ordinales (empates al azar o por posición) |
 | `recurrence_matrix`, `rqa` | recurrencias: tasa, determinismo, laminaridad, longitud media de las diagonales |
+| `delay_embedding`, `correlation_sums`, `correlation_dimensions` | inmersión con retardos y dimensión de correlación |
+| `change_points`, `boundary_levels` | puntos de cambio y el nivel de la frontera en que caen |
 | `return_times` | tiempos entre visitas a una clase, en subciclos o en tiempo |
-| `shuffled`, `phase_randomized` | series sustitutas |
+| `shuffled`, `phase_randomized`, `digit_permuted` | series sustitutas; la última, el nulo del orden de los dígitos |
 | `reversal_symmetry` | la simetría de una serie al invertir el tiempo |
 | `carry_lengths`, `exact_duration_ratios`, `exact_dharma_steps` | los acarreos y lo que fijan |
-| `exact_duration_hurst`, `exact_duration_spectrum`, `exact_dharma_roughness`, `zoom_dynamics` | los resultados exactos |
+| `exact_duration_hurst`, `exact_duration_spectrum`, `exact_dharma_roughness`, `exact_dharma_dimension`, `zoom_dynamics` | los resultados exactos |
 
 El estudio `sandbox/study_of_dynamics.py` (capítulo 11) aplica todo a las duraciones y a todas las medidas.
 
-## 16.10 Pendiente
+## 16.14 Pendiente
 
-- Un panel *Dynamics* en el explorador: el mapa de retorno, las fluctuaciones, el espectro y el diagrama de
-  recurrencia del nivel o del subciclo seleccionado.
-- Inmersión con retardos y dimensión de correlación; detección de puntos de cambio.
-- Una serie sustituta que permute los dígitos de las direcciones (conserva la composición y deshace el orden) y
-  sirva como modelo nulo de las medidas.
+- El valor p de los puntos de cambio frente al nulo de los dígitos, con muchas permutaciones, en lugar de una.
+- Las mismas herramientas sobre las medidas del cielo a profundidades menores, donde un subciclo dura más que los
+  periodos de los planetas exteriores.

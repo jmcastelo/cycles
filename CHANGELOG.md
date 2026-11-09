@@ -19,6 +19,16 @@ the commit `vX.Y.Z`.
   Riesz-product spectrum; dharma has roughness log₄ b; zooming in is chaotic (entropy = Lyapunov = H(p) = 1.28
   nats per level) and moving on in time an odometer with zero entropy. Purity, mixture, tension, roughness and
   complexity read the same backwards; dharma and trend turn around 5/8 and 0.
+  Also delay embedding and the correlation dimension (dharma's is exact, min(1, log 4/log b), in every embedding
+  dimension: it is deterministic), change points by binary segmentation and the level of the boundary each falls
+  on (roughness, purity, microcosm and mixture change regime on the boundaries of levels 1–3), and a
+  digit-permuted surrogate, the null model of the digit order (the durations stay; the structure of the measures
+  goes: it is in the hierarchy of the levels).
+- **The Dynamics panel**: the durations or a measure of a level as a time series, in the order of the subcycles or
+  evenly in years: return map, DFA fluctuations, spectrum, recurrence plot, or the series with its change points,
+  with a surrogate drawn behind (shuffled, phase-randomized or digits permuted), the estimates and what is known
+  exactly; the selection is marked and clicking selects. Layouts saved before it are not restored (the layout
+  version is now 10).
 - **The multifractal spectrum of the division** (`cycles.functions.multifractal`, `sandbox/study_of_multifractal.py`,
   docs 1.9): f(α) exactly by the Legendre transform for the two measures the division puts on the cycle (the time
   on the index line, the count on the time line), and estimated at finite depths by histograms of the classes of

@@ -29,6 +29,7 @@ from cycles.gui.datepanel import DatePanel
 from cycles.gui.export import LOGICAL_DPI, ExportDialog, GraphSource, save_figure, save_widget
 from cycles.gui.inspector import Inspector
 from cycles.gui.measures import MeasuresPanel
+from cycles.gui.dynamicspanel import DynamicsPanel
 from cycles.gui.navigator import Breadcrumb, Navigator
 from cycles.gui.sky import SkyPanel
 from cycles.gui.studies import StudyLauncher
@@ -45,7 +46,7 @@ QUERY_HELP = (
     '  a1, a2, … (the age of each level), first, last; the ages Satya, Treta, Dvapara, Kali;\n'
     '  and, or, not, < <= > >= == !=, + - * /, count(age), abs(x).\n'
     'Examples: trend > 0.3 and dharma < 0.5   |   last == Kali and count(Satya) >= 2   |   year > 0')
-LAYOUT_VERSION = 9           # 9: the panels dock with QtAds
+LAYOUT_VERSION = 10          # 9: the panels dock with QtAds; 10: the Dynamics panel
 
 
 class MainWindow(QMainWindow):
@@ -79,6 +80,7 @@ class MainWindow(QMainWindow):
         self.landscape_panel = LandscapePanel(self.state)
         self.notes_panel = NotesPanel(self.state)
         self.events_panel = EventsPanel(self.sky_panel, self.state)
+        self.dynamics_panel = DynamicsPanel(self.state)
         self.docks = {
             'inspector': make_dock(self.dock_manager, 'Subcycle', 'inspector', self.inspector),
             'date': make_dock(self.dock_manager, 'Date', 'date', self.date_panel),
@@ -91,6 +93,7 @@ class MainWindow(QMainWindow):
             'landscape': make_dock(self.dock_manager, 'Model landscape', 'landscape', self.landscape_panel),
             'notes': make_dock(self.dock_manager, 'Notes', 'notes', self.notes_panel),
             'events': make_dock(self.dock_manager, 'Events', 'events', self.events_panel),
+            'dynamics': make_dock(self.dock_manager, 'Dynamics', 'dynamics', self.dynamics_panel),
         }
         self.launcher: StudyLauncher | None = None
         self.model_dialog: CycleModelDialog | None = None
@@ -99,7 +102,8 @@ class MainWindow(QMainWindow):
         for key, panel in (('sky', self.sky_panel), ('measures', self.measures_panel),
                            ('colorspace', self.colorspace_panel), ('permutations', self.permutations_panel),
                            ('compositions', self.compositions_panel), ('skycompare', self.skycompare_panel),
-                           ('landscape', self.landscape_panel), ('events', self.events_panel)):
+                           ('landscape', self.landscape_panel), ('events', self.events_panel),
+                           ('dynamics', self.dynamics_panel)):
             panel.saveRequested.connect(lambda key=key: self.save_graph(key))
         self.sky_panel.compareRequested.connect(lambda: self.show_panel('skycompare'))
 
@@ -585,6 +589,7 @@ class MainWindow(QMainWindow):
             figure_source('landscape', 'Model landscape', self.landscape_panel, self.landscape_panel.title,
                           self.landscape_panel.finish),
             figure_source('events', 'Events', self.events_panel, self.events_panel.title),
+            figure_source('dynamics', 'Dynamics', self.dynamics_panel, lambda: self.dynamics_panel.graph_name()),
         ]
 
     def save_graph(self, key: str | None = None) -> None:
@@ -594,7 +599,7 @@ class MainWindow(QMainWindow):
             key = next((name for name, dock in self.docks.items()
                         if focus is not None and dock.isAncestorOf(focus) and name in
                         ('sky', 'measures', 'colorspace', 'permutations', 'compositions', 'skycompare',
-                                                       'landscape', 'events')),
+                                                       'landscape', 'events', 'dynamics')),
                        'navigator')
         if self.export_dialog is None:
             self.export_dialog = ExportDialog(self.graph_sources(), key, self)

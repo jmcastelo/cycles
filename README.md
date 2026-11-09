@@ -6,7 +6,8 @@ A cycle is split into four ages in the ratio 4 : 3 : 2 : 1 (Satya, Treta,
 Dvapara and Kali Yuga, or the Golden, Silver, Bronze and Iron ages), each age
 again in the same ratio, and so on to any depth. The project studies the
 resulting structure (durations, compositions, permutations, measures, colors,
-sound), places the cycle in history through the precession of the equinoxes,
+sound, the multifractal spectrum), studies how the durations and the measures
+evolve in time as a dynamical system, places the cycle in history through the precession of the equinoxes,
 computes the sky at any moment with its own long-term N-body ephemeris, and
 tests whether the subcycle boundaries fall on planetary events more often than
 chance. A graphical explorer (PySide6) ties it all together.
@@ -60,8 +61,8 @@ describe the version of the program they match; see
 |---|---|
 | [Index and glossary](docs/es/markdown/00_indice_y_glosario.md) | organisation, main results, conventions, glossary, references |
 | **I. The structure** | |
-| [1. Fractal division](docs/es/markdown/01_division_fractal.md) | the 4:3:2:1 rule, addresses and indices, durations, compositions |
-| [2. Measures and colors](docs/es/markdown/02_medidas_y_colores.md) | dharma, purity and seven more measures; the colorings and their parameters |
+| [1. Fractal division](docs/es/markdown/01_division_fractal.md) | the 4:3:2:1 rule, addresses and indices, durations, compositions, the multifractal spectrum |
+| [2. Measures and colors](docs/es/markdown/02_medidas_y_colores.md) | dharma, purity and ten more measures; the colorings and their parameters |
 | [3. Permutations](docs/es/markdown/03_permutaciones.md) | permutations of the digit positions, orbits, Burnside's lemma |
 | **II. Astronomy and time** | |
 | [4. Precession and ayanamsa](docs/es/markdown/04_precesion_y_ayanamsa.md) | sidereal and tropical zodiacs, linear and long-term precession |
@@ -78,6 +79,8 @@ describe the version of the program they match; see
 | [14. Results and open questions](docs/es/markdown/14_resultados_y_preguntas_abiertas.md) | what has been found and what remains |
 | **IV. Significance tests** | |
 | [15. Planetary events and significance](docs/es/markdown/15_eventos_y_significacion.md) | event catalogues, rigid-rotation tests, the hypotheses tested |
+| **V. Dynamics** | |
+| [16. Dynamics](docs/es/markdown/16_dinamica.md) | the series in index order and in years: return maps, Hurst exponents, roughness, spectra, ordinal patterns, recurrences, correlation dimension, change points, surrogates; exact results against estimates; the Dynamics panel |
 
 All functions have docstrings, e.g. `help(compute_level)`.
 
@@ -99,8 +102,24 @@ All functions have docstrings, e.g. `help(compute_level)`.
 - Burgess, E. (1860). *Translation of the Sûrya-Siddhânta.* Journal of the
   American Oriental Society 6.
 - Billard, R. (1971). *L'astronomie indienne.* École française d'Extrême-Orient.
+- Lempel, A., Ziv, J. (1976). *On the complexity of finite sequences.* IEEE
+  Trans. Inf. Theory 22, 75; Kaspar, F., Schuster, H. G. (1987). *Easily
+  calculable measure for the complexity of spatiotemporal patterns.* Phys.
+  Rev. A 36, 842.
+- Ottosson, B. (2020). *A perceptual color space for image processing* (OKLab).
 - Guénon, R. *Formes traditionnelles et cycles cosmiques*; Hani, J. (on the
   subdivision of the cycles).
+- Peng, C.-K. et al. (1994). *Mosaic organization of DNA nucleotides.* Phys.
+  Rev. E 49, 1685 (DFA); Kantelhardt, J. W. et al. (2002). *Multifractal
+  detrended fluctuation analysis of nonstationary time series.* Physica A 316, 87.
+- Higuchi, T. (1988). *Approach to an irregular time series on the basis of the
+  fractal theory.* Physica D 31, 277.
+- Bandt, C., Pompe, B. (2002). *Permutation entropy.* Phys. Rev. Lett. 88,
+  174102; Rosso, O. A. et al. (2007). *Distinguishing noise from chaos.* Phys.
+  Rev. Lett. 99, 154102.
+- Grassberger, P., Procaccia, I. (1983). *Measuring the strangeness of strange
+  attractors.* Physica D 9, 189; Marwan, N. et al. (2007). *Recurrence plots for
+  the analysis of complex systems.* Phys. Rep. 438, 237.
 
 ## License
 

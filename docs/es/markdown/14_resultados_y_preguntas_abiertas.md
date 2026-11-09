@@ -28,7 +28,11 @@
    densidad), brownianas (dharma, tendencia, tensión, aspereza, microcosmos, pureza, mezcla) y ruidos (duraciones,
    complejidad, contraste); la reunión de los planetas no tiene memoria a profundidad 8. Leídas en años dan casi
    lo mismo que en el orden de los índices. La pureza, la mezcla, la tensión, la aspereza y la complejidad son
-   capicúas; el dharma y la tendencia, impares.
+   capicúas; el dharma y la tendencia, impares. El dharma es determinista: su dimensión de correlación no crece
+   con la inmersión y es la exacta, $\min(1, \log 4/\log b)$. La aspereza, la pureza, el microcosmos y la mezcla
+   cambian de régimen en las fronteras de los niveles 1 a 3 (del 47 al 93 % de sus quince primeros puntos de
+   cambio, frente al 0,1 % del azar); con los dígitos en otro orden, toda la estructura de las medidas desaparece:
+   está en la jerarquía de los niveles.
 7. **Colores.** Dentro de los rangos de los parámetros los colores de cada nivel son únicos; el coloreado del
    tetraedro llena un tetraedro de Sierpinski.
 
@@ -85,7 +89,7 @@ con Holm).
 | **Sonido en el explorador** (idea 7) | reproducir el tramo ampliado con un cursor ligado al momento del cielo, y oír el efecto de σ |
 | **Animación de permutaciones** | reproducir el panel de permutaciones a través de σ⁰, σ¹, σ², … |
 | **Acoplamiento con QtAds** | hecho (capítulo 12) |
-| **Dinámica** | hecho el cálculo y el estudio (capítulo 16); pendientes: un panel *Dynamics*, la inmersión con retardos y la dimensión de correlación, los puntos de cambio y una sustituta por permutación de dígitos |
+| **Dinámica** | hecho: cálculo, estudio y panel *Dynamics* (capítulos 16 y 12.13); pendientes: el valor p de los puntos de cambio con muchas permutaciones de dígitos, y las medidas del cielo a profundidades menores |
 | **Dosier** | el resumen pasa a una segunda página A4 vertical cuando el subciclo tiene marcadores |
 | **Marte antes de −2000** | discrepancia con Moshier; falta una tercera referencia (DE441) |
 | **Incertidumbre numérica de la efeméride** | integrar variantes con `build_many` |

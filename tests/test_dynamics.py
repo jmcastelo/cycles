@@ -138,3 +138,51 @@ def test_surrogates_keep_what_they_should():
     assert np.array_equal(np.sort(dy.shuffled(x)), np.sort(x))
     y = dy.phase_randomized(x)
     assert np.allclose(np.abs(np.fft.rfft(y - y.mean())), np.abs(np.fft.rfft(x - x.mean())))
+
+
+@pytest.mark.parametrize('base', [3, 8, 16])
+def test_the_correlation_dimension_of_dharma_saturates(base):
+    x = compute_level(7, [4, base, 2]).dharmas
+    d2 = dy.correlation_dimensions(x, [1, 3, 5], max_points=2000)['dimensions']
+    assert np.all(np.abs(d2 - dy.exact_dharma_dimension(base)) < 0.07)     # the same in every dimension
+    noise = dy.correlation_dimensions(dy.shuffled(x), [1, 3], max_points=2000)['dimensions']
+    assert noise[1] > 2.4 * noise[0]                                        # noise fills the embedding
+
+
+def test_embedding_and_correlation_sums():
+    states = dy.delay_embedding(np.arange(10.0), 3, 2)
+    assert states.shape == (6, 3) and np.array_equal(states[0], [0, 2, 4])
+    line = np.random.default_rng(0).random(4000)
+    sums = dy.correlation_sums(line, [0.01, 0.1, 1.0])
+    assert np.allclose(sums, [0.02, 0.19, 1.0], atol=0.01)                 # uniform: 2r − r²
+    assert dy.exact_dharma_dimension(2) == 1.0 and np.isclose(dy.exact_dharma_dimension(16), 0.5)
+
+
+def test_change_points():
+    x = np.repeat([0.0, 3.0, 1.0, 1.5], [100, 50, 200, 80])
+    cuts = dy.change_points(x, 3)
+    assert list(cuts) == [100, 150, 350]                                      # the largest change first
+    assert len(dy.change_points(x, 10)) == 3                                  # nothing more to cut
+    assert list(dy.boundary_levels([0, 16, 32, 4, 5, 20], 3)) == [1, 1, 1, 2, 3, 2]
+    # trend changes first at the starts of the ages
+    level = compute_level(6)
+    from cycles.functions.measure import address_measures
+    trend = address_measures(level.lcoords, level.durations, level.dharmas, level.purities, [4, 2, 2])['trend']
+    assert sorted(dy.boundary_levels(dy.change_points(trend, 3), 6)) == [1, 1, 1]
+
+
+def test_the_digit_permuted_null(level):
+    assert np.allclose(dy.digit_permuted(level.durations, level.lcoords), level.durations, rtol=1e-12)  # same compositions
+    shuffled = dy.digit_permuted(level.dharmas, level.lcoords, seed=2)
+    assert not np.allclose(shuffled, level.dharmas)
+    lags = dy.scales_between(len(shuffled), 4)
+    assert dy.fit_exponent(lags, dy.structure_functions(shuffled, lags, [1])[0]) < 0.05   # the roughness is gone
+    # one permutation of the positions for all: the reversal (3, 2, …, 0) of the order of the levels
+    reversed_levels = dy.digit_permuted(np.arange(len(level.dharmas)), level.lcoords, permutation=range(7, -1, -1))
+    assert reversed_levels[1] == 4 ** 7 and reversed_levels[4 ** 7] == 1
+
+
+def test_time_samples_give_their_moments():
+    level = compute_level(2)
+    values, moments = dy.time_samples(level.starts, np.arange(16), 100, moments=True)
+    assert np.all(np.diff(moments) > 0) and np.all(level.starts[values] <= moments)

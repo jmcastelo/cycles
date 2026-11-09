@@ -107,4 +107,13 @@ if 'events' in WHICH:
     ep.kind.setCurrentIndex(ep.kind.findData('great')); ep.depth.setValue(2); ep.render(); ep.canvas.draw(); spin(30)
     dock.widget().grab().save(f"{OUT}/panel_eventos.png")
     w.arrange_panels('tabs'); spin()
+if 'dynamics' in WHICH:
+    s.set_focus(()); s.select((3, 1, 2, 0, 1, 2)); spin()
+    w.show_panel('dynamics'); spin()
+    from cycles.gui.layouts import float_panel
+    dp = w.dynamics_panel; float_panel(w, 'dynamics', (900, 720)); dock = w.docks['dynamics']; spin(60)
+    dp.plot.setCurrentIndex(dp.plot.findData('return')); dp.series_box.setCurrentIndex(dp.series_box.findData('duration'))
+    dp.surrogate.setCurrentIndex(dp.surrogate.findData('shuffled')); dp.render(); dp.canvas.draw(); spin(30)
+    dock.widget().grab().save(f"{OUT}/panel_dinamica.png")
+    w.arrange_panels('tabs'); spin()
 print('ok')

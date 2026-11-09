@@ -26,13 +26,13 @@ explorador gráfico. Incorpora, revisados y actualizados, los documentos de `efe
 | **III. El software** | |
 | [`10_arquitectura_y_modulos.md`](10_arquitectura_y_modulos.md) | organización del código, instalación, guía de los módulos de cálculo, figuras y explorador, y versiones |
 | [`11_estudios_del_sandbox.md`](11_estudios_del_sandbox.md) | el ejecutor de estudios, sus opciones (`--session`) y cada estudio |
-| [`12_aplicacion_grafica.md`](12_aplicacion_grafica.md) | el explorador: navegador, los once paneles, modelo, colores, gráficos, sesiones, dosier, disposición, atajos |
+| [`12_aplicacion_grafica.md`](12_aplicacion_grafica.md) | el explorador: navegador, los doce paneles, modelo, colores, gráficos, sesiones, dosier, disposición, atajos |
 | [`13_pruebas.md`](13_pruebas.md) | cómo se ejecutan las pruebas y qué comprueban |
 | [`14_resultados_y_preguntas_abiertas.md`](14_resultados_y_preguntas_abiertas.md) | resultados obtenidos y trabajo pendiente |
 | **IV. Contrastes** | |
 | [`15_eventos_y_significacion.md`](15_eventos_y_significacion.md) | catálogos de acontecimientos planetarios (conjunciones, cambios de trígono), contrastes de significación con rotaciones rígidas, tres hipótesis (Sūrya Siddhānta, grandes conjunciones, planetas exteriores) en los zodiacos sidéreo y trópico, y el panel *Events* |
 | **V. Dinámica** | |
-| [`16_dinamica.md`](16_dinamica.md) | las duraciones y las medidas como series temporales, en el orden de los índices y en años: el odómetro y la aplicación de ampliación (entropía, Lyapunov), mapas de retorno, exponentes de Hurst y MF-DFA, aspereza y dimensión de las gráficas, espectros, patrones ordinales, recurrencias, tiempos de retorno, la inversión del tiempo; lo exacto frente a lo estimado |
+| [`16_dinamica.md`](16_dinamica.md) | las duraciones y las medidas como series temporales, en el orden de los índices y en años: el odómetro y la aplicación de ampliación (entropía, Lyapunov), mapas de retorno, exponentes de Hurst y MF-DFA, aspereza y dimensión de las gráficas, espectros, patrones ordinales, recurrencias, dimensión de correlación, puntos de cambio, tiempos de retorno, la inversión del tiempo, el nulo de los dígitos permutados; lo exacto frente a lo estimado; el panel *Dynamics* |
 
 Estos documentos están en `docs/es/` del repositorio: los capítulos en `markdown/`, con sus figuras en
 `markdown/figuras/`; la versión LaTeX, que reúne todos los capítulos en un solo documento, se genera en `tex/` con
@@ -195,3 +195,13 @@ al azar.
   Physical Review A 36, 842–848.
 - Ottosson, B. (2020). *A perceptual color space for image processing* (OKLab).
 - Guénon, R. *Formes traditionnelles et cycles cosmiques*; Hani, J. (sobre la subdivisión de los ciclos).
+- Peng, C.-K. et al. (1994). *Mosaic organization of DNA nucleotides.* Physical Review E 49, 1685 (el DFA);
+  Kantelhardt, J. W. et al. (2002). *Multifractal detrended fluctuation analysis of nonstationary time series.*
+  Physica A 316, 87–114.
+- Higuchi, T. (1988). *Approach to an irregular time series on the basis of the fractal theory.* Physica D 31,
+  277–283.
+- Bandt, C., Pompe, B. (2002). *Permutation entropy: a natural complexity measure for time series.* Physical
+  Review Letters 88, 174102; Rosso, O. A. et al. (2007). *Distinguishing noise from chaos.* Physical Review
+  Letters 99, 154102.
+- Grassberger, P., Procaccia, I. (1983). *Measuring the strangeness of strange attractors.* Physica D 9, 189–208;
+  Marwan, N. et al. (2007). *Recurrence plots for the analysis of complex systems.* Physics Reports 438, 237–329.

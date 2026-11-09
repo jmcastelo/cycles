@@ -25,7 +25,7 @@ def _area_side(window, name: str) -> str:
 def test_the_navigator_is_the_central_widget(window):
     central = window.dock_manager.centralWidget()
     assert central.isCentralWidget() and central.widget().isAncestorOf(window.navigator)
-    assert len(window.docks) == 11 and all(not d.isCentralWidget() for d in window.docks.values())
+    assert len(window.docks) == 12 and all(not d.isCentralWidget() for d in window.docks.values())
 
 
 @pytest.mark.parametrize('layout, sides', [
@@ -118,7 +118,7 @@ def test_the_panels_menu(window):
     from PySide6.QtWidgets import QMenu
     menu = next(m for m in window.findChildren(QMenu) if m.title() == '&Panels')
     texts = [a.text() for a in menu.actions()]
-    assert texts[:11] == [d.windowTitle() for d in window.docks.values()]   # show or hide each panel
+    assert texts[:12] == [d.windowTitle() for d in window.docks.values()]   # show or hide each panel
     assert 'Arrange &around the navigator' in texts and '&Layouts' in texts and '&Reset layout' in texts
     assert not any('Move' in t or 'Corners' in t for t in texts)          # dragging does that now
 
@@ -171,7 +171,7 @@ def test_a_floating_group_attaches_again(window, spin):
     window.attach_floating()
     spin()
     assert not any(window.docks[n].isInFloatingContainer() for n in ('measures', 'colorspace', 'landscape'))
-    assert window.statusBar().currentMessage() == 'Attached 5 floating panels'
+    assert window.statusBar().currentMessage() == 'Attached 6 floating panels'
 
 
 def test_inactive_tab_titles_are_readable_in_a_dark_palette(window):
