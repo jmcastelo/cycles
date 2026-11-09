@@ -31,6 +31,8 @@ explorador gráfico. Incorpora, revisados y actualizados, los documentos de `efe
 | [`14_resultados_y_preguntas_abiertas.md`](14_resultados_y_preguntas_abiertas.md) | resultados obtenidos y trabajo pendiente |
 | **IV. Contrastes** | |
 | [`15_eventos_y_significacion.md`](15_eventos_y_significacion.md) | catálogos de acontecimientos planetarios (conjunciones, cambios de trígono), contrastes de significación con rotaciones rígidas, tres hipótesis (Sūrya Siddhānta, grandes conjunciones, planetas exteriores) en los zodiacos sidéreo y trópico, y el panel *Events* |
+| **V. Dinámica** | |
+| [`16_dinamica.md`](16_dinamica.md) | las duraciones y las medidas como series temporales, en el orden de los índices y en años: el odómetro y la aplicación de ampliación (entropía, Lyapunov), mapas de retorno, exponentes de Hurst y MF-DFA, aspereza y dimensión de las gráficas, espectros, patrones ordinales, recurrencias, tiempos de retorno, la inversión del tiempo; lo exacto frente a lo estimado |
 
 Estos documentos están en `docs/es/` del repositorio: los capítulos en `markdown/`, con sus figuras en
 `markdown/figuras/`; la versión LaTeX, que reúne todos los capítulos en un solo documento, se genera en `tex/` con
@@ -58,6 +60,10 @@ regeneran las figuras, en `generar_figuras/`.
    modelo** (ancla × arco) se acerca a los acontecimientos más de lo que permite el azar, tenida en cuenta la búsqueda.
 7. **La efeméride propia** cubre ±70 000 años; coincide con DE421 a decenas de km y con Moshier a 10″ o menos hasta
    −3000, salvo Marte (discrepancia abierta). Más allá de −3000 no hay referencia independiente.
+8. **Como series temporales**, las duraciones tienen memoria larga y son multifractales con exponentes exactos
+   ($H = 0{,}934$), el dharma es tan áspero como un camino browniano con base 2 ($H = \log_4 b$), y cada paso de
+   una duración o del dharma lo fija el número de Kali acarreados. Ampliar una edad es caótico (entropía
+   $H(p) = 1{,}28$ nats por nivel); avanzar en el tiempo, un odómetro sin entropía.
 
 ## Convenciones
 

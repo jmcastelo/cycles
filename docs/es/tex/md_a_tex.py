@@ -29,9 +29,9 @@ CHAPTERS = {
     '04': ('Precesion', None), '05': ('Fechas', None), '06': ('Nbody', None), '07': ('Validacion', None),
     '08': ('Modelo', None), '09': ('Hindu', None), '10': ('Modulos', None), '11': ('Estudios', None),
     '12': ('Aplicacion', None), '13': ('Pruebas', None), '14': ('Resultados', None),
-    '15': ('Eventos', None),
+    '15': ('Eventos', None), '16': ('Dinamica', None),
 }
-PARTS = {'01': 'La estructura', '04': 'Astronomía y tiempo', '10': 'El software', '15': 'Contrastes'}
+PARTS = {'01': 'La estructura', '04': 'Astronomía y tiempo', '10': 'El software', '15': 'Contrastes', '16': 'Dinámica'}
 LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 _KEPT: list[str] = []      # trozos ya convertidos, sustituidos por marcas mientras se procesa el resto
 

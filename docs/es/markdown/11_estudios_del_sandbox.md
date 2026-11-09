@@ -116,6 +116,23 @@ Los estudios del principio usan las bases de la versión original (pesos de pure
 | `key_numbers`* | los extremos, el exponente típico y las dimensiones de información y de correlación de las dos medidas, y su dualidad |
 | `spectra`* | la figura de 1.9: $f(\alpha)$ exacto y estimado a profundidades 10, 40 y 160 |
 
+### `study_of_dynamics.py`: la evolución en el tiempo
+
+Las duraciones (profundidad 9) y todas las medidas (profundidad 8, con el modelo de la sesión o el por defecto), en el
+orden de los índices y en $2^{18}$ instantes repartidos en años (capítulo 16).
+
+| Estudio | Qué hace |
+|---|---|
+| `exact_numbers`* | la aplicación de ampliación (entropía, Lyapunov), $h(q)$ exacto de las duraciones, la aspereza del dharma por base |
+| `return_maps`* | el mapa de retorno de las duraciones por acarreos, y los pasos del dharma, exactos frente a vistos |
+| `exponents`* | DFA, R/S, funciones de estructura, Higuchi, β, entropía de permutación y complejidad de cada serie, en índice y en tiempo, y de las sustitutas |
+| `fluctuations`* | el MF-DFA de las duraciones frente a $h(q)$ exacto y a las sustitutas |
+| `spectra`* | el periodograma de las duraciones frente al producto de Riesz; los espectros de las medidas |
+| `complexity_plane`* | el plano complejidad–entropía |
+| `recurrences`* | diagramas de recurrencia y su cuantificación a profundidad 5; la simetría al invertir el tiempo |
+| `return_times`* | los tiempos entre los inicios de los Kali de los niveles 2 a 4, en subciclos y en años |
+| `roughness_by_base` | la aspereza del dharma para bases de 1,25 a 4, frente a $\log_4 b$ |
+
 ### `study_of_permutations.py`: permutaciones
 
 | Estudio | Qué hace |

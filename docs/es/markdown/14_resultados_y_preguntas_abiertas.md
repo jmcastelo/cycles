@@ -21,7 +21,15 @@
    $D_1 = 0{,}9232$ (la entropía de las proporciones entre $\log 4$), y casi todos los subciclos, contados, en un
    conjunto de instantes de dimensión 0,9192; las dos medidas son duales ($0{,}9232 = 1/1{,}0832$). Los subciclos
    de un mismo exponente son una clase de igual duración.
-6. **Colores.** Dentro de los rangos de los parámetros los colores de cada nivel son únicos; el coloreado del
+6. **Dinámica** (capítulo 16). Cada paso de una duración, $(p_{j+1}/p_j) \cdot 4^k$, y del dharma lo fija el número
+   $k$ de Kali acarreados. En el orden de los índices las duraciones tienen $h(q) = (1 + \tau(q))/q$ exactamente
+   ($H = 0{,}934$: memoria larga; multifractales por la cascada, no por las correlaciones lineales) y un espectro
+   que es un producto de Riesz; el dharma tiene aspereza $\log_4 b$. Las medidas se agrupan en suaves (balance,
+   densidad), brownianas (dharma, tendencia, tensión, aspereza, microcosmos, pureza, mezcla) y ruidos (duraciones,
+   complejidad, contraste); la reunión de los planetas no tiene memoria a profundidad 8. Leídas en años dan casi
+   lo mismo que en el orden de los índices. La pureza, la mezcla, la tensión, la aspereza y la complejidad son
+   capicúas; el dharma y la tendencia, impares.
+7. **Colores.** Dentro de los rangos de los parámetros los colores de cada nivel son únicos; el coloreado del
    tetraedro llena un tetraedro de Sierpinski.
 
 ## 14.2 El modelo de ciclo y la precesión
@@ -76,7 +84,8 @@ con Holm).
 | **Eventos y significación** (idea 4) | hecho para tres hipótesis astronómicas, con estudio y panel *Events* (capítulo 15); con el mapa sobre todos los modelos; pendientes: otras familias de acontecimientos, el nulo de las permutaciones de dígitos y los acontecimientos históricos con fecha (falta un conjunto de datos) |
 | **Sonido en el explorador** (idea 7) | reproducir el tramo ampliado con un cursor ligado al momento del cielo, y oír el efecto de σ |
 | **Animación de permutaciones** | reproducir el panel de permutaciones a través de σ⁰, σ¹, σ², … |
-| **Acoplamiento con QtAds** (opcional) | destinos de soltado al arrastrar paneles y paneles que se ocultan en un borde, si los menús de colocación se quedan cortos |
+| **Acoplamiento con QtAds** | hecho (capítulo 12) |
+| **Dinámica** | hecho el cálculo y el estudio (capítulo 16); pendientes: un panel *Dynamics*, la inmersión con retardos y la dimensión de correlación, los puntos de cambio y una sustituta por permutación de dígitos |
 | **Dosier** | el resumen pasa a una segunda página A4 vertical cuando el subciclo tiene marcadores |
 | **Marte antes de −2000** | discrepancia con Moshier; falta una tercera referencia (DE441) |
 | **Incertidumbre numérica de la efeméride** | integrar variantes con `build_many` |

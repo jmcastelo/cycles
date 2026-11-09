@@ -48,6 +48,7 @@ tienen docstrings (`help(compute_level)`).
 | `cycle_analysis.py` | cuotas de tiempo, desviaciones, `mismatch_by_depth`, `mismatch_grid`, `fit_anchor`, `precession_rate`; `angular_density`; `dense_years` y `dense_ayanamsa` (los años y el ayanāṃśa de muchos momentos, interpolados en una rejilla fina: el mapa del arco invierte la precesión punto a punto) |
 | `query.py` | consultas: una condición sobre los subciclos (`parse`, que admite solo una parte de las expresiones de Python, y `evaluate`, de una vez sobre el nivel) |
 | `multifractal.py` | el espectro multifractal de la división: τ(q), α, f(α), los valores clave (`key_values`) y las estimaciones a profundidad finita por clases de duración (`composition_spectrum`, `histogram_spectrum`) |
+| `dynamics.py` | la evolución en el tiempo como sistema dinámico (capítulo 16): muestreo en años, DFA y MF-DFA, R/S, funciones de estructura, dimensión de Higuchi, espectros, patrones ordinales, recurrencias, tiempos de retorno, series sustitutas, la inversión del tiempo y los resultados exactos (acarreos, $h(q)$ de las duraciones, producto de Riesz, aspereza del dharma, la aplicación de ampliación) |
 | `events.py` | acontecimientos planetarios: conjunciones exactas y sus series, signos y elementos en ambos zodiacos, cambios de trígono, cuerpos alrededor de un punto (capítulo 15); el trígono vigente en cada momento (`trigon_periods`, `trigon_in_force`) |
 | `significance.py` | contrastes: distancia al acontecimiento más cercano, rotaciones rígidas, valores p, corrección de Holm |
 | `astro_dates.py` | calendarios, día juliano, año decimal, ΔT, UT ↔ TDB (capítulo 5) |
@@ -180,7 +181,7 @@ Los capítulos describen también lo que se ha añadido desde la última versió
 
 | Versión | Fecha | Contenido |
 |---|---|---|
-| *sin publicar* | — | el espectro multifractal; aviso al cerrar con cambios sin guardar |
+| *sin publicar* | — | el espectro multifractal; aviso al cerrar con cambios sin guardar; paneles con QtAds; la dinámica (capítulo 16) |
 | 0.4.0 | 2026-11-09 | más medidas (mezcla, tensión, tendencia, aspereza, contraste, balance, microcosmos, complejidad, densidad angular, reunión), uniones de los resaltados, coloreados por medida, clase, punto vernal y trígono, OKLab, mapas de color a elegir, consultas, niveles vectorizados hasta la profundidad 9, menú *View*, pruebas en paralelo, una barra más ordenada, un color por papel y todos los niveles en el navegador |
 | 0.3.0 | 2026-11-08 | acontecimientos planetarios y contrastes de significación: cálculo, estudio y panel *Events*; mapa sobre todos los modelos; H1 con los planetas medios; fórmulas en LaTeX |
 | 0.2.0 | 2026-11-07 | el explorador, el modelo de ciclo, sesiones, marcadores, dosier, disposición de paneles, consultas vectorizadas, pruebas, esta documentación |

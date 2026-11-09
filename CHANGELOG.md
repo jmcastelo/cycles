@@ -10,6 +10,15 @@ the commit `vX.Y.Z`.
 
 ## Unreleased
 
+- **The time evolution as a dynamical system** (`cycles.functions.dynamics`, `sandbox/study_of_dynamics.py`, docs
+  chapter 16): the durations and every measure as time series, in the index order and sampled in years of the
+  cycle model. Estimators: DFA and MF-DFA, rescaled range, structure functions, Higuchi dimension, spectra,
+  permutation entropy and statistical complexity, recurrence plots and RQA, return times, and shuffled and
+  phase-randomized surrogates. Exact results to test them: each step of a duration ((p_{j+1}/p_j)·4^k) and of
+  dharma is fixed by the number k of Kali digits carried; the durations have h(q) = (1 + τ(q))/q (H = 0.934) and a
+  Riesz-product spectrum; dharma has roughness log₄ b; zooming in is chaotic (entropy = Lyapunov = H(p) = 1.28
+  nats per level) and moving on in time an odometer with zero entropy. Purity, mixture, tension, roughness and
+  complexity read the same backwards; dharma and trend turn around 5/8 and 0.
 - **The multifractal spectrum of the division** (`cycles.functions.multifractal`, `sandbox/study_of_multifractal.py`,
   docs 1.9): f(α) exactly by the Legendre transform for the two measures the division puts on the cycle (the time
   on the index line, the count on the time line), and estimated at finite depths by histograms of the classes of
