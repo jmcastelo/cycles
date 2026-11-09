@@ -4,7 +4,10 @@ part framed, and below it the subdivisions of the zoomed subcycle, one row per
 depth, each subcycle drawn in its color and labelled with its name and/or a
 column of dots (4, 3, 2, 1 for Satya, Treta, Dvapara, Kali).
 
-The rows show a window of the cycle (``CycleState.window``), from the whole cycle down to a subcycle of depth 8.
+The rows show a window of the cycle (``CycleState.window``), from the whole cycle down to a subcycle of depth 11.
+The levels go down to ``NAVIGATOR_DEPTH`` (12); those deeper than ``MAX_DEPTH`` (9) are computed for the part in view
+alone (sampled at a few points per pixel when it holds too many subcycles), and a click there selects the ancestor
+at ``MAX_DEPTH``.
 Mouse: the wheel zooms in and out around the pointer; dragging pans; click selects, double-click fits a
 subcycle, right-click fits the one above; on the overview (a map of the whole cycle), drag the frame to pan or
 its edges to zoom, and click to fit that yuga; Shift+click sets the moment of the sky chart. The tags of the
@@ -27,8 +30,9 @@ from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QScrollBar, QSizePolicy, QToolButton, QToolTip, QWidget
 
 from cycles.gui.state import (
-    BOOKMARK_COLOR, DATE_COLOR, EVENT_COLOR, MAX_DEPTH, MOMENT_COLOR, SELECTION_COLOR, PERMUTATION_COLOR, CycleState, address_of, current_year,
-    coordinate_extent, date_text, index_to_time, span_text, tcoord, time_text,
+    BOOKMARK_COLOR, DATE_COLOR, EVENT_COLOR, MAX_DEPTH, NAVIGATOR_DEPTH, MOMENT_COLOR, SELECTION_COLOR, PERMUTATION_COLOR, CycleState, address_of, current_year,
+    coordinate_extent, coordinate_lcoords, date_text, index_to_time, index_to_time_array, span_text, tcoord,
+    time_text,
 )
 
 LABEL_WIDTH = 44     # left margin, for the depth of each row
@@ -44,6 +48,8 @@ SELECTION_WIDTH = 2.0      # border of the selected subcycle (and of those that 
 PARENT_WIDTH = 1.0         # border of its parents
 CURSOR_WIDTH = 1.5         # the lines of the marked date and the sky moment
 ZOOM_COLOR = '#404040'     # the frame of the zoomed part on the overview strip
+DEEP_CELLS = 4096          # a level deeper than MAX_DEPTH with more subcycles in view is sampled
+SAMPLES = 12000            # ... at about this many points in all (a few per pixel, at random places in it)
 HALO = QColor(255, 255, 255, 210)    # the light edge under borders and cursors, to stand out over any color
 ZOOM_STEP = 1.25           # the window narrows (or widens) by this for each notch of the wheel
 DRAG_THRESHOLD = 4         # pixels the mouse moves before a press becomes a drag (a pan), not a click
@@ -60,7 +66,9 @@ VERTICAL_DEAD_ZONE = 8     # pixels a pan moves up or down before it scrolls the
 
 class Row(NamedTuple):
     """Where a row of the navigator is drawn: its depth, top and height, the indices of its subcycles in their
-    level (start to stop), their left edges and widths (pixels), and whether it is dense (drawn as pixels)."""
+    level (start to stop), their left edges and widths (pixels), whether it is dense (drawn as pixels), their
+    starts and durations in normalized time, their colors, and whether it is sampled: a level deeper than
+    ``MAX_DEPTH`` with too many subcycles in view, drawn by pixels (its 'cells') of the colors sampled in each."""
     depth: int
     top: float
     height: float
@@ -69,6 +77,10 @@ class Row(NamedTuple):
     lefts: np.ndarray
     widths: np.ndarray
     dense: bool
+    starts: np.ndarray
+    durations: np.ndarray
+    colors: np.ndarray
+    sampled: bool = False
 
 
 def stroke(painter: QPainter, color: QColor, width: float, draw) -> None:
@@ -122,7 +134,8 @@ class Navigator(QWidget):
         self.row_height: float | None = None  # px; None: fit the levels in view
         self.follow_zoom = True          # the top row is the level below the zoom
         self._offset = 0.0               # how far the levels are scrolled (px), when not following the zoom
-        self.deepest = MAX_DEPTH         # the deepest level drawn
+        self.deepest = NAVIGATOR_DEPTH   # the deepest level drawn (below MAX_DEPTH: only what is in view)
+        self._deep_colors = {}           # colors computed for the parts in view of the deep levels
         self._resize = None              # (depth whose bottom is dragged) while resizing the rows
         self._vertical = False           # a pan has passed the dead zone and scrolls the levels too
         self._row_to_show = None         # the depth of a row to scroll into view when next painted
@@ -154,8 +167,9 @@ class Navigator(QWidget):
 
     def _changed(self, *_) -> None:
         """Compute the levels the new view needs (with a wait cursor if slow), then repaint."""
+        self._deep_colors = {}
         depths = [d for d in [len(self.state.focus), *self._depths_in_view()]
-                  if d and not self.state.cache.has(d)]
+                  if d and d <= MAX_DEPTH and not self.state.cache.has(d)]
         if depths:
             QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
             try:
@@ -318,20 +332,63 @@ class Navigator(QWidget):
         top = self._overview_rect().bottom() + ROWS_TOP_GAP
         return QRectF(LABEL_WIDTH, top, self.width() - LABEL_WIDTH - 8, self._tag_band().top() - TAG_GAP - top)
 
-    def _visible(self, depth: int) -> tuple[int, int, np.ndarray, np.ndarray]:
-        """The subcycles of ``depth`` in the window drawn: (first index, end index, their starts and widths in the
-        coordinate of the spacing)."""
+    def _deep(self, key, compute):
+        """Colors of a part of a deep level, kept until the view or the colors change."""
+        if key not in self._deep_colors:
+            if len(self._deep_colors) > 256:
+                self._deep_colors.clear()
+            self._deep_colors[key] = compute()
+        return self._deep_colors[key]
+
+    def _make_row(self, depth: int, top: float, height: float, area: QRectF) -> Row:
+        """The subcycles of ``depth`` in the window drawn, placed in ``area``."""
+        state = self.state
         a, b = self._window
-        if self.state.spacing == 'time':
-            level = self.state.cache.level(depth)
-            first = max(0, int(np.searchsorted(level.starts, a, side='right')) - 1)
-            end = max(first + 1, int(np.searchsorted(level.starts, b, side='left')))
-            return first, end, level.starts[first:end], level.durations[first:end]
+        scale = area.width() / (b - a)
+        key = state.color_key
         n = 4 ** depth
-        first = min(n - 1, max(0, int(np.floor(a * n))))
-        end = max(first + 1, min(n, int(np.ceil(b * n))))
-        indices = np.arange(first, end)
-        return first, end, indices / n, np.full(end - first, 1.0 / n)
+        if depth <= MAX_DEPTH:
+            level = state.cache.level(depth)
+            if state.spacing == 'time':
+                first = max(0, int(np.searchsorted(level.starts, a, side='right')) - 1)
+                end = max(first + 1, int(np.searchsorted(level.starts, b, side='left')))
+                x, widths = level.starts[first:end], level.durations[first:end]
+            else:
+                first = min(n - 1, max(0, int(np.floor(a * n))))
+                end = max(first + 1, min(n, int(np.ceil(b * n))))
+                x, widths = np.arange(first, end) / n, np.full(end - first, 1.0 / n)
+            return Row(depth, top, height, first, end, area.left() + (x - a) * scale, widths * scale,
+                       (end - first) * DENSE_CELL > area.width(), level.starts[first:end],
+                       level.durations[first:end], state.colors(depth, key)[first:end])
+        # deeper: computed for the part in view alone
+        from cycles.functions.division import index_lcoords, level_of
+        tiny = (b - a) * 1e-9
+        powers = 4 ** np.arange(depth - 1, -1, -1, dtype=np.int64)
+        ends = coordinate_lcoords(np.array([a + tiny, b - tiny]), state.spacing, depth) @ powers
+        first, end = int(ends[0]), int(ends[1]) + 1
+        if end - first <= DEEP_CELLS:
+            lcoords = index_lcoords(np.arange(first, end), depth)
+            cache = state.cache
+            level = level_of(lcoords, cache.bases, cache.scales, cache.vertices)
+            if state.spacing == 'time':
+                x, widths = level.starts, level.durations
+            else:
+                x, widths = np.arange(first, end) / n, np.full(end - first, 1.0 / n)
+            colors = self._deep((depth, first, end, key), lambda: state.colors_of(lcoords, key))
+            return Row(depth, top, height, first, end, area.left() + (x - a) * scale, widths * scale,
+                       (end - first) * DENSE_CELL > area.width(), level.starts, level.durations, colors)
+        # too many: pixels, each the mean of the colors at a few points in it
+        pixels = max(1, int(round(area.width() * self.devicePixelRatioF())))
+        per_pixel = max(3, min(32, SAMPLES // pixels))
+        edges = a + (b - a) * np.arange(pixels + 1) / pixels
+        jitter = np.random.default_rng(depth).random(pixels * per_pixel)       # the same places each time
+        points = a + (b - a) * (np.repeat(np.arange(pixels), per_pixel) + jitter) / pixels
+        colors = self._deep((depth, a, b, pixels, key, state.spacing), lambda: state.colors_of(
+            coordinate_lcoords(points, state.spacing, depth), key).reshape(pixels, per_pixel, 3).mean(axis=1))
+        times = edges if state.spacing == 'time' else index_to_time_array(edges)
+        width = area.width() / pixels
+        return Row(depth, top, height, -1, -1, area.left() + np.arange(pixels) * width, np.full(pixels, width),
+                   True, times[:-1], np.diff(times), colors, True)
 
     def _layout(self) -> list[tuple[QRectF, tuple, int, int]]:
         """
@@ -344,18 +401,14 @@ class Navigator(QWidget):
         area = self._area()
         row_height = self._row_step()
         offset = self.scroll_offset()
-        self.state.set_visible_depths(range(rows[0], rows[-1] + 1))
-        a, b = self._window
-        scale = area.width() / (b - a)
+        self.state.set_visible_depths(range(rows[0], min(rows[-1], MAX_DEPTH) + 1))
         cells, self._geometry = [], []
         for depth in rows:
             top = round(area.top() + (depth - 1) * row_height - offset, 6)
-            first, end, starts, widths = self._visible(depth)
-            row = Row(depth, top, row_height - ROW_GAP, first, end,
-                      area.left() + (starts - a) * scale, widths * scale, (end - first) * DENSE_CELL > area.width())
+            row = self._make_row(depth, top, row_height - ROW_GAP, area)
             self._geometry.append(row)
             if not row.dense:
-                for k, index in enumerate(range(first, end)):
+                for k, index in enumerate(range(row.start, row.stop)):
                     rect = QRectF(row.lefts[k], top, row.widths[k], row.height)
                     cells.append((rect, address_of(index, depth), depth, index))
         return cells
@@ -367,25 +420,29 @@ class Navigator(QWidget):
     def rect_of(self, address: tuple) -> QRectF | None:
         """Where the subcycle ``address`` is drawn (also in a dense row), or None if it is not in view."""
         row = self._row(len(address))
-        if row is None:
+        if row is None or row.sampled:
             return None
         k = tcoord(address) - row.start
         if not 0 <= k < row.stop - row.start:
             return None
         return QRectF(row.lefts[k], row.top, row.widths[k], row.height)
 
-    def _index_at(self, row, x: float) -> int | None:
-        """Index (in its level) of the subcycle of ``row`` at the horizontal position ``x``."""
+    @staticmethod
+    def _position_at(row, x: float) -> int | None:
+        """Position, among the cells of ``row``, of the one at the horizontal position ``x``."""
         rights = row.lefts + row.widths
         if not len(rights) or x < row.lefts[0] or x > rights[-1]:
             return None
-        return row.start + int(min(np.searchsorted(rights, x, side='right'), len(rights) - 1))
+        return int(min(np.searchsorted(rights, x, side='right'), len(rights) - 1))
+
+    def _index_at(self, row, x: float) -> int | None:
+        """Index (in its level) of the subcycle of ``row`` at the horizontal position ``x``."""
+        k = self._position_at(row, x)
+        return None if k is None or row.sampled else row.start + k
 
     def _x_of(self, row, u: float) -> float | None:
         """Horizontal position of the normalized time ``u`` in ``row`` (also with equal widths)."""
-        level = self.state.cache.level(row.depth)
-        starts = level.starts[row.start:row.stop]
-        durations = level.durations[row.start:row.stop]
+        starts, durations = row.starts, row.durations
         k = int(np.searchsorted(starts, u, side='right')) - 1
         if k < 0 or u > starts[-1] + durations[-1] + 1e-12:
             return None
@@ -398,6 +455,14 @@ class Navigator(QWidget):
                 return address
         for row in getattr(self, '_geometry', []):
             if row.dense and row.top <= pos.y() <= row.top + row.height:
+                if row.sampled:
+                    area = self._area()
+                    if not area.left() <= pos.x() <= area.right():
+                        return None
+                    a, b = self._window
+                    x = a + (pos.x() - area.left()) / area.width() * (b - a)
+                    return tuple(int(d) for d in coordinate_lcoords(np.array([x]), self.state.spacing,
+                                                                    row.depth)[0])
                 index = self._index_at(row, pos.x())
                 return None if index is None else address_of(index, row.depth)
         return None
@@ -421,11 +486,11 @@ class Navigator(QWidget):
             at_edges = cumulative[k] + values[k] * covered[:, None]
             return at_edges[1:] - at_edges[:-1]
 
-        rgb = np.clip(np.asarray(colors, dtype=float)[row.start:row.stop], 0, 1)
+        rgb = np.clip(np.asarray(colors, dtype=float), 0, 1)
         pixel = np.diff(edges)[:, None]
         mean = integral(rgb) / pixel
         if mask is not None:
-            bright = mask[row.start:row.stop].astype(float)[:, None]
+            bright = mask.astype(float)[:, None]
             weight = integral(bright)
             base = np.array([dim.redF(), dim.greenF(), dim.blueF()])
             dimmed = mean * (1 - dim.alphaF()) + base * dim.alphaF()
@@ -456,6 +521,8 @@ class Navigator(QWidget):
         bright = {}           # depth -> mask of the subcycles kept bright (the highlight), where there is one
 
         def bright_at(depth: int):
+            if depth > MAX_DEPTH:
+                return None                     # the highlights are of the levels computed whole
             if depth not in bright:
                 indices = state.highlighted(depth)
                 if indices is None:
@@ -474,9 +541,11 @@ class Navigator(QWidget):
 
         painter.save()
         painter.setClipRect(area.adjusted(0, -1, 0, 1))
+        rows_by_depth = {row.depth: row for row in self._geometry}
         for full, address, depth, index in cells:
             rect = full.intersected(area.adjusted(-3, 0, 3, 0))     # the part in view: its name stays visible
-            color = rgb_to_qcolor(state.colors(depth, state.color_key)[index])
+            row = rows_by_depth[depth]
+            color = rgb_to_qcolor(row.colors[index - row.start])
             painter.fillRect(rect, color)
             if state.borders and rect.width() >= 3:
                 painter.setPen(border)
@@ -488,7 +557,8 @@ class Navigator(QWidget):
             self._draw_label(painter, metrics, rect, address[-1], text_color(color))
         for row in self._geometry:
             if row.dense:
-                self._draw_dense_row(painter, row, state.colors(row.depth, state.color_key), bright_at(row.depth),
+                mask = bright_at(row.depth)
+                self._draw_dense_row(painter, row, row.colors, None if mask is None else mask[row.start:row.stop],
                                      dim)
 
         self._draw_criteria(painter, cells)
@@ -512,6 +582,8 @@ class Navigator(QWidget):
         # The subcycles that contain the sky moment (Follow)
         if state.follow and state.sky_time is not None:
             for depth in self._rows():
+                if depth > MAX_DEPTH:
+                    break
                 index = state.moment_index(depth)
                 rect = None if index is None else self.rect_of(address_of(index, depth))
                 if rect is not None:
@@ -607,9 +679,7 @@ class Navigator(QWidget):
         painter.save()
         painter.setPen(QPen(tick, 1.5))
         bottom = min(row.top + row.height, self._area().bottom())
-        level = state.cache.level(row.depth)
-        starts = level.starts[row.start:row.stop]
-        durations = level.durations[row.start:row.stop]
+        starts, durations = row.starts, row.durations
         k = np.clip(np.searchsorted(starts, u, side='right') - 1, 0, len(starts) - 1)
         xs = row.lefts[k] + (u - starts[k]) / durations[k] * row.widths[k]
         area = self._area()
@@ -657,6 +727,8 @@ class Navigator(QWidget):
             rows.setdefault(depth, []).append((rect, index))
         shown = set()
         for depth, row in rows.items():
+            if depth > MAX_DEPTH:
+                continue
             criteria = state.criteria_boundaries(depth)
             level = state.cache.level(depth)
             indices = np.array([index for _, index in row])
@@ -718,7 +790,8 @@ class Navigator(QWidget):
     def criteria_text(self, address: tuple) -> str:
         """Where the other criteria would start ``address``, for its tooltip."""
         state = self.state
-        criteria = state.criteria_boundaries(len(address)) if state.compare_criteria else None
+        criteria = (state.criteria_boundaries(len(address)) if state.compare_criteria and len(address) <= MAX_DEPTH
+                    else None)
         if not criteria:
             return ''
         t0 = state.time_map.interval(address)[0]
@@ -866,11 +939,10 @@ class Navigator(QWidget):
                 chosen = (row, np.flatnonzero(inside))
                 break
         row, inside = chosen
-        level = state.cache.level(row.depth)
         if len(inside) > area.width() / 4:              # too many: a few, evenly
             inside = inside[np.linspace(0, len(inside) - 1, int(area.width() / 40)).astype(int)]
         ticks = [(area.left(), start)]
-        ticks += [(float(row.lefts[k]), float(level.starts[row.start + k])) for k in inside]
+        ticks += [(float(row.lefts[k]), float(row.starts[k])) for k in inside]
         ticks.append((area.right(), end))
         painter.setPen(self.palette().text().color())
         y = bottom + 6 + metrics.ascent()
@@ -1088,13 +1160,11 @@ class Navigator(QWidget):
             return None
         # the row under the mouse, or else the deepest one
         row = next((r for r in geometry if r.top <= pos.y() <= r.top + r.height), geometry[-1])
-        i = self._index_at(row, pos.x())
-        if i is None:
+        k = self._position_at(row, pos.x())
+        if k is None:
             return None
-        k = i - row.start
-        level = self.state.cache.level(row.depth)
         fraction = (pos.x() - row.lefts[k]) / row.widths[k] if row.widths[k] > 0 else 0.0
-        u = float(level.starts[i] + fraction * level.durations[i])
+        u = float(row.starts[k] + fraction * row.durations[k])
         return time_map.to_physical(min(1.0, max(0.0, u)))
 
     def mouseReleaseEvent(self, event) -> None:
@@ -1116,10 +1186,10 @@ class Navigator(QWidget):
             self._press = None
             self._panning = False
             self.unsetCursor()
-            if not panned:                      # a click: select
+            if not panned:                      # a click: select (a deeper subcycle: its ancestor at MAX_DEPTH)
                 address = self.cell_at(pos)
                 if address is not None:
-                    self.state.select(address)
+                    self.state.select(address[:MAX_DEPTH])
         else:
             super().mouseReleaseEvent(event)
 
@@ -1169,7 +1239,11 @@ class Navigator(QWidget):
             return
         if event.button() == Qt.MouseButton.LeftButton:
             address = self.cell_at(event.position())
-            if address:
+            if address and len(address) >= MAX_DEPTH:    # fit it in the window (the zoom stays above it)
+                state = self.state
+                state.set_window(*coordinate_extent(address, state.spacing), animate=True)
+                state.select(address[:MAX_DEPTH])
+            elif address:
                 self.state.zoom_in(address)
 
     def mouseMoveEvent(self, event) -> None:
@@ -1235,6 +1309,8 @@ class Navigator(QWidget):
                     text += f"\n{time_text(t0, t1 - t0)} to {time_text(t1, t1 - t0)} ({span_text(t1 - t0)})"
                     text += self.criteria_text(address)
                 text += self.bookmark_text(address)
+                if len(address) > MAX_DEPTH:
+                    text += f"\nDeeper than {MAX_DEPTH}: drawn here only; a click selects its ancestor at depth {MAX_DEPTH}"
                 QToolTip.showText(event.globalPos(), text, self)
             else:
                 QToolTip.hideText()

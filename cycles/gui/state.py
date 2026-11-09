@@ -31,6 +31,7 @@ from cycles.functions.timescale import AGE_NAMES, YUGA_NAMES, TimeMap
 
 # Deepest level the GUI computes (4^9 = 262,144 subcycles, a quarter of a second the first time)
 MAX_DEPTH = 9
+NAVIGATOR_DEPTH = 12     # the navigator draws down to here (deeper than MAX_DEPTH: only the part in view)
 # Name sets for the four ages
 NAME_SETS = {'Yugas': YUGA_NAMES, 'Ages': AGE_NAMES}
 # One color per role, in the navigator and in every plot
@@ -163,6 +164,35 @@ def coordinate_digits(x: float, spacing: str, depth: int) -> tuple:
             x = x * 4 - k
         digits.append(k)
     return tuple(digits)
+
+
+def coordinate_lcoords(x, spacing: str, depth: int) -> np.ndarray:
+    """The addresses (N, depth) of the subcycles at the coordinates ``x`` (an array, in ``spacing``)."""
+    x = np.clip(np.asarray(x, dtype=float), 0.0, 1.0)
+    starts, shares = np.array(_STARTS), np.array(_SHARES)
+    out = np.empty((len(x), depth), dtype=np.int64)
+    for level in range(depth):
+        if spacing == 'time':
+            k = np.searchsorted(starts, x, side='right') - 1
+            x = np.clip((x - starts[k]) / shares[k], 0.0, 1.0)
+        else:
+            k = np.minimum(3, (x * 4).astype(np.int64))
+            x = x * 4 - k
+        out[:, level] = k
+    return out
+
+
+def index_to_time_array(v) -> np.ndarray:
+    """``index_to_time`` for an array of index positions."""
+    x = np.clip(np.asarray(v, dtype=float), 0.0, 1.0)
+    starts, shares = np.array(_STARTS), np.array(_SHARES)
+    u, scale = np.zeros_like(x), np.ones_like(x)
+    for _ in range(_LEVELS):
+        k = np.minimum(3, (x * 4).astype(np.int64))
+        x = x * 4 - k
+        u += starts[k] * scale
+        scale *= shares[k]
+    return u + x * scale
 
 
 def coordinate_extent(address: tuple, spacing: str) -> tuple[float, float]:
@@ -392,8 +422,9 @@ class CycleState(QObject):
         self.set_window(*coordinate_extent(address, self.spacing), animate=animate, focus=address)
 
     def min_width_at(self, x: float) -> float:
-        """The narrowest window around the coordinate ``x``: the deepest subcycle a zoom can be (depth 8) there."""
-        return float(np.subtract(*coordinate_extent(coordinate_digits(x, self.spacing, MAX_DEPTH - 1),
+        """The narrowest window around the coordinate ``x``: a subcycle just above the deepest row the navigator
+        draws (``NAVIGATOR_DEPTH``)."""
+        return float(np.subtract(*coordinate_extent(coordinate_digits(x, self.spacing, NAVIGATOR_DEPTH - 1),
                                                     self.spacing)[::-1]))
 
     def set_window(self, a: float, b: float, animate: bool = False, focus: tuple | None = None) -> None:
@@ -658,6 +689,63 @@ class CycleState(QObject):
                 colors = np.where(elements[:, None] >= 0, ELEMENT_COLORS[np.clip(elements, 0, 3)], NO_MODEL_GRAY)
             store[cached] = colors
         return store[cached]
+
+    def colors_of(self, lcoords, key: str) -> np.ndarray:
+        """
+        RGB colors (N, 3) of any subcycles of one depth (their addresses ``lcoords``) in the coloring ``key``, also
+        deeper than ``MAX_DEPTH`` (computed for them alone): as ``colors`` gives for their whole level. Balance, a
+        running sum over the whole level, takes there the color of the ancestor at ``MAX_DEPTH``; the angular
+        density, its range at that depth.
+        """
+        from cycles.functions.color import ELEMENT_COLORS, measure_colors, vernal_colors
+        from cycles.functions.division import class_durations, index_lcoords, level_colors, level_of
+        lcoords = np.asarray(lcoords, dtype=np.int64)
+        depth = lcoords.shape[1]
+        powers = 4 ** np.arange(depth - 1, -1, -1, dtype=np.int64)
+        if depth <= MAX_DEPTH:
+            return self.colors(depth, key)[lcoords @ powers]
+        return self._computed_colors(lcoords, key)
+
+    def _computed_colors(self, lcoords, key: str) -> np.ndarray:
+        """The colors of ``colors_of`` computed for these subcycles alone (whatever their depth)."""
+        from cycles.functions.color import ELEMENT_COLORS, measure_colors, vernal_colors
+        from cycles.functions.division import class_durations, index_lcoords, level_colors, level_of
+        lcoords = np.asarray(lcoords, dtype=np.int64)
+        depth = lcoords.shape[1]
+        powers = 4 ** np.arange(depth - 1, -1, -1, dtype=np.int64)
+        if key == 'balance' and depth > MAX_DEPTH:
+            return self.colors(MAX_DEPTH, key)[lcoords[:, :MAX_DEPTH] @ powers[-MAX_DEPTH:]]
+        cache = self.cache
+        level = level_of(lcoords, cache.bases, cache.scales, cache.vertices)
+        if key in STATE_COLOR_KEYS:
+            if not self.can_color(key):
+                return np.full((len(lcoords), 3), NO_MODEL_GRAY)
+            from cycles.functions.cycle_analysis import angular_density, dense_ayanamsa
+            years = np.asarray(self.time_map.to_physical(level.starts), dtype=float)
+            if key == 'density':
+                values = angular_density(self.model, level.starts, level.durations, self.time_map)
+                reference = self.measure_values(MAX_DEPTH, 'density')
+                values = np.concatenate([values, [reference.min(), reference.max()]])
+                return measure_colors(values, key, cache.maps)[0][:-2]
+            if key.startswith('vernal'):
+                return vernal_colors(dense_ayanamsa(self.model, years), key.split('_')[1])
+            if key == 'gathering':
+                from cycles.functions.events import CLASSICAL, around_point
+                spread = around_point(self.ephemeris[0], self._to_tdb(years), CLASSICAL)['spread']
+                return measure_colors(1 - spread / 360.0, key, cache.maps)[0]
+            from cycles.functions.events import trigon_in_force
+            elements = trigon_in_force(self.great_conjunctions(), key.split('_')[1], self._to_tdb(years))
+            return np.where(elements[:, None] >= 0, ELEMENT_COLORS[np.clip(elements, 0, 3)], NO_MODEL_GRAY)
+        if key in MEASURE_COLOR_KEYS and key not in ('dharma', 'purity'):
+            from cycles.functions.measure import address_measures
+            values = address_measures(lcoords, level.durations, level.dharmas, level.purities, cache.bases)[key]
+            if key == 'contrast':                     # against the subcycle before each one (the cycle repeats)
+                before = level_of(index_lcoords((lcoords @ powers - 1) % 4 ** depth, depth), cache.bases,
+                                  cache.scales, cache.vertices)
+                from cycles.functions.measure import VIRTUE_SPAN
+                values = (level.dharmas - before.dharmas) / VIRTUE_SPAN
+            return measure_colors(values, key, cache.maps)[0]
+        return level_colors(level, cache.maps, class_durations(depth))[key]
 
     def can_color(self, key: str) -> bool:
         """Whether the coloring (or measure) ``key`` can be computed now: with a model, and the ephemeris for the sky."""

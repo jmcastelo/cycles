@@ -24,7 +24,7 @@ the commit `vX.Y.Z`.
   on (roughness, purity, microcosm and mixture change regime on the boundaries of levels 1–3), and a
   digit-permuted surrogate, the null model of the digit order (the durations stay; the structure of the measures
   goes: it is in the hierarchy of the levels).
-- **The navigator shows a window of the cycle**, from the whole cycle down to the width of a subcycle of depth 8:
+- **The navigator shows a window of the cycle**, from the whole cycle down to the width of a subcycle of depth 11:
   the mouse wheel zooms in and out around the pointer, dragging the rows pans (a click without moving still
   selects), and a scroll bar under the navigator pans too. The strip of the whole cycle is a map: drag the
   frame to pan, drag its edges to zoom, click an age to fit it. Double-click, right-click, the breadcrumb and
@@ -33,12 +33,19 @@ the commit `vX.Y.Z`.
   switching the widths keeps the same part of the cycle in view; selecting a subcycle out of view pans to it;
   sessions keep the window.
 - **The rows of the navigator share one height and scroll through the levels**: all the levels are stacked
-  from depth 1 to 9; drag the rows up or down (past a small dead zone, so that sideways pans stay level) or use
+  from depth 1 to 12; drag the rows up or down (past a small dead zone, so that sideways pans stay level) or use
   the scroll bar beside the navigator to move through them. Drag any boundary between two rows to make every row
   taller or shorter; double-click one, or *View → Fit the levels* (`Ctrl+0`), to fit five levels below the zoom
   again. *View → Follow the zoom* keeps the top row at the level below the zoom (scrolling by hand turns it
   off); selecting a subcycle of a level out of view scrolls to it. The *Levels* box of the toolbar is gone.
   Sessions keep the rows; saved graphs of the navigator draw them as on the screen.
+- **The navigator goes down to depth 12**: the levels deeper than 9 (up to 16.7 million subcycles) are computed for
+  the part in view alone (`CycleState.colors_of`, `division.level_of`), with the same colors as their whole level
+  would have (the classes of duration ranked among all those of the depth, contrast against the subcycle before);
+  with too many in view, each pixel averages the colors of a few random points in it. Balance, a running sum over
+  the whole level, takes the color of the ancestor at depth 9. The selection, the panels, the highlights and the
+  query stay with the nine levels computed whole: a click on a deeper subcycle selects its ancestor at depth 9, and
+  a double-click fits the window to it.
 - **The Dynamics panel**: the durations or a measure of a level as a time series, in the order of the subcycles or
   evenly in years: return map, DFA fluctuations, spectrum, recurrence plot, or the series with its change points,
   with a surrogate drawn behind (shuffled, phase-randomized or digits permuted), the estimates and what is known

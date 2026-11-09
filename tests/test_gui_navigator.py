@@ -391,3 +391,77 @@ def test_a_saved_navigator_has_the_same_rows(window, spin):
     navigator.scroll_rows(55)
     twin = navigator.twin()
     assert (twin.row_height, twin.follow_zoom, twin._offset) == (120, False, 55)
+
+
+# -- deeper than MAX_DEPTH: drawn for the part in view alone
+
+def test_the_deep_levels_are_drawn_for_the_part_in_view(window, spin):
+    import numpy as np
+    from cycles.gui.state import MAX_DEPTH, NAVIGATOR_DEPTH, coordinate_extent, coordinate_lcoords, address_of
+    state, navigator = window.state, window.navigator
+    deep = (2, 0, 1, 3, 2, 1, 0, 1)
+    state.set_focus(deep)                            # the deepest zoom: the rows go on to depth 12
+    spin()
+    navigator.repaint()
+    rows = navigator._geometry
+    assert [r.depth for r in rows] == list(range(MAX_DEPTH, NAVIGATOR_DEPTH + 1))
+    row = rows[-1]
+    assert not row.sampled and row.stop - row.start == 4 ** (NAVIGATOR_DEPTH - len(deep))
+    lcoords = np.array([address_of(i, row.depth) for i in range(row.start, row.stop)])
+    assert np.allclose(row.colors, state.colors_of(lcoords, state.color_key))
+    start, end = coordinate_extent(deep, 'time')
+    assert row.starts[0] == pytest.approx(start) and row.starts[-1] + row.durations[-1] == pytest.approx(end)
+    assert list(state.visible_depths()) == [MAX_DEPTH]                 # the panels see the levels computed whole
+    # a click selects the ancestor at depth 9; a double-click fits the deep subcycle (the zoom stays above it)
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtTest import QTest
+    point = QPoint(int(row.lefts[5] + row.widths[5] / 2), int(row.top + row.height / 2))
+    address = navigator.cell_at(point.toPointF())
+    assert len(address) == NAVIGATOR_DEPTH
+    QTest.mouseClick(navigator, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, point)
+    assert state.selection == address[:MAX_DEPTH]
+    QTest.mouseDClick(navigator, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, point)
+    a, b = state.window
+    s, e = coordinate_extent(address, 'time')
+    assert a <= s and e <= b and len(state.focus) <= MAX_DEPTH - 1
+    assert b - a == pytest.approx(state.min_width_at((a + b) / 2))     # as narrow as a subcycle of depth 11
+
+
+def test_a_deep_level_over_the_whole_cycle_is_sampled(window, spin):
+    from cycles.gui.state import NAVIGATOR_DEPTH, coordinate_lcoords
+    import numpy as np
+    state, navigator = window.state, window.navigator
+    state.set_focus(())
+    navigator.set_row_height(60)
+    navigator.scroll_rows(1e9)                       # down to the deepest levels
+    spin()
+    navigator.repaint()
+    row = navigator._geometry[-1]
+    assert row.depth == NAVIGATOR_DEPTH and row.sampled and row.dense
+    assert len(row.colors) == len(row.lefts) and np.all((row.colors >= 0) & (row.colors <= 1))
+    assert row.starts[0] == pytest.approx(0) and row.starts[-1] + row.durations[-1] == pytest.approx(1)
+    area = navigator._area()
+    from PySide6.QtCore import QPointF
+    point = QPointF(area.left() + 0.62 * area.width(), row.top + row.height / 2)
+    address = navigator.cell_at(point)
+    expected = tuple(coordinate_lcoords(np.array([0.62]), 'time', NAVIGATOR_DEPTH)[0])
+    assert len(address) == NAVIGATOR_DEPTH and address[:6] == expected[:6]
+    assert navigator.moment_at(point) == pytest.approx(state.time_map.to_physical(0.62), abs=200)
+
+
+def test_the_colors_of_a_part_are_those_of_the_whole_level(window):
+    import numpy as np
+    from cycles.functions.division import COLOR_KEYS, index_lcoords
+    state = window.state
+    indices = np.array([0, 5, 77, 300, 1000, 4095])
+    lcoords = index_lcoords(indices, 6)
+    for key in COLOR_KEYS:
+        if key in ('balance', 'gathering', 'trigon_sidereal', 'trigon_tropical'):
+            continue                                   # a running sum; the sky needs the ephemeris
+        assert np.allclose(state._computed_colors(lcoords, key), state.colors(6, key)[indices], atol=1e-9), key
+    from cycles.gui.state import coordinate_digits, coordinate_lcoords, index_to_time, index_to_time_array
+    x = np.array([0.0, 0.123, 0.4, 0.77, 0.999])
+    for spacing in ('time', 'index'):
+        assert [tuple(r) for r in coordinate_lcoords(x, spacing, 11)] == \
+            [coordinate_digits(v, spacing, 11) for v in x]
+    assert np.allclose(index_to_time_array(x), [index_to_time(v) for v in x])

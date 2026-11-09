@@ -11,7 +11,7 @@ evolve in time as a dynamical system, places the cycle in history through the pr
 computes the sky at any moment with its own long-term N-body ephemeris, and
 tests whether the subcycle boundaries fall on planetary events more often than
 chance. A graphical explorer (PySide6) ties it all together: a navigator that
-zooms with the mouse wheel from the whole cycle down to the ninth level, with
+zooms with the mouse wheel from the whole cycle down to the twelfth level, with
 twelve dockable panels around it.
 
 ![The explorer](docs/es/markdown/figuras/ventana_principal.png)

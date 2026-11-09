@@ -239,18 +239,25 @@ def oklch_to_srgb(lightness, chroma, hue_degrees) -> np.ndarray:
 GOLDEN_ANGLE = 137.50776405003785
 
 
-def duration_class_colors(durations) -> np.ndarray:
+def duration_class_colors(durations, classes=None) -> np.ndarray:
     """
     One color per class of equal duration (``duration_class`` coloring), as (N, 3) RGB: the classes, longest
     first, take hues a golden angle apart (each far from the previous ones) and three alternating lightnesses, in
-    OKLab so that they all look equally strong.
+    OKLab so that they all look equally strong. The classes are ranked among those of ``durations``, or among
+    ``classes`` (all the durations of their depth, for a part of a level: the same colors as the whole level).
     """
     durations = np.asarray(durations, dtype=float)
     keys = np.round(np.log(durations), 9)
-    classes, inverse = np.unique(-keys, return_inverse=True)          # rank 0 = the longest
-    rank = np.arange(len(classes))
+    if classes is None:
+        ranked, inverse = np.unique(-keys, return_inverse=True)          # rank 0 = the longest
+        count = len(ranked)
+    else:
+        ranked = np.unique(-np.round(np.log(np.asarray(classes, dtype=float)), 9))
+        inverse = np.clip(np.searchsorted(ranked, -keys - 1e-12), 0, len(ranked) - 1)
+        count = len(ranked)
+    rank = np.arange(count)
     palette = oklch_to_srgb(np.array([0.74, 0.60, 0.86])[rank % 3], 0.12, 30 + rank * GOLDEN_ANGLE)
-    return palette[inverse.ravel()]
+    return palette[np.asarray(inverse).ravel()]
 
 
 # The color maps of the measures (matplotlib names and labels): a sequential one for the measures from 0 to 1 (or

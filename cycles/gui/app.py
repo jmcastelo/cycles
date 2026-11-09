@@ -34,7 +34,7 @@ from cycles.gui.navigator import Breadcrumb, Navigator
 from cycles.gui.sky import SkyPanel
 from cycles.gui.studies import StudyLauncher
 from cycles.gui.modeldialog import CycleModelDialog
-from cycles.gui.state import HIGHLIGHTS, LABEL_MODES, MAX_DEPTH, NAME_SETS, CycleState, datetime_text
+from cycles.gui.state import HIGHLIGHTS, LABEL_MODES, MAX_DEPTH, NAME_SETS, NAVIGATOR_DEPTH, CycleState, datetime_text
 
 
 # Version of the saved panel layout (increase when the panels change)
@@ -630,7 +630,8 @@ class MainWindow(QMainWindow):
             '  Backspace / Esc  zoom out\n'
             '  + / −  zoom in / out around the middle      Home  the whole cycle\n\n'
             f'Subcycles are computed down to depth {MAX_DEPTH} ({4 ** MAX_DEPTH:,} subcycles, under a '
-            'second the first time).'))
+            f'second the first time); the navigator draws down to depth {NAVIGATOR_DEPTH}, only the part in view. '
+            f'A click there selects the ancestor at depth {MAX_DEPTH}.'))
 
 
     def show_about(self) -> None:

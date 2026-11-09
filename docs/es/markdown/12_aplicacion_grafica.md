@@ -12,7 +12,7 @@ La interfaz está en inglés. Este capítulo describe cada parte con los nombres
 ## 12.1 El navegador
 
 El área central muestra una **ventana** del ciclo, una fila por profundidad, cada subciclo con su color. La ventana
-es cualquier tramo, del ciclo entero a uno tan estrecho como un subciclo de profundidad 8: la **rueda** del ratón
+es cualquier tramo, del ciclo entero a uno tan estrecho como un subciclo de profundidad 11: la **rueda** del ratón
 la estrecha o la ensancha alrededor del puntero (el punto bajo el puntero no se mueve), y **arrastrar** las filas o
 la **barra de desplazamiento** de debajo la mueven. El **zoom** (lo que usan la ruta de arriba y los paneles en
 *Only inside the zoom*) es el subciclo más pequeño que contiene la ventana, y las filas empiezan en el nivel justo
@@ -58,12 +58,23 @@ para que ninguno se pierda entre los atenuados. Pulsar en esas filas selecciona 
 la selección, *Follow*, los marcadores y las líneas se dibujan en ellas como en las demás (un subciclo muy
 estrecho, como una línea). Así se ven las nueve profundidades a la vez sin dibujar cientos de miles de celdas.
 
+Las profundidades **10 a 12** (más de un millón, cuatro y dieciséis millones de subciclos) solo existen en el
+navegador, y se calculan para el tramo a la vista (`CycleState.colors_of`, con los mismos colores que daría el
+nivel entero: las clases de duración se ordenan entre todas las de su profundidad y el contraste se mide frente al
+subciclo anterior). Si el tramo tiene más de 4096 subciclos de esa profundidad, cada píxel toma el color medio de
+unos cuantos puntos al azar dentro de él. El balance, una suma acumulada sobre todo el nivel, toma ahí el color de
+su antepasado de profundidad 9. Con el modelo por defecto, un subciclo de profundidad 12 dura de unos 2 segundos
+(todo Kali) a algo más de un año (todo Satya).
+La selección, los paneles, los resaltados y la consulta se quedan en las nueve profundidades calculadas enteras:
+pulsar un subciclo más profundo selecciona su antepasado de profundidad 9 (la descripción emergente lo dice), y un
+doble clic ajusta la ventana a él.
+
 Debajo de las filas, un eje con años o fechas (con un modelo de ciclo): los dos extremos de la ventana y las
 fronteras del nivel menos profundo que tenga al menos dos en ella. Seleccionar un subciclo que no está a la vista
 (desde un panel o con el teclado) mueve la ventana hasta él. Con *View → Widths* (por duración o iguales) la
 ventana sigue mostrando el mismo tramo del ciclo, y las sesiones la guardan.
 
-Las **filas** de todos los niveles tienen la misma altura y están apiladas de la profundidad 1 a la 9. Arrastrar
+Las **filas** de todos los niveles tienen la misma altura y están apiladas de la profundidad 1 a la 12. Arrastrar
 las filas hacia arriba o hacia abajo, o la **barra de desplazamiento** de la derecha, recorre los niveles (un
 arrastre casi horizontal no los mueve: hacen falta 8 píxeles en vertical). Arrastrar una **frontera entre dos
 filas** (el cursor cambia encima de ella) hace todas las filas más altas o más bajas, con esa frontera bajo el

@@ -132,11 +132,12 @@ class Level(NamedTuple):
         return Level(*(field[index] for field in self))
 
 
-def level_colors(level: Level, maps=DEFAULT_COLOR_MAPS) -> dict[str, np.ndarray]:
+def level_colors(level: Level, maps=DEFAULT_COLOR_MAPS, classes=None) -> dict[str, np.ndarray]:
     """
     RGB color of every subcycle of ``level`` for each name in ``LEVEL_COLOR_KEYS``:
     the Level's RGB variants, ``lrgb`` (pure ink of the innermost age) and
-    ``duration_class`` (one color per class of equal duration); and ``dharma``
+    ``duration_class`` (one color per class of equal duration, ranked among ``classes``: by default those of
+    the level itself, ``class_durations`` for a part of a level); and ``dharma``
     and ``purity`` on the sequential map of ``maps`` (``color.measure_colors``).
     """
     colors = {key: level.rgb(key) for key in RGB_KEYS}
@@ -144,7 +145,7 @@ def level_colors(level: Level, maps=DEFAULT_COLOR_MAPS) -> dict[str, np.ndarray]
     colors['lrgb'] = inks[level.lcoords[:, -1]]
     colors['dharma'] = measure_colors(level.dharmas, 'dharma', maps)[0]
     colors['purity'] = measure_colors(level.purities, 'purity', maps)[0]
-    colors['duration_class'] = duration_class_colors(level.durations)
+    colors['duration_class'] = duration_class_colors(level.durations, classes)
     return colors
 
 
@@ -177,6 +178,21 @@ def level_lcoords(depth: int, base: int = 4) -> np.ndarray:
     return (np.arange(base ** depth)[:, None] // base ** np.arange(depth - 1, -1, -1)) % base
 
 
+def index_lcoords(indices, depth: int) -> np.ndarray:
+    """The addresses (N, depth) of the subcycles of ``depth`` with time-order ``indices`` (any depth: int64)."""
+    indices = np.asarray(indices, dtype=np.int64)
+    return (indices[:, None] // (4 ** np.arange(depth - 1, -1, -1, dtype=np.int64))) % 4
+
+
+def class_durations(depth: int) -> np.ndarray:
+    """The (d + 1)² distinct durations of the subcycles of ``depth``, longest first (one per class)."""
+    counts = [(a, b, c, depth - a - b - c) for a in range(depth + 1) for b in range(depth + 1 - a)
+              for c in range(depth + 1 - a - b)]
+    durations = np.array([np.prod(proportions ** np.array(n)) for n in counts])
+    keys = np.unique(np.round(np.log(durations), 9))
+    return np.exp(keys[::-1])
+
+
 def compute_level(depth: int, bases: list[int] = DEFAULT_BASES, scales: list[float] = DEFAULT_SCALES,
                   colors: np.ndarray = TETRAHEDRON_COLORS) -> Level:
     """
@@ -195,7 +211,17 @@ def compute_level(depth: int, bases: list[int] = DEFAULT_BASES, scales: list[flo
     Returns a ``Level``: addresses, durations, starts, all CMYK and RGB color
     variants, dharma and purity of each subcycle.
     """
-    lcoords = level_lcoords(depth, bases[0])
+    return level_of(level_lcoords(depth, bases[0]), bases, scales, colors)
+
+
+def level_of(lcoords, bases: list[int] = DEFAULT_BASES, scales: list[float] = DEFAULT_SCALES,
+             colors: np.ndarray = TETRAHEDRON_COLORS) -> Level:
+    """
+    A ``Level`` of any subcycles of one depth (their addresses ``lcoords``, (N, depth)): what ``compute_level``
+    gives for all of them, for a part of a level too deep to compute whole.
+    """
+    lcoords = np.asarray(lcoords, dtype=np.int64)
+    depth = lcoords.shape[1]
     n = len(lcoords)
     shares = proportions[lcoords]                                   # (N, depth)
     durations = np.prod(shares, axis=1) if depth else np.ones(n)
