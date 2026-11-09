@@ -321,7 +321,7 @@ coloreados de clases, medidas y modelo no buscan colores únicos.
 
 ## 2.9 Resumen
 
-- Pesos `b^−k`: los niveles exteriores cuentan más.
+- Pesos $b^{-k}$: los niveles exteriores cuentan más.
 - Dharma: media ponderada de las virtudes (1 a 1/4). Pureza: cuota mayor menos cuota menor.
 - Diez medidas más: mezcla, tensión, tendencia, aspereza, contraste, balance, microcosmos y complejidad, de la
   dirección; la densidad angular, del modelo; y la reunión de los planetas, del cielo. Las que aportan

@@ -63,7 +63,9 @@ def inline(text: str) -> str:
         return f"\x00{len(keep) - 1}\x00"
 
     text = re.sub(r'`([^`]+)`', lambda m: hold(code(m.group(1))), text)
-    # maths in $…$ goes to LaTeX as it is (as GitHub renders it)
+    # displayed maths inside a paragraph or a list item ($$…$$), and maths in $…$, go to LaTeX as they are (as
+    # GitHub renders them)
+    text = re.sub(r'\$\$(.+?)\$\$', lambda m: hold('\\[' + m.group(1).strip() + '\\]'), text, flags=re.S)
     text = re.sub(r'(?<![\\$\w])\$([^\s$](?:[^$\n]*?[^\s$])?)\$(?![\w$])', lambda m: hold('$' + m.group(1) + '$'),
                   text)
 

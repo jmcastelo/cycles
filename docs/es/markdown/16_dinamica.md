@@ -53,7 +53,7 @@ pasos. En el mapa $d(n+1)$ frente a $d(n)$ los puntos caen sobre rectas paralela
 cada $k$: a profundidad 9, 27 razones distintas. El mapa es exacto para los 262 143 pares.
 
 **Los pasos del dharma.** Con base $b$, el dharma de un subciclo al siguiente cambia en
-$$\Delta_k = \frac{3 \sum_{i > d-k} w_i - w_{d-k}}{4 \sum w}, \qquad w_i = b^{-i}:$$
+$$\Delta_k = \frac{3 \sum_{i > d-k} w_i - w_{d-k}}{4 \sum w}, \qquad w_i = b^{-i},$$
 el dígito que sube resta su peso y los $k$ Kali que vuelven a Satya suman tres edades cada uno. Solo hay $d$
 valores. El paso sin acarreo es el único que baja (−0,000489 a profundidad 9 con base 2), y el de $k = 8$
 sube 0,249. Con un acarreo, el dharma sube por debajo de la base 3, no cambia con base 3 y baja por encima: el

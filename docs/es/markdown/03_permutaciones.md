@@ -38,7 +38,7 @@ Kali › Dvapara › Treta. La posición 0 de σ es siempre el primer dígito so
 
 ## 3.3 Índices de la imagen y matriz
 
-El índice de la imagen se calcula para todos los subciclos a la vez: si la cola tiene dígitos *a_j*, la imagen
+El índice de la imagen se calcula para todos los subciclos a la vez: si la cola tiene dígitos $a_j$, la imagen
 de σ ocupa el lugar
 
 $$
