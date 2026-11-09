@@ -59,6 +59,7 @@ def window(qapp, spin, monkeypatch):
     monkeypatch.setattr(eventspanel, 'AUTO_RENDER', False)
     from cycles.gui.app import MainWindow
     w = MainWindow()
+    w.navigator.animation_ms = 0                       # fits jump to their window (no glide to wait for)
     w.resize(1400, 850)
     w.show()
     spin()

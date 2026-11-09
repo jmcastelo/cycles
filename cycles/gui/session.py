@@ -179,6 +179,7 @@ def capture(window, layout: bool = True) -> dict:
             'date': state.date,
             'sky_time': state.sky_time,
             'focus': list(state.focus),
+            'window': list(state.window),
             'selection': list(state.selection) if state.selection is not None else None,
         },
         'panels': panels,
@@ -257,7 +258,9 @@ def apply(window, data: dict, layout: bool = True) -> list[str]:
                         lambda panel=panel, name=name: set_widget_value(getattr(panel, name), values[name]))
 
     if 'focus' in saved:
-        attempt('zoom', lambda: state.set_focus(_address(saved['focus']) or ()))
+        attempt('zoom', lambda: state.set_focus(_address(saved['focus']) or (), animate=False))
+    if isinstance(saved.get('window'), list) and len(saved['window']) == 2:     # the window in view (older sessions: the zoom)
+        attempt('zoom', lambda: state.set_window(*(float(x) for x in saved['window'])))
     if 'selection' in saved:
         attempt('selection', lambda: state.select(_address(saved['selection'])))
     if 'notes' in data:

@@ -31,7 +31,7 @@ pendientes y `ephemeris` localiza las tablas.
 
 ## 13.2 Qué se comprueba
 
-En total hay **317 pruebas** en 28 ficheros.
+En total hay **324 pruebas** en 28 ficheros.
 
 ### Cálculo
 
@@ -59,7 +59,7 @@ En total hay **317 pruebas** en 28 ficheros.
 | `test_gui_panels.py` | 6 | los paneles existen; al reordenarlos, los cerrados siguen colocados y se pueden abrir |
 | `test_gui_dynamics.py` | 6 | el panel *Dynamics*: los cinco gráficos en las dos lecturas; el mapa de retorno del dharma con lo exacto (aspereza 0,5, giro en torno a 0,625) y la selección marcada; las duraciones con la sustituta desordenada (menos memoria) y la de los dígitos (la misma serie), en escala logarítmica; dentro del zoom y en años; pulsar selecciona; la densidad sin modelo; la sesión guarda el panel |
 | `test_gui_layouts.py` | 13 | los paneles con QtAds: el navegador en el centro; cada tipo de panel en su lado (los cerrados, colocados), con espacio para el navegador; flotantes y barras laterales; disposiciones con nombre (perspectivas, en los ajustes); la sesión guarda la disposición; mover marca la sesión; el menú *Panels*; volver a acoplar los paneles flotantes, solos o en grupo (el botón, pulsado, y el menú); los títulos de las pestañas legibles con una paleta oscura; el botón *Attach* solo en las ventanas flotantes, con su icono, también al cambiar de pestaña |
-| `test_gui_navigator.py` | 6 | la banda de etiquetas, arrastrar las etiquetas, Mayús + clic; las nueve profundidades a la vez: las filas densas como tiras de píxeles, pulsar en ellas, y un subciclo resaltado que no se pierde en su píxel |
+| `test_gui_navigator.py` | 13 | la banda de etiquetas, arrastrar las etiquetas, Mayús + clic; las nueve profundidades a la vez: las filas densas como tiras de píxeles, pulsar en ellas, y un subciclo resaltado que no se pierde en su píxel; la ventana: la rueda estrecha y ensancha alrededor del puntero (hasta un subciclo de profundidad 8 y hasta el ciclo entero), el zoom es el subciclo más pequeño que la contiene (y solo avisa al cambiar), arrastrar mueve sin seleccionar y un clic selecciona, el mapa (arrastrar el marco y su borde, clic en una edad), la barra de desplazamiento y las teclas `+` e `Inicio`, ajustes, el mismo tramo con anchos iguales, mostrar un subciclo fuera de la vista, y la sesión guarda la ventana |
 | `test_gui_measures.py` | 8 | el panel Measures con dos medidas cualesquiera (2D, tiempo, 3D), coloreado por una medida con su barra, la densidad angular sin modelo, la línea de medidas del inspector, sesiones; las uniones de los resaltados (36 intercambios entre las 24 ordenaciones de cuatro edades distintas, los pasos de la órbita en orden) en Measures y Color space |
 | `test_gui_highlight.py` | 6 | los resaltados alrededor de la selección y el momento con *Follow*; el menú *View* dibuja el navegador y sigue al estado |
 | `test_gui_export.py` | 10 | guardar gráficos: tamaños, formatos, resolución; los paneles conservan su tamaño en pantalla |

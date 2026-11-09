@@ -11,9 +11,18 @@ La interfaz está en inglés. Este capítulo describe cada parte con los nombres
 
 ## 12.1 El navegador
 
-El área central muestra las subdivisiones del subciclo ampliado (el **zoom**), una fila por profundidad, cada
-subciclo con su color. Arriba, una franja con el **ciclo completo**, con la parte ampliada enmarcada, la fecha
-marcada y el momento del cielo; pulsar una edad en ella amplía esa edad. Las filas empiezan justo debajo. Bajo
+El área central muestra una **ventana** del ciclo, una fila por profundidad, cada subciclo con su color. La ventana
+es cualquier tramo, del ciclo entero a uno tan estrecho como un subciclo de profundidad 8: la **rueda** del ratón
+la estrecha o la ensancha alrededor del puntero (el punto bajo el puntero no se mueve), y **arrastrar** las filas o
+la **barra de desplazamiento** de debajo la mueven. El **zoom** (lo que usan la ruta de arriba y los paneles en
+*Only inside the zoom*) es el subciclo más pequeño que contiene la ventana, y las filas empiezan en el nivel justo
+debajo de él; solo cambia cuando la ventana sale de un subciclo o entra en uno de sus hijos, así que los paneles no
+se redibujan a cada paso de la rueda. Doble clic, clic derecho, un paso de la ruta o `Inicio` **ajustan** la
+ventana a un subciclo, deslizándose hasta él.
+
+Arriba, una franja con el **ciclo completo** hace de mapa: la ventana va enmarcada (y el resto, atenuado), con la
+fecha marcada y el momento del cielo. Arrastrar el marco mueve la ventana; arrastrar sus bordes la estrecha o la
+ensancha; un clic en una edad ajusta la ventana a ella. Las filas empiezan justo debajo. Bajo
 las filas, sobre el eje del tiempo, hay una **banda de etiquetas** con las de la fecha (*now* o la fecha, en rojo) y
 el momento del cielo (*sky*, en naranja), cada una al pie de su línea; la banda tiene una línea por etiqueta (o
 las que necesite la clave de los criterios), y las filas ocupan el resto.
@@ -25,9 +34,14 @@ filo claro debajo, para que se vean sobre cualquier color de celda.
 
 | Acción | Efecto |
 |---|---|
-| clic | selecciona el subciclo |
-| doble clic | amplía ese subciclo |
-| clic derecho | reduce un nivel |
+| rueda | estrecha o ensancha la ventana alrededor del puntero |
+| arrastrar las filas, barra de desplazamiento | mueve la ventana |
+| clic | selecciona el subciclo (si el ratón no se ha movido: si no, es un arrastre) |
+| doble clic | ajusta la ventana a ese subciclo |
+| clic derecho | ajusta la ventana al subciclo de encima del zoom |
+| `+` / `−` | estrecha o ensancha la ventana alrededor del centro |
+| `Inicio` | todo el ciclo |
+| en el mapa: arrastrar el marco, sus bordes, clic en una edad | mover la ventana, estrecharla o ensancharla, ajustarla a esa edad |
 | ← → | subciclo anterior o siguiente |
 | ↑ / ↓ | padre / primera parte |
 | Intro / Retroceso | ampliar / reducir |
@@ -42,7 +56,10 @@ para que ninguno se pierda entre los atenuados. Pulsar en esas filas selecciona 
 la selección, *Follow*, los marcadores y las líneas se dibujan en ellas como en las demás (un subciclo muy
 estrecho, como una línea). Así se ven las nueve profundidades a la vez sin dibujar cientos de miles de celdas.
 
-Debajo de las filas, un eje con años o fechas (con un modelo de ciclo). La descripción emergente de un subciclo
+Debajo de las filas, un eje con años o fechas (con un modelo de ciclo): los dos extremos de la ventana y las
+fronteras del nivel menos profundo que tenga al menos dos en ella. Seleccionar un subciclo que no está a la vista
+(desde un panel o con el teclado) mueve la ventana hasta él. Con *View → Widths* (por duración o iguales) la
+ventana sigue mostrando el mismo tramo del ciclo, y las sesiones la guardan. La descripción emergente de un subciclo
 da su nombre, sus fechas y duración, con los criterios activados la fecha en que empezaría según el otro
 criterio, y sus marcadores.
 

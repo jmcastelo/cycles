@@ -24,6 +24,14 @@ the commit `vX.Y.Z`.
   on (roughness, purity, microcosm and mixture change regime on the boundaries of levels 1–3), and a
   digit-permuted surrogate, the null model of the digit order (the durations stay; the structure of the measures
   goes: it is in the hierarchy of the levels).
+- **The navigator shows a window of the cycle**, from the whole cycle down to the width of a subcycle of depth 8:
+  the mouse wheel zooms in and out around the pointer, dragging the rows pans (a click without moving still
+  selects), and a scroll bar under the navigator pans too. The strip of the whole cycle is a map: drag the
+  frame to pan, drag its edges to zoom, click an age to fit it. Double-click, right-click, the breadcrumb and
+  `Home` fit a subcycle, gliding to it; `+` and `−` zoom around the middle. The zoom of the panels and of the
+  breadcrumb is now the smallest subcycle that contains the window. The axis labels the ends of the window;
+  switching the widths keeps the same part of the cycle in view; selecting a subcycle out of view pans to it;
+  sessions keep the window.
 - **The Dynamics panel**: the durations or a measure of a level as a time series, in the order of the subcycles or
   evenly in years: return map, DFA fluctuations, spectrum, recurrence plot, or the series with its change points,
   with a surrogate drawn behind (shuffled, phase-randomized or digits permuted), the estimates and what is known

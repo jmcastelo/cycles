@@ -117,6 +117,67 @@ def address_of(index: int, depth: int) -> tuple:
     return tuple(reversed(digits))
 
 
+# -- the navigator's coordinates: normalized time (widths by duration) or the index position (equal widths)
+
+_SHARES = (0.4, 0.3, 0.2, 0.1)
+_STARTS = (0.0, 0.4, 0.7, 0.9)
+_LEVELS = 40                     # enough for float precision in both coordinates
+
+
+def _age_at(x: float) -> int:
+    return 3 if x >= 0.9 else 2 if x >= 0.7 else 1 if x >= 0.4 else 0
+
+
+def index_to_time(v: float) -> float:
+    """The normalized time of the index position ``v`` (Σ a_i 4^−i): the same point of the cycle."""
+    x, u, scale = min(max(float(v), 0.0), 1.0), 0.0, 1.0
+    for _ in range(_LEVELS):
+        k = min(3, int(x * 4))
+        x = x * 4 - k
+        u += _STARTS[k] * scale
+        scale *= _SHARES[k]
+    return u + x * scale
+
+
+def time_to_index(u: float) -> float:
+    """The index position of the normalized time ``u`` (the inverse of ``index_to_time``)."""
+    x, v, scale = min(max(float(u), 0.0), 1.0), 0.0, 1.0
+    for _ in range(_LEVELS):
+        k = _age_at(x)
+        x = min(max((x - _STARTS[k]) / _SHARES[k], 0.0), 1.0)
+        scale /= 4
+        v += k * scale
+    return v + x * scale
+
+
+def coordinate_digits(x: float, spacing: str, depth: int) -> tuple:
+    """The address, ``depth`` digits long, of the subcycle at the coordinate ``x`` (in ``spacing``)."""
+    x = min(max(float(x), 0.0), 1.0)
+    digits = []
+    for _ in range(depth):
+        if spacing == 'time':
+            k = _age_at(x)
+            x = min(max((x - _STARTS[k]) / _SHARES[k], 0.0), 1.0)
+        else:
+            k = min(3, int(x * 4))
+            x = x * 4 - k
+        digits.append(k)
+    return tuple(digits)
+
+
+def coordinate_extent(address: tuple, spacing: str) -> tuple[float, float]:
+    """Where the subcycle ``address`` starts and ends, in the coordinate of ``spacing``."""
+    start, scale = 0.0, 1.0
+    for k in address:
+        if spacing == 'time':
+            start += _STARTS[k] * scale
+            scale *= _SHARES[k]
+        else:
+            scale /= 4
+            start += k * scale
+    return start, start + scale
+
+
 def children_range(address: tuple, depth: int) -> range:
     """Indices, at ``depth``, of the subcycles inside ``address`` (a contiguous range)."""
     span = 4 ** (depth - len(address))
@@ -278,6 +339,7 @@ class CycleState(QObject):
     """
 
     focusChanged = Signal(tuple)
+    windowChanged = Signal(bool)        # the part of the cycle the navigator shows (True: glide to it)
     selectionChanged = Signal(object)   # tuple, or None
     viewChanged = Signal()              # coloring, rows, spacing, names, highlight or cycle model
     modelChanged = Signal(object)       # the cycle model, or None (normalized time)
@@ -300,7 +362,8 @@ class CycleState(QObject):
         self.date: float | None = current_year()
         self.sky_time: float | None = None
         self.follow: bool = True        # the plots highlight their subcycle containing the sky moment
-        self.focus: tuple = ()
+        self.focus: tuple = ()          # the smallest subcycle that contains the window
+        self.window: tuple = (0.0, 1.0)  # the part of the cycle in view, in the coordinate of the spacing
         self.selection: tuple | None = None
         self.color_key: str = DEFAULT_COLOR_KEY
         self.rows: int = 5
@@ -323,11 +386,53 @@ class CycleState(QObject):
 
     # -- focus and selection
 
-    def set_focus(self, address) -> None:
+    def set_focus(self, address, animate: bool = True) -> None:
+        """Show the subcycle ``address`` filling the navigator (and so zoom into it)."""
         address = tuple(address)[:MAX_DEPTH - 1]
-        if address != self.focus:
-            self.focus = address
-            self.focusChanged.emit(address)
+        self.set_window(*coordinate_extent(address, self.spacing), animate=animate, focus=address)
+
+    def min_width_at(self, x: float) -> float:
+        """The narrowest window around the coordinate ``x``: the deepest subcycle a zoom can be (depth 8) there."""
+        return float(np.subtract(*coordinate_extent(coordinate_digits(x, self.spacing, MAX_DEPTH - 1),
+                                                    self.spacing)[::-1]))
+
+    def set_window(self, a: float, b: float, animate: bool = False, focus: tuple | None = None) -> None:
+        """
+        Show the part (``a``, ``b``) of the cycle, in the coordinate of the spacing (normalized time, or the index
+        position with equal widths): kept inside the cycle and no narrower than ``min_width_at``. The focus becomes
+        the smallest subcycle that contains it (or ``focus``, the subcycle that the window is exactly).
+        """
+        a, b = float(a), float(b)
+        width = min(1.0, max(b - a, self.min_width_at((a + b) / 2)))
+        centre = (a + b) / 2
+        a = min(max(centre - width / 2, 0.0), 1.0 - width)
+        window = (a, a + width)
+        if focus is None:
+            tiny = width * 1e-9
+            first = coordinate_digits(a + tiny, self.spacing, MAX_DEPTH - 1)
+            last = coordinate_digits(a + width - tiny, self.spacing, MAX_DEPTH - 1)
+            common = 0
+            while common < len(first) and first[common] == last[common]:
+                common += 1
+            focus = first[:common]
+        if window != self.window or animate:
+            self.window = window
+            self.windowChanged.emit(animate)
+        if focus != self.focus:
+            self.focus = focus
+            self.focusChanged.emit(focus)
+
+    def window_time(self) -> tuple[float, float]:
+        """The window in normalized time."""
+        a, b = self.window
+        return (a, b) if self.spacing == 'time' else (index_to_time(a), index_to_time(b))
+
+    def set_window_time(self, a: float, b: float) -> None:
+        """Show the part (``a``, ``b``) of the cycle given in normalized time."""
+        if self.spacing == 'time':
+            self.set_window(a, b)
+        else:
+            self.set_window(time_to_index(a), time_to_index(b))
 
     def zoom_in(self, address) -> None:
         """Zoom into ``address`` (if it has subdivisions to show) and select it."""
@@ -337,8 +442,8 @@ class CycleState(QObject):
         self.select(address)
 
     def zoom_out(self) -> None:
-        if self.focus:
-            self.set_focus(self.focus[:-1])
+        """Show the subcycle above the zoom (or the whole cycle)."""
+        self.set_focus(self.focus[:-1] if self.focus else ())
 
     def select(self, address) -> None:
         address = tuple(address) if address is not None else None
@@ -357,7 +462,16 @@ class CycleState(QObject):
             focus = address[:min(len(focus), max(0, len(address) - 1))]
         if len(address) > len(focus) + self.rows:
             focus = address[:len(address) - self.rows]
-        self.set_focus(focus)
+        if focus != self.focus:
+            self.set_focus(focus)
+        else:
+            # the same zoom: move the window over the address if it is out of view
+            a, b = self.window
+            start, end = coordinate_extent(address, self.spacing)
+            if end <= a or start >= b:
+                width = b - a
+                centre = (start + end) / 2
+                self.set_window(centre - width / 2, centre + width / 2, animate=True)
         self.select(address)
 
     def visible_depths(self) -> range:
@@ -382,7 +496,14 @@ class CycleState(QObject):
     def set_spacing(self, spacing: str) -> None:
         if spacing not in ('time', 'index'):
             raise ValueError("spacing must be 'time' or 'index'")
+        if spacing == self.spacing:
+            return
+        # the same part of the cycle, in the other coordinate
+        convert = time_to_index if spacing == 'index' else index_to_time
+        a, b = self.window
+        self.window = (convert(a), convert(b))
         self._set('spacing', spacing)
+        self.windowChanged.emit(False)
 
     def set_names(self, names: tuple) -> None:
         self._set('names', tuple(names))

@@ -65,6 +65,7 @@ class MainWindow(QMainWindow):
         self.navigator = Navigator(self.state)
         layout.addWidget(self.breadcrumb)
         layout.addWidget(self.navigator, 1)
+        layout.addWidget(self.navigator.hscroll)
         central.setMinimumSize(360, 240)      # panels around it never squeeze the navigator away
         # the panels dock around the navigator with QtAds (layouts.py)
         self.dock_manager = make_manager(self, central)
@@ -611,12 +612,15 @@ class MainWindow(QMainWindow):
 
     def show_help(self) -> None:
         QMessageBox.information(self, 'Navigation', (
-            'Click a subcycle to select it; double-click to zoom into it; right-click to zoom out.\n\n'
+            'The wheel zooms in and out around the pointer; drag to pan (or use the scroll bar).\n'
+            'Click a subcycle to select it; double-click to fit it; right-click to fit the one above.\n'
+            'On the strip of the whole cycle: drag the frame to pan, drag its edges to zoom, click an age to fit it.\n\n'
             'Keys in the navigator:\n'
             '  ← →  previous / next subcycle of the same depth\n'
             '  ↑  parent      ↓  first part\n'
             '  Enter  zoom into the selection\n'
-            '  Backspace / Esc  zoom out\n\n'
+            '  Backspace / Esc  zoom out\n'
+            '  + / −  zoom in / out around the middle      Home  the whole cycle\n\n'
             f'Subcycles are computed down to depth {MAX_DEPTH} ({4 ** MAX_DEPTH:,} subcycles, under a '
             'second the first time).'))
 

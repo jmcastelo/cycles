@@ -4,25 +4,26 @@ part framed, and below it the subdivisions of the zoomed subcycle, one row per
 depth, each subcycle drawn in its color and labelled with its name and/or a
 column of dots (4, 3, 2, 1 for Satya, Treta, Dvapara, Kali).
 
-Mouse: click selects, double-click zooms in, right-click zooms out; a click on
-the overview zooms to that yuga; Shift+click sets the moment of the sky chart.
-The tags of the marked date and of the sky moment, in a band under the
-rows (above the time axis), can be dragged along the rows (Escape cancels a
-drag).
-Keys: Left/Right previous/next subcycle, Up parent, Down first part,
-Enter zoom into the selection, Backspace/Escape zoom out.
+The rows show a window of the cycle (``CycleState.window``), from the whole cycle down to a subcycle of depth 8.
+Mouse: the wheel zooms in and out around the pointer; dragging pans; click selects, double-click fits a
+subcycle, right-click fits the one above; on the overview (a map of the whole cycle), drag the frame to pan or
+its edges to zoom, and click to fit that yuga; Shift+click sets the moment of the sky chart. The tags of the
+marked date and of the sky moment, in a band under the rows (above the time axis), can be dragged along the
+rows (Escape cancels a drag). A scroll bar under the navigator (``hscroll``) pans too.
+Keys: Left/Right previous/next subcycle, Up parent, Down first part, Enter zoom into the selection,
+Backspace/Escape zoom out, +/− zoom around the middle, Home the whole cycle.
 """
 
 from typing import NamedTuple
 
 import numpy as np
-from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
+from PySide6.QtCore import QEasingCurve, QPointF, QRectF, QSize, Qt, QVariantAnimation, Signal
 from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPen, QPolygonF
-from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QSizePolicy, QToolButton, QToolTip, QWidget
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QScrollBar, QSizePolicy, QToolButton, QToolTip, QWidget
 
 from cycles.gui.state import (
-    BOOKMARK_COLOR, DATE_COLOR, EVENT_COLOR, MAX_DEPTH, MOMENT_COLOR, SELECTION_COLOR, PERMUTATION_COLOR, CycleState, address_of, children_range, current_year,
-    date_text, span_text, tcoord, time_text,
+    BOOKMARK_COLOR, DATE_COLOR, EVENT_COLOR, MAX_DEPTH, MOMENT_COLOR, SELECTION_COLOR, PERMUTATION_COLOR, CycleState, address_of, current_year,
+    coordinate_extent, date_text, index_to_time, span_text, tcoord, time_text,
 )
 
 LABEL_WIDTH = 44     # left margin, for the depth of each row
@@ -39,6 +40,12 @@ PARENT_WIDTH = 1.0         # border of its parents
 CURSOR_WIDTH = 1.5         # the lines of the marked date and the sky moment
 ZOOM_COLOR = '#404040'     # the frame of the zoomed part on the overview strip
 HALO = QColor(255, 255, 255, 210)    # the light edge under borders and cursors, to stand out over any color
+ZOOM_STEP = 1.25           # the window narrows (or widens) by this for each notch of the wheel
+DRAG_THRESHOLD = 4         # pixels the mouse moves before a press becomes a drag (a pan), not a click
+EDGE_GRAB = 4              # pixels around an edge of the overview's frame that grab it (to zoom)
+ANIMATION_MS = 160         # the glide to a fitted subcycle (0: none)
+SCROLL_PAGE = 1000         # the scroll bar: steps per window width, ...
+SCROLL_MAX = 2_000_000_000  # ... and at most these steps in all
 
 
 class Row(NamedTuple):
@@ -90,10 +97,26 @@ class Navigator(QWidget):
         self._cells: list[tuple[QRectF, tuple]] = []
         self._tags: dict[str, QRectF] = {}     # 'date' and 'sky': where their tags are drawn
         self._drag: tuple[str, float] | None = None   # marker being dragged, and its year before the drag
+        self._window = state.window      # the window drawn (it glides to the state's after a fit)
+        self._press = None               # (position, window) of a left press in the rows, before it is a pan
+        self._panning = False
+        self._overview_drag = None       # (part grabbed: 'frame', 'left', 'right' or None, x, window in time)
+        self.animation_ms = ANIMATION_MS
+        self._animation = QVariantAnimation(self)
+        self._animation.setStartValue(0.0)
+        self._animation.setEndValue(1.0)
+        self._animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._animation.valueChanged.connect(self._glide)
+        self._glide_ends = None
+        self.hscroll = QScrollBar(Qt.Orientation.Horizontal)
+        self.hscroll.setToolTip('Pan along the cycle (the wheel over the rows zooms)')
+        self.hscroll.valueChanged.connect(self._scrolled)
+        self._sync_scroll()
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMouseTracking(True)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         state.focusChanged.connect(self._changed)
+        state.windowChanged.connect(self._window_changed)
         state.selectionChanged.connect(self.update)
         state.bookmarksChanged.connect(self.update)
         state.eventsChanged.connect(self.update)
@@ -149,43 +172,47 @@ class Navigator(QWidget):
         bottom = self.height() - AXIS_HEIGHT - TAG_GAP
         return QRectF(LABEL_WIDTH, bottom - height, self.width() - LABEL_WIDTH - 8, height)
 
+    def _area(self) -> QRectF:
+        """Where the rows are drawn."""
+        top = self._overview_rect().bottom() + ROWS_TOP_GAP
+        return QRectF(LABEL_WIDTH, top, self.width() - LABEL_WIDTH - 8, self._tag_band().top() - TAG_GAP - top)
+
+    def _visible(self, depth: int) -> tuple[int, int, np.ndarray, np.ndarray]:
+        """The subcycles of ``depth`` in the window drawn: (first index, end index, their starts and widths in the
+        coordinate of the spacing)."""
+        a, b = self._window
+        if self.state.spacing == 'time':
+            level = self.state.cache.level(depth)
+            first = max(0, int(np.searchsorted(level.starts, a, side='right')) - 1)
+            end = max(first + 1, int(np.searchsorted(level.starts, b, side='left')))
+            return first, end, level.starts[first:end], level.durations[first:end]
+        n = 4 ** depth
+        first = min(n - 1, max(0, int(np.floor(a * n))))
+        end = max(first + 1, min(n, int(np.ceil(b * n))))
+        indices = np.arange(first, end)
+        return first, end, indices / n, np.full(end - first, 1.0 / n)
+
     def _layout(self) -> list[tuple[QRectF, tuple, int, int]]:
         """
         Cells to draw one by one: (rectangle, address, depth, index), for the rows whose subcycles are wide
-        enough. The geometry of every row is kept in ``self._geometry`` (``Row``); the dense rows (more subcycles
-        than about one per ``DENSE_CELL`` pixels) are drawn as a strip of pixels instead.
+        enough (the rectangles may reach past the area: the drawing is clipped to it). The geometry of every row
+        is kept in ``self._geometry`` (``Row``); the dense rows (more subcycles in view than about one per
+        ``DENSE_CELL`` pixels) are drawn as a strip of pixels instead.
         """
-        state = self.state
         rows = self._rows()
-        top = self._overview_rect().bottom() + ROWS_TOP_GAP
-        area = QRectF(LABEL_WIDTH, top, self.width() - LABEL_WIDTH - 8, self._tag_band().top() - TAG_GAP - top)
+        area = self._area()
         row_height = area.height() / len(rows)
-        focus = state.focus
-        if focus:
-            level = state.cache.level(len(focus))
-            f_start = level.starts[tcoord(focus)]
-            f_duration = level.durations[tcoord(focus)]
-        else:
-            f_start, f_duration = 0.0, 1.0
-
+        a, b = self._window
+        scale = area.width() / (b - a)
         cells, self._geometry = [], []
         for r, depth in enumerate(rows):
             top = area.top() + r * row_height
-            indices = children_range(focus, depth)
-            n = len(indices)
-            if state.spacing == 'time' and depth:
-                level = state.cache.level(depth)
-                lefts = (level.starts[indices.start:indices.stop] - f_start) / f_duration
-                widths = level.durations[indices.start:indices.stop] / f_duration
-            else:
-                lefts = np.arange(n) / n
-                widths = np.full(n, 1 / n)
-            row = Row(depth, top, row_height - ROW_GAP, indices.start, indices.stop,
-                      area.left() + lefts * area.width(), widths * area.width(),
-                      n * DENSE_CELL > area.width())
+            first, end, starts, widths = self._visible(depth)
+            row = Row(depth, top, row_height - ROW_GAP, first, end,
+                      area.left() + (starts - a) * scale, widths * scale, (end - first) * DENSE_CELL > area.width())
             self._geometry.append(row)
             if not row.dense:
-                for k, index in enumerate(indices):
+                for k, index in enumerate(range(first, end)):
                     rect = QRectF(row.lefts[k], top, row.widths[k], row.height)
                     cells.append((rect, address_of(index, depth), depth, index))
         return cells
@@ -276,7 +303,8 @@ class Navigator(QWidget):
         palette = self.palette()
         painter.fillRect(self.rect(), palette.base())
         cells = self._layout()
-        self._cells = [(rect, address) for rect, address, _, _ in cells]
+        area = self._area()
+        self._cells = [(rect.intersected(area), address) for rect, address, _, _ in cells]
 
         selection = state.selection
         bright = {}           # depth -> mask of the subcycles kept bright (the highlight), where there is one
@@ -298,7 +326,10 @@ class Navigator(QWidget):
         dim.setAlphaF(0.75)
         border = QPen(QColor(0, 0, 0, 45), 0)    # hairline
 
-        for rect, address, depth, index in cells:
+        painter.save()
+        painter.setClipRect(area.adjusted(0, -1, 0, 1))
+        for full, address, depth, index in cells:
+            rect = full.intersected(area.adjusted(-3, 0, 3, 0))     # the part in view: its name stays visible
             color = rgb_to_qcolor(state.colors(depth, state.color_key)[index])
             painter.fillRect(rect, color)
             if state.borders and rect.width() >= 3:
@@ -315,7 +346,6 @@ class Navigator(QWidget):
                                      dim)
 
         self._draw_criteria(painter, cells)
-        self._draw_overview(painter, metrics)
 
         # Selection and its ancestors
         if selection:
@@ -343,6 +373,9 @@ class Navigator(QWidget):
                     stroke(painter, QColor(MOMENT_COLOR), SELECTION_WIDTH, lambda r=inner: painter.drawRect(r))
 
         self._draw_bookmarks(painter, cells)
+        painter.restore()
+        self._draw_overview(painter, metrics)
+        self._draw_bookmark_ticks(painter)
 
         # Depth of each row, and the extent of the zoomed subcycle
         painter.setPen(palette.text().color())
@@ -383,6 +416,16 @@ class Navigator(QWidget):
                 size = min(12.0, rect.width(), rect.height() / 2)
                 painter.drawPolygon(QPolygonF([rect.topLeft(), rect.topLeft() + QPointF(size, 0),
                                                rect.topLeft() + QPointF(0, size)]))
+        painter.restore()
+
+    def _draw_bookmark_ticks(self, painter: QPainter) -> None:
+        """A tick on the overview strip at each bookmark."""
+        state = self.state
+        if not state.bookmarks:
+            return
+        marked = {b['address'] for b in state.bookmarks}
+        painter.save()
+        color = QColor(BOOKMARK_COLOR)
         strip = self._overview_rect()
         painter.setPen(QPen(color, 2))
         for address in marked:
@@ -401,7 +444,7 @@ class Navigator(QWidget):
         if state.event_marks is None or state.time_map is None or not cells:
             return
         years, label = state.event_marks
-        start, end = self._focus_extent()
+        start, end = self._window_time()
         u = np.asarray(state.time_map.to_normalized(years[(years >= state.time_map.start)
                                                           & (years <= state.time_map.end)]), dtype=float)
         u = u[(u >= start) & (u <= end)]
@@ -409,7 +452,7 @@ class Navigator(QWidget):
         band = self._tag_band()
         color = QColor(EVENT_COLOR)
         tick = QColor(color)
-        span_pixels = max(1.0, float(row.widths.sum()))
+        span_pixels = max(1.0, self._area().width())
         if len(u) > span_pixels / 4:            # crowded: a translucent band that shows the density
             tick.setAlphaF(0.35)
         painter.save()
@@ -420,7 +463,8 @@ class Navigator(QWidget):
         durations = level.durations[row.start:row.stop]
         k = np.clip(np.searchsorted(starts, u, side='right') - 1, 0, len(starts) - 1)
         xs = row.lefts[k] + (u - starts[k]) / durations[k] * row.widths[k]
-        for x in np.unique(np.round(xs)):
+        area = self._area()
+        for x in np.unique(np.round(xs[(xs >= area.left()) & (xs <= area.right())])):
             painter.drawLine(QPointF(x, bottom - 3), QPointF(x, bottom + TAG_GAP + 3))
         if label:
             font = QFont(painter.font())
@@ -618,9 +662,9 @@ class Navigator(QWidget):
         painter.setPen(self.palette().text().color())
         painter.drawText(QRectF(0, strip.top(), LABEL_WIDTH - 6, strip.height()),
                          Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, 'cycle')
-        # the zoomed part: dim the rest and frame it
-        start, end = self._focus_extent()
-        if state.focus:
+        # the window: dim the rest and frame it
+        start, end = self._window_time()
+        if end - start < 1 - 1e-12:
             x0 = strip.left() + start * strip.width()
             x1 = max(strip.left() + end * strip.width(), x0 + 3)
             shade = QColor(self.palette().base().color())
@@ -652,32 +696,46 @@ class Navigator(QWidget):
         return time_text(time_map.to_physical(min(1.0, u)), span)
 
     def _draw_axis(self, painter: QPainter, cells) -> None:
-        """Ticks at the boundaries of the first row below the zoom, labelled in the current time units."""
+        """
+        Ticks at the boundaries in view of the shallowest row with at least two of them (or the deepest row), and
+        the times of the two ends of the window, labelled in the current time units.
+        """
         state = self.state
-        rows = self._rows()
-        if not rows:
+        geometry = getattr(self, '_geometry', [])
+        if not geometry:
             return
-        depth = rows[0]
-        children = [(rect, address) for rect, address, d, _ in cells if d == depth]
-        level = state.cache.level(depth)
-        start, end = self._focus_extent()
+        area = self._area()
+        start, end = self._window_time()
         time_map = state.time_map
         span = (time_map.to_physical(end) - time_map.to_physical(start)) if time_map else 0.0
         bottom = self._tag_band().bottom() + TAG_GAP
         metrics = painter.fontMetrics()
-        ticks = [(rect.left(), float(level.starts[tcoord(address)])) for rect, address in children]
-        ticks.append((children[-1][0].right(), end))
+        chosen = None
+        for row in geometry:
+            inside = (row.lefts > area.left() + 0.5) & (row.lefts < area.right() - 0.5)
+            if inside.sum() >= 2 or row is geometry[-1]:
+                chosen = (row, np.flatnonzero(inside))
+                break
+        row, inside = chosen
+        level = state.cache.level(row.depth)
+        if len(inside) > area.width() / 4:              # too many: a few, evenly
+            inside = inside[np.linspace(0, len(inside) - 1, int(area.width() / 40)).astype(int)]
+        ticks = [(area.left(), start)]
+        ticks += [(float(row.lefts[k]), float(level.starts[row.start + k])) for k in inside]
+        ticks.append((area.right(), end))
         painter.setPen(self.palette().text().color())
-        last_right = -1e9
-        for k, (x, u) in enumerate(ticks):
+        y = bottom + 6 + metrics.ascent()
+        taken = []                              # the label boxes drawn: the ends of the window first
+        for k in [0, len(ticks) - 1] + list(range(1, len(ticks) - 1)):
+            x, u = ticks[k]
             painter.drawLine(QPointF(x, bottom), QPointF(x, bottom + 4))
             text = self._time_label(u, span)
             width = metrics.horizontalAdvance(text)
             left = x if k == 0 else (x - width if k == len(ticks) - 1 else x - width / 2)
             left = min(max(left, LABEL_WIDTH), self.width() - 8 - width)
-            if left > last_right + 8:
-                painter.drawText(QPointF(left, bottom + 6 + metrics.ascent()), text)
-                last_right = left + width
+            if all(left > right + 8 or left + width < other - 8 for other, right in taken):
+                painter.drawText(QPointF(left, y), text)
+                taken.append((left, left + width))
 
     def _draw_markers(self, painter: QPainter, cells) -> None:
         """The marked date (red) and the moment of the sky chart (orange), solid lines with a light edge."""
@@ -702,13 +760,14 @@ class Navigator(QWidget):
         u = state.position(year)
         if u is None:
             return
-        start, end = self._focus_extent()
+        start, end = self._window_time()
         if not start <= u <= end:
             return
+        area = self._area()
         last = None                             # (depth, x, bottom) in the deepest row
         for row in self._geometry:
             x = self._x_of(row, u)
-            if x is None:
+            if x is None or not area.left() - 1 <= x <= area.right() + 1:
                 continue
             stroke(painter, color, CURSOR_WIDTH,
                    lambda x=x, r=row: painter.drawLine(QPointF(x, r.top), QPointF(x, r.top + r.height)))
@@ -736,13 +795,85 @@ class Navigator(QWidget):
             painter.drawText(tag, Qt.AlignmentFlag.AlignCenter, label)
             self._tags[kind] = tag
 
-    def _focus_extent(self) -> tuple[float, float]:
-        focus = self.state.focus
-        if not focus:
-            return 0.0, 1.0
-        level = self.state.cache.level(len(focus))
-        i = tcoord(focus)
-        return float(level.starts[i]), float(min(1.0, level.starts[i] + level.durations[i]))
+    def _window_time(self) -> tuple[float, float]:
+        """The window drawn, in normalized time."""
+        a, b = self._window
+        if self.state.spacing == 'index':
+            return index_to_time(a), min(1.0, index_to_time(b))
+        return a, min(1.0, b)
+
+    # -- the window: zoom, pan, glide, scroll bar
+
+    def _window_changed(self, animate: bool) -> None:
+        target = self.state.window
+        if animate and self.animation_ms > 0 and self.isVisible() and target != self._window:
+            self._glide_ends = (self._window, target)
+            self._animation.stop()
+            self._animation.setDuration(self.animation_ms)
+            self._animation.start()
+        else:
+            self._animation.stop()
+            self._window = target
+        self._sync_scroll()
+        self.update()
+
+    def _glide(self, t) -> None:
+        """A step of the glide to a fitted window: the centre moves and the width changes by a constant factor."""
+        if self._glide_ends is None:
+            return
+        (a0, b0), (a1, b1) = self._glide_ends
+        t = float(t)
+        width = (b0 - a0) * ((b1 - a1) / (b0 - a0)) ** t
+        centre = (a0 + b0) / 2 + ((a1 + b1) / 2 - (a0 + b0) / 2) * t
+        self._window = (centre - width / 2, centre + width / 2) if t < 1 else (a1, b1)
+        self.update()
+
+    def zoom(self, factor: float, anchor: float = 0.5) -> None:
+        """Narrow (``factor`` < 1) or widen the window by ``factor``, keeping the point at the fraction ``anchor``
+        of the rows' width where it is."""
+        state = self.state
+        a, b = state.window
+        width = b - a
+        point = a + anchor * width
+        new = min(1.0, max(width * factor, state.min_width_at(point)))
+        start = min(max(point - anchor * new, 0.0), 1.0 - new)
+        state.set_window(start, start + new)
+
+    def pan_to(self, start: float) -> None:
+        """Move the window (keeping its width) to begin at ``start``."""
+        a, b = self.state.window
+        width = b - a
+        start = min(max(start, 0.0), 1.0 - width)
+        self.state.set_window(start, start + width)
+
+    def _sync_scroll(self) -> None:
+        a, b = self.state.window
+        width = b - a
+        maximum = 0 if width >= 1 - 1e-12 else int(min(SCROLL_MAX, round((1 - width) / width * SCROLL_PAGE)))
+        self.hscroll.blockSignals(True)
+        self.hscroll.setRange(0, maximum)
+        self.hscroll.setPageStep(SCROLL_PAGE if maximum < SCROLL_MAX else max(1, int(SCROLL_MAX * width)))
+        self.hscroll.setSingleStep(max(1, self.hscroll.pageStep() // 10))
+        self.hscroll.setValue(int(round(a / (1 - width) * maximum)) if maximum else 0)
+        self.hscroll.blockSignals(False)
+
+    def _scrolled(self, value: int) -> None:
+        maximum = self.hscroll.maximum()
+        if maximum:
+            a, b = self.state.window
+            self.pan_to(value / maximum * (1 - (b - a)))
+
+    def wheelEvent(self, event) -> None:
+        steps = event.angleDelta().y() / 120
+        if not steps and not event.pixelDelta().isNull():
+            steps = event.pixelDelta().y() / 120
+        if not steps:
+            event.ignore()
+            return
+        area = self._area()
+        anchor = min(max((event.position().x() - area.left()) / area.width(), 0.0), 1.0)
+        self.zoom(ZOOM_STEP ** -steps, anchor)
+        event.accept()
 
     # -- interaction
 
@@ -751,12 +882,14 @@ class Navigator(QWidget):
 
     def _year_at_x(self, x: float) -> float | None:
         """Year at ``x`` along the first row (where the tags are joined to their lines)."""
-        rows = self._rows()
-        first = [rect for rect, address in self._cells if len(address) == rows[0]] if rows else []
-        if not first:
+        geometry = getattr(self, '_geometry', [])
+        if not geometry:
             return None
-        x = min(max(x, first[0].left()), first[-1].right() - 1e-6)
-        return self.moment_at(QPointF(x, first[0].center().y()))
+        area = self._area()
+        row = geometry[0]
+        x = min(max(x, area.left(), float(row.lefts[0])), area.right() - 1e-6,
+                float(row.lefts[-1] + row.widths[-1]) - 1e-6)
+        return self.moment_at(QPointF(x, row.top + row.height / 2))
 
     def _move_marker(self, kind: str, year: float | None) -> None:
         if year is None:
@@ -782,13 +915,12 @@ class Navigator(QWidget):
             if year is not None:
                 self.state.set_sky_time(year)
         elif event.button() == Qt.MouseButton.LeftButton:
-            yuga = self._overview_yuga(event.position())
-            if yuga is not None:
-                self.state.set_focus((yuga,))
+            pos = event.position()
+            if self._overview_rect().contains(pos):
+                self._overview_drag = (self._overview_part(pos), pos.x(), self.state.window_time(), False)
                 return
-            address = self.cell_at(event.position())
-            if address is not None:
-                self.state.select(address)
+            self._press = (pos, self.state.window)
+            self._panning = False
 
     def moment_at(self, pos: QPointF) -> float | None:
         """Year at the horizontal position of ``pos`` in the rows (also with equal widths)."""
@@ -812,8 +944,56 @@ class Navigator(QWidget):
     def mouseReleaseEvent(self, event) -> None:
         if self._drag is not None and event.button() == Qt.MouseButton.LeftButton:
             self._end_drag()
+        elif self._overview_drag is not None and event.button() == Qt.MouseButton.LeftButton:
+            moved = self._overview_drag[3]
+            self._overview_drag = None
+            self.unsetCursor()
+            if not moved:                       # a click: fit that yuga
+                yuga = self._overview_yuga(event.position())
+                if yuga is not None:
+                    self.state.set_focus((yuga,))
+        elif self._press is not None and event.button() == Qt.MouseButton.LeftButton:
+            pos, _ = self._press
+            panned = self._panning
+            self._press = None
+            self._panning = False
+            self.unsetCursor()
+            if not panned:                      # a click: select
+                address = self.cell_at(pos)
+                if address is not None:
+                    self.state.select(address)
         else:
             super().mouseReleaseEvent(event)
+
+    def _overview_part(self, pos: QPointF) -> str | None:
+        """What a press at ``pos`` on the overview grabs: an edge of the frame of the window, the frame, or nothing."""
+        strip = self._overview_rect()
+        start, end = self._window_time()
+        if end - start >= 1 - 1e-12:
+            return None
+        x0, x1 = strip.left() + start * strip.width(), strip.left() + end * strip.width()
+        if abs(pos.x() - x0) <= EDGE_GRAB and x1 - x0 > 2 * EDGE_GRAB:
+            return 'left'
+        if abs(pos.x() - x1) <= EDGE_GRAB:
+            return 'right'
+        return 'frame' if x0 <= pos.x() <= x1 else None
+
+    def _drag_overview(self, pos: QPointF) -> None:
+        part, x0, (a, b), moved = self._overview_drag
+        if not moved and abs(pos.x() - x0) < DRAG_THRESHOLD:
+            return
+        self._overview_drag = (part, x0, (a, b), True)
+        if part is None:
+            return
+        du = (pos.x() - x0) / self._overview_rect().width()
+        state = self.state
+        if part == 'frame':
+            du = min(max(du, -a), 1 - b)
+            state.set_window_time(a + du, b + du)
+        elif part == 'left':
+            state.set_window_time(min(max(0.0, a + du), b - 1e-12), b)
+        else:
+            state.set_window_time(a, max(min(1.0, b + du), a + 1e-12))
 
     def _end_drag(self, cancel: bool = False) -> None:
         kind, before = self._drag
@@ -836,7 +1016,25 @@ class Navigator(QWidget):
         if self._drag is not None:
             self._move_marker(self._drag[0], self._year_at_x(pos.x()))
             return
-        if self._tag_at(pos) is not None:
+        if self._overview_drag is not None:
+            self._drag_overview(pos)
+            return
+        if self._press is not None:
+            start, (a, b) = self._press
+            dx = pos.x() - start.x()
+            if not self._panning and abs(dx) < DRAG_THRESHOLD and abs(pos.y() - start.y()) < DRAG_THRESHOLD:
+                return
+            if not self._panning:
+                self._panning = True
+                self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            self.pan_to(a - dx / self._area().width() * (b - a))
+            return
+        part = self._overview_part(pos) if self._overview_rect().contains(pos) else None
+        if part in ('left', 'right'):
+            self.setCursor(Qt.CursorShape.SizeHorCursor)
+        elif part == 'frame':
+            self.setCursor(Qt.CursorShape.OpenHandCursor)
+        elif self._tag_at(pos) is not None:
             self.setCursor(Qt.CursorShape.OpenHandCursor)
         else:
             self.unsetCursor()
@@ -882,6 +1080,12 @@ class Navigator(QWidget):
             state.zoom_out()
         elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and selection:
             state.zoom_in(selection)
+        elif key in (Qt.Key.Key_Plus, Qt.Key.Key_Equal):
+            self.zoom(1 / ZOOM_STEP ** 2)
+        elif key == Qt.Key.Key_Minus:
+            self.zoom(ZOOM_STEP ** 2)
+        elif key == Qt.Key.Key_Home:
+            state.set_focus(())
         elif selection is None and key in (Qt.Key.Key_Left, Qt.Key.Key_Right, Qt.Key.Key_Down):
             self._select(state.focus + (0,))
         elif key in (Qt.Key.Key_Left, Qt.Key.Key_Right):

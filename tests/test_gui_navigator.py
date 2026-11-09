@@ -1,4 +1,4 @@
-"""The navigator: the tag band of the markers, dragging the tags, and Shift+click."""
+"""The navigator: the tag band of the markers, dragging the tags, Shift+click, and the window (zoom, pan, map, fits)."""
 
 import pytest
 
@@ -130,3 +130,151 @@ def test_all_the_levels_down_to_the_deepest(window, spin):
     expected = np.clip(state.colors(MAX_DEPTH, state.color_key)[index], 0, 1) * 255
     assert np.allclose([color.red(), color.green(), color.blue()], expected, atol=3)
     assert tcoord(address_of(index, MAX_DEPTH)) == index
+
+
+# -- the window: wheel zoom, panning, the overview as a map, the scroll bar, fits
+
+def wheel(navigator, x, notches):
+    from PySide6.QtCore import QPoint, QPointF, Qt
+    from PySide6.QtGui import QWheelEvent
+    from PySide6.QtWidgets import QApplication
+    area = navigator._area()
+    pos = QPointF(x, area.center().y())
+    event = QWheelEvent(pos, navigator.mapToGlobal(pos), QPoint(0, 0), QPoint(0, 120 * notches),
+                        Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier, Qt.ScrollPhase.NoScrollPhase,
+                        False)
+    QApplication.sendEvent(navigator, event)
+
+
+def test_the_wheel_zooms_around_the_pointer(window, spin):
+    state, navigator = window.state, window.navigator
+    state.set_focus(())
+    spin()
+    area = navigator._area()
+    x = area.left() + 0.3 * area.width()
+    before = 0.3                                     # the point under the pointer, in the whole cycle
+    wheel(navigator, x, 4)
+    spin()
+    a, b = state.window
+    assert b - a == pytest.approx(1.25 ** -4) and a + 0.3 * (b - a) == pytest.approx(before)
+    wheel(navigator, x, 40)                         # down to the narrowest: a subcycle of depth 8
+    spin()
+    a, b = state.window
+    assert len(state.focus) >= 7 and state.min_width_at((a + b) / 2) <= b - a < 1e-4   # about a subcycle of depth 8
+    wheel(navigator, x, -200)                        # and out to the whole cycle
+    spin()
+    assert state.window == (0.0, 1.0) and state.focus == ()
+
+
+def test_the_focus_is_the_smallest_subcycle_holding_the_window(window, spin):
+    state = window.state
+    focuses = []
+    state.focusChanged.connect(focuses.append)
+    state.set_window(0.91, 0.93)                    # inside Kali › Satya (0.9 to 0.94)
+    assert state.focus == (3, 0)
+    state.set_window(0.92, 0.935)                   # still there: no signal
+    assert focuses == [(3, 0)]
+    state.set_window(0.85, 0.95)                    # across the start of the Kali
+    assert state.focus == ()
+
+
+def test_dragging_pans_and_a_click_still_selects(window, spin):
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtTest import QTest
+    state, navigator = window.state, window.navigator
+    state.set_window(0.5, 0.6)
+    state.select(None)
+    spin()
+    navigator.repaint()
+    area = navigator._area()
+    start = QPoint(int(area.center().x()), int(area.top() + 10))
+    QTest.mousePress(navigator, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+    for k in range(1, 6):
+        QTest.mouseMove(navigator, start + QPoint(-20 * k, 0))
+    QTest.mouseRelease(navigator, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start + QPoint(-100, 0))
+    spin()
+    a, b = state.window
+    assert a == pytest.approx(0.5 + 100 / area.width() * 0.1) and b - a == pytest.approx(0.1)
+    assert state.selection is None                  # a pan does not select
+    QTest.mouseClick(navigator, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+    spin()
+    assert state.selection is not None and len(state.selection) == len(state.focus) + 1
+
+
+def test_the_overview_is_a_map_of_the_window(window, spin):
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtTest import QTest
+    state, navigator = window.state, window.navigator
+    state.set_window(0.2, 0.3)
+    spin()
+    strip = navigator._overview_rect()
+    y = int(strip.center().y())
+    x = lambda u: int(round(strip.left() + u * strip.width()))
+    QTest.mousePress(navigator, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(x(0.25), y))
+    for k in range(1, 5):                            # drag the frame
+        QTest.mouseMove(navigator, QPoint(x(0.25 + 0.1 * k / 4), y))
+    QTest.mouseRelease(navigator, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(x(0.35), y))
+    a, b = state.window
+    assert a == pytest.approx(0.3, abs=2e-3) and b - a == pytest.approx(0.1)
+    QTest.mousePress(navigator, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(x(0.4), y))
+    for k in range(1, 5):                            # drag its right edge: zoom
+        QTest.mouseMove(navigator, QPoint(x(0.4 + 0.1 * k / 4), y))
+    QTest.mouseRelease(navigator, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(x(0.5), y))
+    a, b = state.window
+    assert a == pytest.approx(0.3, abs=2e-3) and b == pytest.approx(0.5, abs=2e-3)
+    QTest.mouseClick(navigator, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(x(0.95), y))
+    assert state.focus == (3,) and state.window == pytest.approx((0.9, 1.0))     # a click fits that yuga
+
+
+def test_the_scroll_bar_and_the_keys(window, spin):
+    from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
+    state, navigator = window.state, window.navigator
+    bar = navigator.hscroll
+    assert bar.isVisible() and bar.maximum() == 0
+    state.set_window(0.0, 0.25)
+    assert bar.maximum() > 0 and bar.value() == 0
+    bar.setValue(bar.maximum())
+    assert state.window == pytest.approx((0.75, 1.0))
+    state.set_window(0.4, 0.5)
+    assert bar.value() == pytest.approx(0.4 / 0.9 * bar.maximum(), abs=1)
+    navigator.setFocus()
+    QTest.keyClick(navigator, Qt.Key.Key_Plus)
+    a, b = state.window
+    assert b - a == pytest.approx(0.1 / 1.25 ** 2) and (a + b) / 2 == pytest.approx(0.45)
+    QTest.keyClick(navigator, Qt.Key.Key_Home)
+    assert state.window == (0.0, 1.0)
+
+
+def test_fits_spacing_and_reveal(window, spin):
+    state, navigator = window.state, window.navigator
+    state.zoom_in((2, 1))                            # double-click: the subcycle fills the rows
+    assert state.focus == (2, 1) and state.window == pytest.approx((0.78, 0.84))
+    state.zoom_out()
+    assert state.focus == (2,) and state.window == pytest.approx((0.7, 0.9))
+    state.set_window(0.75, 0.8)
+    state.set_spacing('index')                       # the same part of the cycle, with equal widths
+    from cycles.gui.state import index_to_time
+    assert (index_to_time(state.window[0]), index_to_time(state.window[1])) == pytest.approx((0.75, 0.8))
+    spin()
+    navigator.repaint()
+    assert navigator._window_time() == pytest.approx((0.75, 0.8))
+    state.set_spacing('time')
+    state.set_window(0.71, 0.73)                     # inside Dvapara › Satya; reveal a subcycle beside it
+    focus = state.focus
+    state.reveal(focus + (3,))
+    a, b = state.window
+    assert state.focus == focus and b - a == pytest.approx(0.02)
+    from cycles.gui.state import coordinate_extent
+    start, end = coordinate_extent(focus + (3,), 'time')
+    assert a < end and start < b                     # moved over it
+
+
+def test_a_session_keeps_the_window(window, spin):
+    from cycles.gui import session
+    state = window.state
+    state.set_window(0.123, 0.1278)
+    data = session.capture(window)
+    state.set_focus(())
+    assert session.apply(window, data) == []
+    assert state.window == pytest.approx((0.123, 0.1278))
