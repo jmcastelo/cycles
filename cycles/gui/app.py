@@ -5,7 +5,7 @@ import sys
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QAction, QActionGroup, QKeySequence
 from PySide6.QtWidgets import (
-    QApplication, QCheckBox, QComboBox, QLabel, QLineEdit, QMainWindow, QMessageBox, QSpinBox,
+    QApplication, QCheckBox, QComboBox, QHBoxLayout, QLabel, QLineEdit, QMainWindow, QMessageBox,
     QToolBar, QToolButton, QVBoxLayout, QWidget,
 )
 
@@ -64,7 +64,12 @@ class MainWindow(QMainWindow):
         self.breadcrumb = Breadcrumb(self.state)
         self.navigator = Navigator(self.state)
         layout.addWidget(self.breadcrumb)
-        layout.addWidget(self.navigator, 1)
+        rows = QHBoxLayout()
+        rows.setContentsMargins(0, 0, 0, 0)
+        rows.setSpacing(0)
+        rows.addWidget(self.navigator, 1)
+        rows.addWidget(self.navigator.vscroll)
+        layout.addLayout(rows, 1)
         layout.addWidget(self.navigator.hscroll)
         central.setMinimumSize(360, 240)      # panels around it never squeeze the navigator away
         # the panels dock around the navigator with QtAds (layouts.py)
@@ -219,15 +224,6 @@ class MainWindow(QMainWindow):
         bar.addWidget(color_button)
 
         bar.addSeparator()
-        bar.addWidget(QLabel(' Levels '))
-        self.rows_box = QSpinBox()
-        self.rows_box.setRange(1, MAX_DEPTH)
-        self.rows_box.setValue(state.rows)
-        self.rows_box.setToolTip('Number of levels drawn below the zoomed subcycle')
-        self.rows_box.valueChanged.connect(state.set_rows)
-        bar.addWidget(self.rows_box)
-
-        bar.addSeparator()
         bar.addWidget(QLabel(' Highlight '))
         self.highlight_box = QComboBox()
         for key, label in HIGHLIGHTS.items():
@@ -339,7 +335,6 @@ class MainWindow(QMainWindow):
         state = self.state
         self.color_box.setCurrentText(state.color_key)
         self.highlight_box.setCurrentIndex(self.highlight_box.findData(state.highlight))
-        self.rows_box.setValue(state.rows)
         self.spacing_actions[state.spacing].setChecked(True)
         names = next((label for label, names in NAME_SETS.items() if tuple(names) == tuple(state.names)), None)
         if names is not None:
@@ -441,6 +436,19 @@ class MainWindow(QMainWindow):
         whole.setShortcut(QKeySequence('Ctrl+Home'))
         whole.triggered.connect(lambda: self.state.set_focus(()))
         view_menu.addAction(whole)
+        view_menu.addSeparator()
+        self.follow_action = QAction('&Follow the zoom', self, checkable=True)
+        self.follow_action.setChecked(self.navigator.follow_zoom)
+        self.follow_action.setToolTip('The top row is the level below the zoom (scrolling the levels by hand stops it)')
+        self.follow_action.toggled.connect(self.navigator.set_follow_zoom)
+        view_menu.addAction(self.follow_action)
+        fit_rows = QAction('Fi&t the levels', self)
+        fit_rows.setShortcut(QKeySequence('Ctrl+0'))
+        fit_rows.setToolTip('Rows that fit the levels below the zoom, following it (also: double-click a boundary '
+                            'between rows)')
+        fit_rows.triggered.connect(self.navigator.fit_rows)
+        view_menu.addAction(fit_rows)
+        self.navigator.rowsChanged.connect(lambda: self.follow_action.setChecked(self.navigator.follow_zoom))
         view_menu.addSeparator()
         self._build_view_options(view_menu)
         view_menu.addSeparator()
@@ -574,7 +582,7 @@ class MainWindow(QMainWindow):
             GraphSource('navigator', 'Subcycles (navigator)',
                         lambda: (navigator.width() / LOGICAL_DPI, navigator.height() / LOGICAL_DPI),
                         navigator_title,
-                        lambda options: save_widget(lambda: Navigator(state), options),
+                        lambda options: save_widget(navigator.twin, options),
                         formats=('png', 'jpg', 'pdf', 'svg')),
             figure_source('sky', 'Sky chart', self.sky_panel, sky_title, self.sky_panel.fit_chart),
             figure_source('measures', 'Measures', self.measures_panel,

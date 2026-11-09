@@ -101,7 +101,8 @@ def test_all_the_levels_down_to_the_deepest(window, spin):
     state, navigator = window.state, window.navigator
     window.resize(1400, 1000)
     state.set_focus(())
-    window.rows_box.setValue(MAX_DEPTH)                   # the toolbar allows every level
+    spin()
+    navigator.set_row_height(navigator._area().height() / MAX_DEPTH)   # short enough for every level in view
     spin()
     navigator.repaint()
     rows = navigator._geometry
@@ -278,3 +279,115 @@ def test_a_session_keeps_the_window(window, spin):
     state.set_focus(())
     assert session.apply(window, data) == []
     assert state.window == pytest.approx((0.123, 0.1278))
+
+
+# -- the rows: one height for all, scrolling through the levels, following the zoom
+
+def test_the_rows_fit_and_follow_the_zoom(window, spin):
+    state, navigator = window.state, window.navigator
+    state.set_focus((2,))
+    spin()
+    navigator.repaint()
+    area = navigator._area()
+    rows = navigator._geometry
+    assert [r.depth for r in rows] == [2, 3, 4, 5, 6] and rows[0].top == pytest.approx(area.top())
+    assert rows[-1].top + rows[-1].height + 2 == pytest.approx(area.bottom())    # five levels fill the height
+    assert list(state.visible_depths()) == [2, 3, 4, 5, 6]
+    state.set_focus((2, 1, 3))
+    spin()
+    navigator.repaint()
+    assert [r.depth for r in navigator._geometry] == [4, 5, 6, 7, 8]       # the top row follows the zoom
+    assert navigator.vscroll.value() == pytest.approx(navigator.scroll_offset(), abs=1)
+
+
+def test_scrolling_the_levels_stops_following(window, spin):
+    state, navigator = window.state, window.navigator
+    state.set_focus((2,))
+    spin()
+    bar = navigator.vscroll
+    assert bar.maximum() > 0 and window.follow_action.isChecked()
+    bar.setValue(0)                                   # up to the whole cycle's level
+    spin()
+    navigator.repaint()
+    assert navigator._geometry[0].depth == 1 and not navigator.follow_zoom
+    assert not window.follow_action.isChecked()
+    state.set_focus((2, 1))                           # no longer follows
+    spin()
+    navigator.repaint()
+    assert navigator._geometry[0].depth == 1
+    window.follow_action.trigger()                    # View → Follow the zoom
+    spin()
+    navigator.repaint()
+    assert navigator.follow_zoom and navigator._geometry[0].depth == 3
+
+
+def drag_mouse(navigator, start, end, steps=8):
+    from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
+    QTest.mousePress(navigator, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+    for k in range(1, steps + 1):
+        QTest.mouseMove(navigator, start + (end - start) * k / steps)
+    QTest.mouseRelease(navigator, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, end)
+
+
+def test_dragging_a_boundary_resizes_every_row(window, spin):
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtTest import QTest
+    state, navigator = window.state, window.navigator
+    state.set_focus(())
+    spin()
+    navigator.repaint()
+    row = navigator._geometry[1]                      # the boundary under the second row
+    y = int(round(row.top + row.height + 1))
+    x = int(navigator._area().center().x())
+    assert navigator._boundary_at(QPoint(x, y).toPointF()) == 2
+    drag_mouse(navigator, QPoint(x, y), QPoint(x, y - 60))
+    spin()
+    navigator.repaint()
+    rows = navigator._geometry
+    assert navigator.row_height == pytest.approx((y - 60 + 1 - navigator._area().top()) / 2, abs=1)
+    assert rows[1].top + rows[1].height + 1 == pytest.approx(y - 60, abs=1.5)  # the boundary under the mouse
+    assert len({round(r.height, 6) for r in rows}) == 1 and len(rows) > 5     # all alike, and more in view
+    assert state.selection is None
+    QTest.mouseDClick(navigator, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(x, y - 60))
+    spin()
+    assert navigator.row_height is None and navigator.follow_zoom             # fit again
+
+
+def test_a_vertical_drag_scrolls_the_levels_past_a_dead_zone(window, spin):
+    from PySide6.QtCore import QPoint
+    state, navigator = window.state, window.navigator
+    state.set_window(0.5, 0.55)                     # inside Treta: a small pan keeps the zoom
+    assert state.focus == (1,)
+    spin()
+    navigator.repaint()
+    area = navigator._area()
+    start = QPoint(int(area.center().x()), int(area.top() + 30))
+    before = navigator.scroll_offset()
+    drag_mouse(navigator, start, start + QPoint(60, 6))      # mostly sideways: the levels stay
+    assert navigator.follow_zoom and navigator.scroll_offset() == before
+    drag_mouse(navigator, start, start + QPoint(0, 50))      # down: towards the shallower levels
+    spin()
+    assert not navigator.follow_zoom and navigator.scroll_offset() == pytest.approx(before - 50, abs=1)
+
+
+def test_selecting_a_level_out_of_view_scrolls_to_it(window, spin):
+    state, navigator = window.state, window.navigator
+    state.set_focus(())
+    navigator.set_row_height(120)
+    spin()
+    state.reveal((0, 1, 2, 3, 0, 1, 2))
+    spin()
+    navigator.repaint()
+    assert 7 in [r.depth for r in navigator._geometry]
+    row = navigator._row(7)
+    area = navigator._area()
+    assert row.top >= area.top() - 0.5 and row.top + row.height <= area.bottom() + 0.5
+
+
+def test_a_saved_navigator_has_the_same_rows(window, spin):
+    navigator = window.navigator
+    navigator.set_row_height(120)
+    navigator.scroll_rows(55)
+    twin = navigator.twin()
+    assert (twin.row_height, twin.follow_zoom, twin._offset) == (120, False, 55)

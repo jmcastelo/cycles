@@ -26,7 +26,7 @@ explorador gráfico. Incorpora, revisados y actualizados, los documentos de `efe
 | **III. El software** | |
 | [`10_arquitectura_y_modulos.md`](10_arquitectura_y_modulos.md) | organización del código, instalación, guía de los módulos de cálculo, figuras y explorador, y versiones |
 | [`11_estudios_del_sandbox.md`](11_estudios_del_sandbox.md) | el ejecutor de estudios, sus opciones (`--session`) y cada estudio |
-| [`12_aplicacion_grafica.md`](12_aplicacion_grafica.md) | el explorador: navegador, los doce paneles, modelo, colores, gráficos, sesiones, dosier, disposición, atajos |
+| [`12_aplicacion_grafica.md`](12_aplicacion_grafica.md) | el explorador: navegador (rueda, arrastre, filas que se desplazan y cambian de altura), los doce paneles, modelo, colores, gráficos, sesiones, dosier, disposición, atajos |
 | [`13_pruebas.md`](13_pruebas.md) | cómo se ejecutan las pruebas y qué comprueban |
 | [`14_resultados_y_preguntas_abiertas.md`](14_resultados_y_preguntas_abiertas.md) | resultados obtenidos y trabajo pendiente |
 | **IV. Contrastes** | |

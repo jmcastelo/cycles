@@ -10,7 +10,9 @@ sound, the multifractal spectrum), studies how the durations and the measures
 evolve in time as a dynamical system, places the cycle in history through the precession of the equinoxes,
 computes the sky at any moment with its own long-term N-body ephemeris, and
 tests whether the subcycle boundaries fall on planetary events more often than
-chance. A graphical explorer (PySide6) ties it all together.
+chance. A graphical explorer (PySide6) ties it all together: a navigator that
+zooms with the mouse wheel from the whole cycle down to the ninth level, with
+twelve dockable panels around it.
 
 ![The explorer](docs/es/markdown/figuras/ventana_principal.png)
 
@@ -74,7 +76,7 @@ describe the version of the program they match; see
 | **III. The software** | |
 | [10. Architecture and modules](docs/es/markdown/10_arquitectura_y_modulos.md) | code layout, installation, module guide, versions |
 | [11. Sandbox studies](docs/es/markdown/11_estudios_del_sandbox.md) | the study runner, its options, every study |
-| [12. The graphical explorer](docs/es/markdown/12_aplicacion_grafica.md) | navigator, panels, sessions, dossier, layouts, shortcuts |
+| [12. The graphical explorer](docs/es/markdown/12_aplicacion_grafica.md) | the navigator (wheel zoom, panning, rows to scroll and resize), the twelve panels, sessions, dossier, layouts, shortcuts |
 | [13. Tests](docs/es/markdown/13_pruebas.md) | running the tests and what they check |
 | [14. Results and open questions](docs/es/markdown/14_resultados_y_preguntas_abiertas.md) | what has been found and what remains |
 | **IV. Significance tests** | |

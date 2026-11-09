@@ -42,6 +42,8 @@ filo claro debajo, para que se vean sobre cualquier color de celda.
 | `+` / `−` | estrecha o ensancha la ventana alrededor del centro |
 | `Inicio` | todo el ciclo |
 | en el mapa: arrastrar el marco, sus bordes, clic en una edad | mover la ventana, estrecharla o ensancharla, ajustarla a esa edad |
+| arrastrar arriba o abajo, barra de la derecha | recorrer los niveles |
+| arrastrar una frontera entre filas / doble clic en ella | cambiar la altura de todas las filas / ajustarlas de nuevo |
 | ← → | subciclo anterior o siguiente |
 | ↑ / ↓ | padre / primera parte |
 | Intro / Retroceso | ampliar / reducir |
@@ -59,7 +61,17 @@ estrecho, como una línea). Así se ven las nueve profundidades a la vez sin dib
 Debajo de las filas, un eje con años o fechas (con un modelo de ciclo): los dos extremos de la ventana y las
 fronteras del nivel menos profundo que tenga al menos dos en ella. Seleccionar un subciclo que no está a la vista
 (desde un panel o con el teclado) mueve la ventana hasta él. Con *View → Widths* (por duración o iguales) la
-ventana sigue mostrando el mismo tramo del ciclo, y las sesiones la guardan. La descripción emergente de un subciclo
+ventana sigue mostrando el mismo tramo del ciclo, y las sesiones la guardan.
+
+Las **filas** de todos los niveles tienen la misma altura y están apiladas de la profundidad 1 a la 9. Arrastrar
+las filas hacia arriba o hacia abajo, o la **barra de desplazamiento** de la derecha, recorre los niveles (un
+arrastre casi horizontal no los mueve: hacen falta 8 píxeles en vertical). Arrastrar una **frontera entre dos
+filas** (el cursor cambia encima de ella) hace todas las filas más altas o más bajas, con esa frontera bajo el
+puntero; un doble clic en una frontera, o *View → Fit the levels* (`Ctrl+0`), vuelve a lo de partida: las cinco
+filas bajo el zoom llenan la altura y las más profundas quedan a un desplazamiento. Mientras está activo *View →
+Follow the zoom*, la fila de arriba es la del nivel justo bajo el zoom, y sigue al zoom cuando cambia;
+desplazarse a mano lo desactiva, y seleccionar un subciclo de un nivel que no está a la vista lleva a él. Las
+sesiones guardan la altura, el seguimiento y el desplazamiento. La descripción emergente de un subciclo
 da su nombre, sus fechas y duración, con los criterios activados la fecha en que empezaría según el otro
 criterio, y sus marcadores.
 
@@ -67,8 +79,8 @@ criterio, y sus marcadores.
 
 ### La barra de herramientas
 
-La barra agrupa sus controles por tema, separados por líneas finas: el modelo de ciclo, el coloreado, los niveles
-y el resaltado.
+La barra agrupa sus controles por tema, separados por líneas finas: el modelo de ciclo, el coloreado y el
+resaltado.
 
 | Control | Qué elige |
 |---|---|
@@ -76,7 +88,6 @@ y el resaltado.
 | *Model…* | el editor del modelo (12.14) |
 | *Landscape* | abre el panel *Model landscape* |
 | *Color* y *Parameters…* | el coloreado (los veintiséis de `COLOR_KEYS`, en cuatro grupos: de la dirección, de las medidas, del modelo de ciclo y del cielo, con la descripción de cada uno al pasar por encima; los del modelo, en gris sin modelo, y los del cielo, también sin la efeméride del panel *Sky*) y sus parámetros (12.15) |
-| *Levels* | cuántas filas se dibujan bajo el zoom (1 a 9, hasta la profundidad 9) |
 | *Highlight* | alrededor de la selección, los subciclos de su profundidad con la misma duración, la misma composición o su órbita bajo ⟨σ⟩ (con su imagen por σ en púrpura discontinuo); o, en todas las profundidades, los que cumplen la **consulta** (*Matching the query*, abajo); los demás se atenúan en el navegador y los resaltados se rodean en los gráficos |
 | consulta | la condición del resaltado *Matching the query*, y cuántos subciclos la cumplen |
 
@@ -92,7 +103,8 @@ Las opciones de dibujo que se fijan una vez están en el menú *View*, con una m
 | *Borders* (`Ctrl+Mayús+B`) | borde en cada celda |
 | *Compare the division criteria* (`Ctrl+Mayús+C`) | dibuja dónde pondría las fronteras el criterio que no es la división del modelo (4:3:2:1 del arco o de los años): discontinuas, con el hueco hasta la frontera propia sombreado, en las filas cuyas celdas tienen unos píxeles de ancho (capítulo 8) |
 
-El mismo menú tiene *Zoom out* (`Ctrl+↑`), *Whole cycle* (`Ctrl+Inicio`) y *Bookmark the selection* (`Ctrl+B`).
+El mismo menú tiene *Zoom out* (`Ctrl+↑`), *Whole cycle* (`Ctrl+Inicio`), *Follow the zoom* y *Fit the levels*
+(`Ctrl+0`) para las filas, y *Bookmark the selection* (`Ctrl+B`).
 
 ### Resaltar con una consulta
 
@@ -507,6 +519,7 @@ modelo y los colores que se ven), y muestra su salida. *Open plots folder* abre 
 | `Ctrl+B` | marcar la selección |
 | `Ctrl+Mayús+B` / `Ctrl+Mayús+C` | bordes de las celdas / comparar los criterios de división |
 | `Ctrl+↑` / `Ctrl+Inicio` | reducir el zoom / todo el ciclo |
+| `Ctrl+0` | ajustar las filas a los niveles bajo el zoom (y seguirlo) |
 | `Alt+1` … `Alt+9`, `Alt+0` | mostrar u ocultar cada panel |
 | `Ctrl+Alt+T/S/V/G/B` | disposiciones: pestañas, lado a lado, apilados, rejilla, debajo |
 | `Ctrl+Alt+L/A/D` | alrededor del navegador: izquierda y derecha, alrededor, izquierda y debajo |

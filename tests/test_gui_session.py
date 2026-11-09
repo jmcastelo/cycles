@@ -16,7 +16,8 @@ def _change_everything(window, spin):
     state.set_color_parameters(bases[:1] + (3,) + bases[2:], scales, colors,     # as the color dialog does
                                ('magma', 'PuOr_r'))
     window.color_box.setCurrentIndex((window.color_box.currentIndex() + 1) % window.color_box.count())
-    window.rows_box.setValue(4)
+    window.navigator.set_row_height(37)
+    window.navigator.set_follow_zoom(False)
     window.spacing_actions['index'].trigger()
     window.names_actions['Ages'].trigger()
     window.labels_actions['dots'].trigger()
@@ -54,7 +55,7 @@ def _snapshot(window):
     state = window.state
     return {
         'model': state.model, 'colors': state.color_parameters, 'color_key': state.color_key,
-        'rows': state.rows, 'spacing': state.spacing, 'names': state.names, 'labels': state.labels,
+        'spacing': state.spacing, 'names': state.names, 'labels': state.labels,
         'borders': state.borders, 'highlight': state.highlight, 'criteria': state.compare_criteria,
         'date': state.date, 'sky_time': state.sky_time, 'focus': state.focus, 'selection': state.selection,
         'measures': (window.measures_panel.kind.currentIndex(), window.measures_panel.depth.value()),
@@ -64,7 +65,8 @@ def _snapshot(window):
         'camera': window.compositions_panel.camera(), 'notes': state.notes,
         'bookmarks': [dict(b) for b in state.bookmarks],
         'measures_open': not window.docks['measures'].isClosed(),
-        'toolbar': (window.rows_box.value(), checked(window.spacing_actions), checked(window.labels_actions),
+        'rows': (window.navigator.row_height, window.navigator.follow_zoom),
+        'toolbar': (checked(window.spacing_actions), checked(window.labels_actions),
                     window.borders_action.isChecked(), window.criteria_action.isChecked(),
                     checked(window.names_actions)),
     }
@@ -221,10 +223,10 @@ def test_parts_that_do_not_fit_are_reported(window, spin, tmp_path):
     data = session.capture(window)
     data['state']['selection'] = [3, 7]
     data['ephemeris'] = str(tmp_path / 'nowhere')
-    data['state']['rows'] = 3
+    data['state']['labels'] = 'dots'
     problems = session.apply(window, data)
     assert any(p.startswith('selection') for p in problems) and any(p.startswith('ephemeris') for p in problems)
-    assert window.state.rows == 3                    # the rest is applied
+    assert window.state.labels == 'dots'             # the rest is applied
 
 
 def test_a_random_sigma_is_kept_as_it_was(window, spin):

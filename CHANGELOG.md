@@ -32,6 +32,13 @@ the commit `vX.Y.Z`.
   breadcrumb is now the smallest subcycle that contains the window. The axis labels the ends of the window;
   switching the widths keeps the same part of the cycle in view; selecting a subcycle out of view pans to it;
   sessions keep the window.
+- **The rows of the navigator share one height and scroll through the levels**: all the levels are stacked
+  from depth 1 to 9; drag the rows up or down (past a small dead zone, so that sideways pans stay level) or use
+  the scroll bar beside the navigator to move through them. Drag any boundary between two rows to make every row
+  taller or shorter; double-click one, or *View → Fit the levels* (`Ctrl+0`), to fit five levels below the zoom
+  again. *View → Follow the zoom* keeps the top row at the level below the zoom (scrolling by hand turns it
+  off); selecting a subcycle of a level out of view scrolls to it. The *Levels* box of the toolbar is gone.
+  Sessions keep the rows; saved graphs of the navigator draw them as on the screen.
 - **The Dynamics panel**: the durations or a measure of a level as a time series, in the order of the subcycles or
   evenly in years: return map, DFA fluctuations, spectrum, recurrence plot, or the series with its change points,
   with a surrogate drawn behind (shuffled, phase-randomized or digits permuted), the estimates and what is known

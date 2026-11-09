@@ -366,7 +366,7 @@ class CycleState(QObject):
         self.window: tuple = (0.0, 1.0)  # the part of the cycle in view, in the coordinate of the spacing
         self.selection: tuple | None = None
         self.color_key: str = DEFAULT_COLOR_KEY
-        self.rows: int = 5
+        self._visible_depths = range(1, 6)  # the depths of the rows in view (the navigator says which)
         self.spacing: str = 'time'      # 'time' (widths by duration) or 'index' (equal widths)
         self.names: tuple = YUGA_NAMES
         self.highlight: str = 'none'    # a key of HIGHLIGHTS
@@ -460,8 +460,6 @@ class CycleState(QObject):
         # the navigator shows the levels below the zoom, so the zoom must be above the address
         if address[:len(focus)] != focus or len(address) <= len(focus):
             focus = address[:min(len(focus), max(0, len(address) - 1))]
-        if len(address) > len(focus) + self.rows:
-            focus = address[:len(address) - self.rows]
         if focus != self.focus:
             self.set_focus(focus)
         else:
@@ -475,8 +473,12 @@ class CycleState(QObject):
         self.select(address)
 
     def visible_depths(self) -> range:
-        """Depths of the rows below the focus that the navigator draws."""
-        return range(len(self.focus) + 1, min(MAX_DEPTH, len(self.focus) + self.rows) + 1)
+        """Depths of the rows that the navigator has in view."""
+        return self._visible_depths
+
+    def set_visible_depths(self, depths: range) -> None:
+        """What the navigator has in view (no signal: it is what follows from the zoom and the scrolling)."""
+        self._visible_depths = depths
 
     # -- view options
 
@@ -489,9 +491,6 @@ class CycleState(QObject):
         if key not in COLOR_KEYS:
             raise ValueError(f"unknown color key {key!r}")
         self._set('color_key', key)
-
-    def set_rows(self, rows: int) -> None:
-        self._set('rows', max(1, int(rows)))
 
     def set_spacing(self, spacing: str) -> None:
         if spacing not in ('time', 'index'):

@@ -10,6 +10,11 @@ subcycle, right-click fits the one above; on the overview (a map of the whole cy
 its edges to zoom, and click to fit that yuga; Shift+click sets the moment of the sky chart. The tags of the
 marked date and of the sky moment, in a band under the rows (above the time axis), can be dragged along the
 rows (Escape cancels a drag). A scroll bar under the navigator (``hscroll``) pans too.
+The rows of all the levels share one height and are stacked from depth 1 down; dragging them up or down, or the
+scroll bar beside the navigator (``vscroll``), moves through the levels. Drag a boundary between two rows to make
+all the rows taller or shorter; double-click one to fit the levels again. By default the rows fit (the levels from
+five levels below the zoom fill the height; the deeper ones are a scroll away) and follow the zoom (the top row is
+the level below it); scrolling by hand stops the following.
 Keys: Left/Right previous/next subcycle, Up parent, Down first part, Enter zoom into the selection,
 Backspace/Escape zoom out, +/− zoom around the middle, Home the whole cycle.
 """
@@ -46,6 +51,11 @@ EDGE_GRAB = 4              # pixels around an edge of the overview's frame that 
 ANIMATION_MS = 160         # the glide to a fitted subcycle (0: none)
 SCROLL_PAGE = 1000         # the scroll bar: steps per window width, ...
 SCROLL_MAX = 2_000_000_000  # ... and at most these steps in all
+FIT_LEVELS = 5             # rows that fit the height by default (the deeper levels: scroll down)
+MIN_ROW = 10.0             # the height of the rows (px), dragged, within these
+MAX_ROW = 300.0
+BOUNDARY_GRAB = 3          # pixels around a boundary between rows that grab it (to resize the rows)
+VERTICAL_DEAD_ZONE = 8     # pixels a pan moves up or down before it scrolls the levels too
 
 
 class Row(NamedTuple):
@@ -89,6 +99,7 @@ class Navigator(QWidget):
     """Rows of subcycles below the focus of a ``CycleState``."""
 
     hovered = Signal(object)   # address under the mouse, or None
+    rowsChanged = Signal()     # the height of the rows, the following of the zoom or the scrolling changed
     busy = Signal(str)         # message while computing levels ('' when done)
 
     def __init__(self, state: CycleState, parent=None):
@@ -108,6 +119,16 @@ class Navigator(QWidget):
         self._animation.setEasingCurve(QEasingCurve.Type.OutCubic)
         self._animation.valueChanged.connect(self._glide)
         self._glide_ends = None
+        self.row_height: float | None = None  # px; None: fit the levels in view
+        self.follow_zoom = True          # the top row is the level below the zoom
+        self._offset = 0.0               # how far the levels are scrolled (px), when not following the zoom
+        self.deepest = MAX_DEPTH         # the deepest level drawn
+        self._resize = None              # (depth whose bottom is dragged) while resizing the rows
+        self._vertical = False           # a pan has passed the dead zone and scrolls the levels too
+        self._row_to_show = None         # the depth of a row to scroll into view when next painted
+        self.vscroll = QScrollBar(Qt.Orientation.Vertical)
+        self.vscroll.setToolTip('Move through the levels (stops following the zoom)')
+        self.vscroll.valueChanged.connect(lambda value: self.scroll_rows(float(value)))
         self.hscroll = QScrollBar(Qt.Orientation.Horizontal)
         self.hscroll.setToolTip('Pan along the cycle (the wheel over the rows zooms)')
         self.hscroll.valueChanged.connect(self._scrolled)
@@ -117,6 +138,7 @@ class Navigator(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         state.focusChanged.connect(self._changed)
         state.windowChanged.connect(self._window_changed)
+        state.selectionChanged.connect(self._show_selected_row)
         state.selectionChanged.connect(self.update)
         state.bookmarksChanged.connect(self.update)
         state.eventsChanged.connect(self.update)
@@ -132,7 +154,7 @@ class Navigator(QWidget):
 
     def _changed(self, *_) -> None:
         """Compute the levels the new view needs (with a wait cursor if slow), then repaint."""
-        depths = [d for d in [len(self.state.focus), *self.state.visible_depths()]
+        depths = [d for d in [len(self.state.focus), *self._depths_in_view()]
                   if d and not self.state.cache.has(d)]
         if depths:
             QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
@@ -143,13 +165,132 @@ class Navigator(QWidget):
             finally:
                 self.busy.emit('')
                 QApplication.restoreOverrideCursor()
+        self._sync_vscroll()
         self.update()
 
     # -- geometry
 
     def _rows(self) -> list[int]:
-        """Depth of each row: the levels below the zoom."""
-        return list(self.state.visible_depths())
+        """Depth of each row in view."""
+        return list(self._depths_in_view())
+
+    # -- the rows: their height and the scrolling through the levels
+
+    def _row_step(self) -> float:
+        """The height of every row (with its gap): the one chosen, or the one that fits ``FIT_LEVELS`` levels below
+        the zoom (fewer near the deepest)."""
+        if self.row_height is not None:
+            return float(self.row_height)
+        levels = min(FIT_LEVELS, self.deepest - len(self.state.focus))
+        return max(MIN_ROW, self._area().height() / max(1, levels))
+
+    def _max_offset(self) -> float:
+        return max(0.0, self.deepest * self._row_step() - self._area().height())
+
+    def scroll_offset(self) -> float:
+        """How far the levels are scrolled (px): to the level below the zoom when following it."""
+        offset = len(self.state.focus) * self._row_step() if self.follow_zoom else self._offset
+        return min(max(offset, 0.0), self._max_offset())
+
+    def _depths_in_view(self) -> range:
+        area_height = self._area().height()
+        step = self._row_step()
+        offset = self.scroll_offset()
+        first = int(offset / step + 1e-6) + 1
+        last = int(np.ceil((offset + area_height) / step - 1e-6))
+        return range(max(1, first), max(1, min(self.deepest, last)) + 1)
+
+    def scroll_rows(self, offset: float) -> None:
+        """Scroll the levels to ``offset`` (px), which stops following the zoom if it moves them."""
+        offset = min(max(float(offset), 0.0), self._max_offset())
+        if abs(offset - self.scroll_offset()) < 0.5:
+            return
+        self.follow_zoom = False
+        self._offset = offset
+        self._sync_vscroll()
+        self.update()
+        self.rowsChanged.emit()
+
+    def set_row_height(self, height: float | None) -> None:
+        """All the rows this tall (px), or fitting the levels (None); the top row stays where it is."""
+        rows_above = self.scroll_offset() / self._row_step()
+        self.row_height = None if height is None else min(max(float(height), MIN_ROW), MAX_ROW)
+        self._offset = rows_above * self._row_step()
+        self._sync_vscroll()
+        self.update()
+        self.rowsChanged.emit()
+
+    def set_follow_zoom(self, follow: bool) -> None:
+        if follow != self.follow_zoom:
+            if not follow:
+                self._offset = self.scroll_offset()
+            self.follow_zoom = bool(follow)
+            self._sync_vscroll()
+            self.update()
+            self.rowsChanged.emit()
+
+    def fit_rows(self) -> None:
+        """Back to the default: the rows fit the levels below the zoom, and follow it."""
+        self.follow_zoom = True
+        self.set_row_height(None)
+
+    def _sync_vscroll(self) -> None:
+        maximum = int(round(self._max_offset()))
+        self.vscroll.blockSignals(True)
+        self.vscroll.setRange(0, maximum)
+        self.vscroll.setPageStep(max(1, int(self._area().height())))
+        self.vscroll.setSingleStep(max(1, int(self._row_step() / 2)))
+        self.vscroll.setValue(int(round(self.scroll_offset())))
+        self.vscroll.blockSignals(False)
+
+    def _show_selected_row(self, selection) -> None:
+        """Scroll the levels so that the row of the selection is in view, when next painted (the panels that
+        follow the selection may still change the size of the navigator)."""
+        if selection and len(selection) <= self.deepest:
+            self._row_to_show = len(selection)
+            self.update()
+
+    def _scroll_to_row(self, depth: int) -> None:
+        step = self._row_step()
+        offset = self.scroll_offset()
+        top = (depth - 1) * step
+        height = self._area().height()
+        if top < offset - 0.5:
+            self.scroll_rows(top)
+        elif top + step > offset + height + 0.5:
+            self.scroll_rows(top + step - height)
+
+    def _boundary_at(self, pos: QPointF) -> int | None:
+        """The depth of the row whose lower boundary is at ``pos`` (to drag it), or None."""
+        area = self._area()
+        if not area.left() <= pos.x() <= area.right():
+            return None
+        step = self._row_step()
+        offset = self.scroll_offset()
+        for depth in self._depths_in_view():
+            y = area.top() + depth * step - offset - ROW_GAP / 2
+            if area.top() < y < area.bottom() + 1 and abs(pos.y() - y) <= BOUNDARY_GRAB:
+                return depth
+        return None
+
+    def _resize_to(self, depth: int, y: float) -> None:
+        """Make the rows as tall as puts the lower boundary of the row ``depth`` at ``y``, the top row fixed."""
+        area = self._area()
+        rows_above = self.scroll_offset() / self._row_step()
+        if depth - rows_above < 0.3:
+            return
+        self.set_row_height((y + ROW_GAP / 2 - area.top()) / (depth - rows_above))
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._sync_vscroll()
+
+    def twin(self) -> 'Navigator':
+        """A new navigator of the same state, its rows as these (to draw it elsewhere: a file, a page)."""
+        other = Navigator(self.state)
+        other.row_height, other.follow_zoom, other._offset, other.deepest = \
+            self.row_height, self.follow_zoom, self.scroll_offset(), self.deepest
+        return other
 
     def _overview_rect(self) -> QRectF:
         return QRectF(LABEL_WIDTH, 4, self.width() - LABEL_WIDTH - 8, OVERVIEW_HEIGHT)
@@ -201,12 +342,14 @@ class Navigator(QWidget):
         """
         rows = self._rows()
         area = self._area()
-        row_height = area.height() / len(rows)
+        row_height = self._row_step()
+        offset = self.scroll_offset()
+        self.state.set_visible_depths(range(rows[0], rows[-1] + 1))
         a, b = self._window
         scale = area.width() / (b - a)
         cells, self._geometry = [], []
-        for r, depth in enumerate(rows):
-            top = area.top() + r * row_height
+        for depth in rows:
+            top = round(area.top() + (depth - 1) * row_height - offset, 6)
             first, end, starts, widths = self._visible(depth)
             row = Row(depth, top, row_height - ROW_GAP, first, end,
                       area.left() + (starts - a) * scale, widths * scale, (end - first) * DENSE_CELL > area.width())
@@ -297,6 +440,9 @@ class Navigator(QWidget):
 
     def paintEvent(self, event) -> None:
         state = self.state
+        if self._row_to_show is not None:
+            depth, self._row_to_show = self._row_to_show, None
+            self._scroll_to_row(depth)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
@@ -380,9 +526,12 @@ class Navigator(QWidget):
         # Depth of each row, and the extent of the zoomed subcycle
         painter.setPen(palette.text().color())
         painter.setFont(font)
+        painter.save()
+        painter.setClipRect(QRectF(0, area.top(), LABEL_WIDTH, area.height()))
         for row in self._geometry:
             painter.drawText(QRectF(0, row.top, LABEL_WIDTH - 6, row.height),
                              Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, f"d{row.depth}")
+        painter.restore()
         self._draw_axis(painter, cells)
         self._draw_markers(painter, cells)
         self._draw_events(painter, cells)           # after the tags, to keep its label clear of them
@@ -457,7 +606,7 @@ class Navigator(QWidget):
             tick.setAlphaF(0.35)
         painter.save()
         painter.setPen(QPen(tick, 1.5))
-        bottom = row.top + row.height
+        bottom = min(row.top + row.height, self._area().bottom())
         level = state.cache.level(row.depth)
         starts = level.starts[row.start:row.stop]
         durations = level.durations[row.start:row.stop]
@@ -769,10 +918,11 @@ class Navigator(QWidget):
             x = self._x_of(row, u)
             if x is None or not area.left() - 1 <= x <= area.right() + 1:
                 continue
+            top, bottom = max(row.top, area.top()), min(row.top + row.height, area.bottom())
             stroke(painter, color, CURSOR_WIDTH,
-                   lambda x=x, r=row: painter.drawLine(QPointF(x, r.top), QPointF(x, r.top + r.height)))
+                   lambda x=x, t=top, b=bottom: painter.drawLine(QPointF(x, t), QPointF(x, b)))
             if last is None or row.depth > last[0]:
-                last = (row.depth, x, row.top + row.height)
+                last = (row.depth, x, bottom)
         if last is not None and label:
             _, x, rows_bottom = last
             metrics = painter.fontMetrics()
@@ -889,7 +1039,8 @@ class Navigator(QWidget):
         row = geometry[0]
         x = min(max(x, area.left(), float(row.lefts[0])), area.right() - 1e-6,
                 float(row.lefts[-1] + row.widths[-1]) - 1e-6)
-        return self.moment_at(QPointF(x, row.top + row.height / 2))
+        y = (max(row.top, area.top()) + min(row.top + row.height, area.bottom())) / 2
+        return self.moment_at(QPointF(x, y))
 
     def _move_marker(self, kind: str, year: float | None) -> None:
         if year is None:
@@ -919,8 +1070,13 @@ class Navigator(QWidget):
             if self._overview_rect().contains(pos):
                 self._overview_drag = (self._overview_part(pos), pos.x(), self.state.window_time(), False)
                 return
-            self._press = (pos, self.state.window)
+            depth = self._boundary_at(pos)
+            if depth is not None:
+                self._resize = depth
+                return
+            self._press = (pos, self.state.window, self.scroll_offset())
             self._panning = False
+            self._vertical = False
 
     def moment_at(self, pos: QPointF) -> float | None:
         """Year at the horizontal position of ``pos`` in the rows (also with equal widths)."""
@@ -952,8 +1108,10 @@ class Navigator(QWidget):
                 yuga = self._overview_yuga(event.position())
                 if yuga is not None:
                     self.state.set_focus((yuga,))
+        elif self._resize is not None and event.button() == Qt.MouseButton.LeftButton:
+            self._resize = None
         elif self._press is not None and event.button() == Qt.MouseButton.LeftButton:
-            pos, _ = self._press
+            pos = self._press[0]
             panned = self._panning
             self._press = None
             self._panning = False
@@ -1006,6 +1164,9 @@ class Navigator(QWidget):
     def mouseDoubleClickEvent(self, event) -> None:
         if self._tag_at(event.position()) is not None:
             return
+        if event.button() == Qt.MouseButton.LeftButton and self._boundary_at(event.position()) is not None:
+            self.fit_rows()
+            return
         if event.button() == Qt.MouseButton.LeftButton:
             address = self.cell_at(event.position())
             if address:
@@ -1019,15 +1180,25 @@ class Navigator(QWidget):
         if self._overview_drag is not None:
             self._drag_overview(pos)
             return
+        if self._resize is not None:
+            self._resize_to(self._resize, pos.y())
+            return
         if self._press is not None:
-            start, (a, b) = self._press
-            dx = pos.x() - start.x()
-            if not self._panning and abs(dx) < DRAG_THRESHOLD and abs(pos.y() - start.y()) < DRAG_THRESHOLD:
+            start, (a, b), offset = self._press
+            dx, dy = pos.x() - start.x(), pos.y() - start.y()
+            if not self._panning and abs(dx) < DRAG_THRESHOLD and abs(dy) < DRAG_THRESHOLD:
                 return
             if not self._panning:
                 self._panning = True
                 self.setCursor(Qt.CursorShape.ClosedHandCursor)
             self.pan_to(a - dx / self._area().width() * (b - a))
+            if self._vertical or abs(dy) > VERTICAL_DEAD_ZONE:
+                self._vertical = True
+                self.scroll_rows(offset - dy)
+            return
+        if self._boundary_at(pos) is not None:
+            self.setCursor(Qt.CursorShape.SplitVCursor)
+            self.hovered.emit(None)
             return
         part = self._overview_part(pos) if self._overview_rect().contains(pos) else None
         if part in ('left', 'right'):

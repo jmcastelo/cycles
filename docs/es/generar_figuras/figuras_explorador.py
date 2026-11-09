@@ -10,7 +10,7 @@ QSettings.setPath(QSettings.Format.IniFormat, QSettings.Scope.UserScope, tempfil
 app = QApplication([]); app.setOrganizationName('cycles-docs'); app.setApplicationName('cycles-docs')
 from cycles.gui.app import MainWindow
 from cycles.gui.export import ExportOptions
-w = MainWindow(); w.resize(1500, 900); w.show()
+w = MainWindow(); w.navigator.animation_ms = 0; w.resize(1500, 900); w.show()
 def spin(n=40):
     for _ in range(n): app.processEvents()
 spin()

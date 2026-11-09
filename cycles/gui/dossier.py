@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (
 
 from cycles.gui.export import LOGICAL_DPI, PAPER_SIZES, light_palette
 from cycles.functions.division import MEASURE_COLOR_KEYS
-from cycles.gui.state import COLOR_KEYS, CycleState, date_text, span_text
+from cycles.gui.state import COLOR_KEYS, MAX_DEPTH, CycleState, date_text, span_text
 
 SECTIONS = {
     'summary': ('Summary', True),
@@ -318,7 +318,8 @@ def _private_state(state: CycleState, focus: tuple) -> CycleState:
         setattr(copy, name, getattr(state, name))
     copy.bookmarks = [dict(b) for b in state.bookmarks]
     copy.focus = focus
-    copy.rows = max(2, min(state.rows, 4))
+    from cycles.gui.state import coordinate_extent
+    copy.window = coordinate_extent(focus, state.spacing)
     return copy
 
 
@@ -342,6 +343,7 @@ def write_dossier(window, address: tuple, options: DossierOptions) -> int:
             rect = out.heading(out.new_page(), 'In the cycle')
             focus = address[:-1]
             navigator = Navigator(_private_state(state, focus))
+            navigator.deepest = min(MAX_DEPTH, len(focus) + 3)     # the subcycle's row and two below it
             height = min(rect.height() * 0.5, rect.width() * 0.6)
             out.widget(QRectF(rect.left(), rect.top(), rect.width(), height), navigator)
             if state.time_map is not None:

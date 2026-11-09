@@ -168,7 +168,6 @@ def capture(window, layout: bool = True) -> dict:
             'color_parameters': {'bases': list(bases), 'scales': list(scales), 'colors': [list(c) for c in colors],
                                  'maps': {'sequential': maps[0], 'diverging': maps[1]}},
             'color_key': state.color_key,
-            'rows': state.rows,
             'spacing': state.spacing,
             'names': names,
             'labels': state.labels,
@@ -180,6 +179,9 @@ def capture(window, layout: bool = True) -> dict:
             'sky_time': state.sky_time,
             'focus': list(state.focus),
             'window': list(state.window),
+            'row_height': window.navigator.row_height,
+            'follow_zoom': window.navigator.follow_zoom,
+            'rows_offset': window.navigator.scroll_offset(),
             'selection': list(state.selection) if state.selection is not None else None,
         },
         'panels': panels,
@@ -232,7 +234,7 @@ def apply(window, data: dict, layout: bool = True) -> list[str]:
         attempt('names', lambda: state.set_names(tuple(NAME_SETS[names] if isinstance(names, str) else names)))
     if saved.get('query'):
         attempt('query', lambda: state.set_query(saved['query']))
-    for key in ('color_key', 'rows', 'spacing', 'labels', 'borders', 'highlight', 'compare_criteria'):
+    for key in ('color_key', 'spacing', 'labels', 'borders', 'highlight', 'compare_criteria'):
         if key in saved:
             attempt(key.replace('_', ' '), lambda key=key: getattr(state, f"set_{key}")(saved[key]))
     if 'date' in saved:
@@ -259,6 +261,17 @@ def apply(window, data: dict, layout: bool = True) -> list[str]:
 
     if 'focus' in saved:
         attempt('zoom', lambda: state.set_focus(_address(saved['focus']) or (), animate=False))
+    if 'row_height' in saved or 'follow_zoom' in saved:             # the rows of the navigator
+        def rows():
+            navigator = window.navigator
+            height = saved.get('row_height')
+            navigator.row_height = None if height is None else min(max(float(height), 10.0), 300.0)
+            navigator.follow_zoom = bool(saved.get('follow_zoom', True))
+            navigator._offset = float(saved.get('rows_offset', 0.0))
+            navigator._sync_vscroll()
+            navigator.update()
+            navigator.rowsChanged.emit()
+        attempt('rows', rows)
     if isinstance(saved.get('window'), list) and len(saved['window']) == 2:     # the window in view (older sessions: the zoom)
         attempt('zoom', lambda: state.set_window(*(float(x) for x in saved['window'])))
     if 'selection' in saved:
@@ -324,7 +337,8 @@ class SessionManager(QObject):
         state = self.window.state
         for signal in (state.focusChanged, state.selectionChanged, state.viewChanged, state.modelChanged,
                        state.colorParametersChanged, state.dateChanged, state.skyTimeChanged,
-                       state.permutationChanged, state.bookmarksChanged, state.notesChanged):
+                       state.permutationChanged, state.bookmarksChanged, state.notesChanged,
+                       self.window.navigator.rowsChanged):
             signal.connect(self.mark_modified)
         for panel_name, widget_names in PANEL_WIDGETS.items():
             panel = getattr(self.window, panel_name)
