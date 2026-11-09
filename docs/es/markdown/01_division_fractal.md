@@ -161,9 +161,65 @@ que cabe en lo que queda (`find_total_lcoords`), hasta que queda menos de `dt_mi
 representa un periodo cualquiera, por ejemplo un siglo, con la estructura de los yugas.
 `study_of_fill_partitions.py` lo dibuja como diagramas de anillos.
 
-## 1.9 Resumen
+## 1.9 El espectro multifractal
+
+La división pone en el ciclo dos medidas, y cada una es muy desigual vista desde la otra:
+
+- **el tiempo**: cada subciclo recibe su duración. Vista sobre la línea de los **índices** (todos los subciclos
+  de una profundidad igual de anchos, $4^{-d}$), es la cascada multinomial de pesos $(0{,}4;\ 0{,}3;\ 0{,}2;\
+  0{,}1)$;
+- **el recuento**: todos los subciclos de una profundidad pesan lo mismo, $4^{-d}$. Vista sobre la línea del
+  **tiempo** (cada subciclo tan largo como su duración), es la medida autosemejante de pesos $\tfrac14$ y
+  razones $0{,}4 \dots 0{,}1$.
+
+Un subciclo encoge en tamaño como $r_{a_1} \cdots r_{a_d}$ y en peso como $w_{a_1} \cdots w_{a_d}$; su
+**exponente de Hölder** es $\alpha = \log(\text{peso}) / \log(\text{tamaño})$. El **espectro** $f(\alpha)$ es la
+dimensión del conjunto de puntos con exponente $\alpha$. Se calcula exactamente con la función de momentos
+$\tau(q)$, la solución de
+
+$$
+\sum_{i} w_i^{\,q}\, r_i^{-\tau(q)} = 1, \qquad \alpha(q) = \tau'(q), \qquad f(\alpha(q)) = q\,\alpha(q) - \tau(q)
+$$
+
+(una transformada de Legendre; `cycles.functions.multifractal`).
+
+![El espectro multifractal de las dos medidas: la curva exacta y las estimaciones a profundidades 10, 40 y 160](figuras/espectro_multifractal.png)
+
+| | El tiempo, sobre los índices | El recuento, sobre el tiempo |
+|---|---|---|
+| $\alpha$ de una dirección toda Satya / toda Kali | 0,6610 / 1,6610 | 1,5129 / 0,6021 |
+| $\alpha_0$ (donde $f = 1$: lo más numeroso) | 1,0878 | 1,0832 |
+| dimensión de información $D_1$ | **0,9232** | **0,9192** |
+| dimensión de correlación $D_2$ | 0,8685 | 0,8511 |
+
+Qué dicen:
+
+- **El tiempo se concentra en pocos subciclos.** $D_1 = H / \log 4 = 0{,}9232$, con $H$ la entropía de
+  $(0{,}4;\ 0{,}3;\ 0{,}2;\ 0{,}1)$: casi todo el tiempo lo ocupa un conjunto de subciclos de dimensión 0,92 entre
+  los índices, unos $4^{0{,}92\,d}$ de los $4^d$. Y el subciclo más común por número ($\alpha_0 = 1{,}088$) dura
+  menos que la media, $4^{-1{,}088\,d}$ en vez de $4^{-d}$: la media geométrica de las proporciones, 0,221, es
+  menor que $\tfrac14$.
+- **Los subciclos se concentran en poco tiempo.** $D_1 = \log 4 / \overline{(-\log p)} = 0{,}9192$: casi todos
+  los subciclos, contados, caen en un conjunto de instantes de dimensión 0,92, las regiones donde abundan los
+  dígitos Kali.
+- **Las dos medidas son duales.** Intercambiar pesos y tamaños cambia $\alpha$ por $1/\alpha$ y $f$ por
+  $f/\alpha$, así que la dimensión de información de cada una es la inversa del exponente típico de la otra:
+  $0{,}9232 = 1/1{,}0832$ y $0{,}9192 = 1/1{,}0878$.
+
+A una profundidad finita, $\alpha$ solo depende del producto de las proporciones de la dirección, la duración: los
+subciclos con un mismo $\alpha$ son exactamente **una clase de igual duración** (1.6). Pero $f(\alpha)$ cuenta todos
+los puntos con exponente *cerca* de $\alpha$: una clase puede ser pequeña mientras sus vecinas reúnen casi todos
+los subciclos (la de la dirección toda Treta tiene un solo miembro, y sin embargo $f \approx 0{,}86$ en ese
+$\alpha$). Por eso la estimación finita (`histogram_spectrum`) agrupa las clases en intervalos de $\alpha$ y suma
+sus subciclos; a profundidad 160 se aparta de la curva exacta menos de 0,02 en el interior, y más despacio en los
+extremos. `study_of_multifractal.py` imprime los valores y dibuja la figura.
+
+## 1.10 Resumen
 
 - Una dirección de $d$ dígitos identifica cada subciclo; leída en base 4 es su posición en el tiempo.
 - La duración es el producto de las proporciones; solo depende de la composición.
 - Hay $\binom{d+3}{3}$ composiciones y $(d + 1)^2$ duraciones distintas; las composiciones de igual duración
   difieren en múltiplos de $(1, 0, -2, 1)$ porque $0{,}4 \cdot 0{,}1 = 0{,}2^2$.
+- El espectro multifractal mide lo desigual del reparto: casi todo el tiempo está en un conjunto de subciclos de
+  dimensión 0,92, y casi todos los subciclos en un conjunto de instantes de dimensión 0,92; las dos medidas son
+  duales.

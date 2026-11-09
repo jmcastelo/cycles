@@ -208,7 +208,9 @@ class MainWindow(QMainWindow):
         self.docks['inspector'].raise_()
 
     def closeEvent(self, event) -> None:
-        self.session.autosave()
+        if not self.session.confirm_close():          # unsaved changes: save, don't save, or cancel
+            event.ignore()
+            return
         settings = QSettings()
         settings.setValue('window/geometry', self.saveGeometry())
         settings.setValue('window/state', self.saveState(LAYOUT_VERSION))

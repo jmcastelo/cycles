@@ -31,7 +31,7 @@ pendientes y `ephemeris` localiza las tablas.
 
 ## 13.2 Qué se comprueba
 
-En total hay **280 pruebas** en 25 ficheros.
+En total hay **290 pruebas** en 26 ficheros.
 
 ### Cálculo
 
@@ -45,6 +45,7 @@ En total hay **280 pruebas** en 25 ficheros.
 | `test_events.py` | 13 | distancia al acontecimiento más cercano, rotaciones que conservan el espaciado, contrastes con acontecimientos en las fronteras (p pequeño) y sin relación (p uniforme), Holm; grandes conjunciones y de planetas exteriores frente a fechas conocidas; cambios de trígono asentados (1603, 2020); la reunión de planetas al inicio del Kali; el trígono vigente con un catálogo de prueba (una racha de paso no cuenta) |
 | `test_colorings.py` | 12 | los coloreados nuevos: OKLab (blanco, negro y rojo de referencia, ida y vuelta); el tetraedro en OKLab encogido por un mismo factor, dentro de la gama y con regiones de las cuatro edades iguales (en RGB no); un color por clase de duración (36 a profundidad 5); los mapas de las medidas (0 neutro, densidad centrada en 1); el punto vernal (hoy en Piscis, agua; en 3102 a. C., tierra); y en el explorador: medidas, modelo (gris sin él), el inspector y todos los coloreados en el navegador; los mapas de las medidas: el dharma y la pureza siguen al secuencial (en gris, grises), mapas desconocidos rechazados, cambiar de mapa solo recolorea las medidas (los niveles se conservan) y el diálogo los elige; el cielo: la reunión al inicio del Kali (más de 0,85), el trígono vigente al inicio de los yugas (agua, tierra, agua, fuego en el trópico), y el inspector y el panel *Measures* sin la efeméride (cinco de ellas, del explorador) |
 | `test_query.py` | 15 | las consultas: condiciones con medidas, dígitos, edades, `count` y `abs`, comparaciones encadenadas; lo que se rechaza (importaciones, atributos, índices, textos, otras funciones); en el explorador: el estado (nombres desconocidos, dígitos que no existen, sin modelo), la barra (el resaltado, la cuenta, una consulta en rojo, vaciarla), los anillos del panel *Measures* y las sesiones |
+| `test_multifractal.py` | 6 | el espectro multifractal: τ(0) = −1 y τ(1) = 0, máximo de f = 1 y f ≤ α, las dimensiones en forma cerrada y la dualidad de las dos medidas, las (*d* + 1)² clases de igual exponente, y la estimación por histogramas que tiende a la curva exacta |
 | `test_measures.py` | 8 | las medidas de 2.4: cada una en su rango; una sola edad da 0 en mezcla, tensión, tendencia y aspereza; los extremos (cuatro edades iguales, mitad Satya y mitad Kali, Kali › Satya); la mezcla distingue lo que la pureza no; el contraste y el balance siguen el orden temporal y el balance cierra en 0; la densidad angular (1 para el ciclo entero y con precesión constante, media ponderada 1); el microcosmos (1 para las cuotas del ciclo, 0 para todo Kali) y la complejidad de Lempel–Ziv (el ejemplo de Kaspar y Schuster, 0 para una edad repetida) |
 | `test_landscape.py` | 9 | `mismatch_grid` frente a `mismatch_by_depth`; los periodos de 41 000 y 20 000 años; el panel del paisaje |
 | `test_version.py` | 5 | la versión: formato MAJOR.MINOR.PATCH, `pyproject.toml` la lee del paquete, el `CHANGELOG.md` empieza por ella, los documentos describen esa versión (si están en el equipo) y el explorador la muestra |
@@ -64,7 +65,7 @@ En total hay **280 pruebas** en 25 ficheros.
 | `test_gui_compositions.py` | 8 | el tetraedro de composiciones y las medidas por nivel |
 | `test_gui_sky_colors.py` | 4 | el gráfico del cielo (tamaño fijo, leyenda) y el diálogo de colores |
 | `test_gui_criteria_skycompare.py` | 21 | los dos criterios en el navegador; el panel Sky comparison (conjuntos, orden por parecido, franja, concentración, ajuste de las cartas al tamaño); posiciones vectorizadas frente a escalares |
-| `test_gui_session.py` | 8 | sesiones: ida y vuelta completa (con los mapas de las medidas), restaurar al arrancar, ficheros inválidos, partes que no encajan, σ al azar, marcadores, recientes, el lanzador con la sesión |
+| `test_gui_session.py` | 12 | sesiones: ida y vuelta completa (con los mapas de las medidas), restaurar al arrancar, ficheros inválidos, partes que no encajan, σ al azar, marcadores, recientes, el lanzador con la sesión; al cerrar con cambios sin guardar: guardar, no guardar (el próximo arranque reabre la sesión guardada, o una nueva) o cancelar, y tras un cierre brusco vuelven los cambios |
 | `test_gui_events.py` | 8 | el panel Events: la prueba coincide con el cálculo directo, el mapa sobre los modelos, los planetas medios, cambios de trígono y planetas en 0° de Aries, solo dentro del zoom, pulsar un acontecimiento, la capa del navegador, sesiones, sin efeméride |
 | `test_gui_dossier.py` | 3 | el dosier: el resumen, todas las secciones, papel y orientación en el PDF, opciones recordadas |
 

@@ -23,7 +23,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QByteArray, QCoreApplication, QObject, QSettings, QTimer
 from PySide6.QtWidgets import (
-    QAbstractButton, QAbstractSpinBox, QComboBox, QDoubleSpinBox, QFileDialog, QLineEdit, QSpinBox,
+    QAbstractButton, QAbstractSpinBox, QComboBox, QDoubleSpinBox, QFileDialog, QLineEdit, QMessageBox, QSpinBox,
 )
 
 from cycles.functions.color import DEFAULT_COLOR_MAPS
@@ -454,6 +454,46 @@ class SessionManager(QObject):
 
     def clear_recent(self) -> None:
         self._set_recent([])
+
+    # -- closing
+
+    def confirm_close(self) -> bool:
+        """
+        Whether the window may close. With unsaved changes, ask: Save (to the session's file, or a new one;
+        cancelling that dialog cancels the closing), Don't save (the next run then reopens the session as it
+        was last saved, or a new one if it never was), or Cancel. Then keep what the next run will reopen.
+        """
+        if not self.modified:
+            self.autosave()
+            return True
+        answer = QMessageBox.question(
+            self.window, 'Unsaved changes',
+            f"The session “{self.name()}” has changes that are not saved.\nSave them before closing?",
+            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard
+            | QMessageBox.StandardButton.Cancel, QMessageBox.StandardButton.Save)
+        if answer == QMessageBox.StandardButton.Cancel:
+            return False
+        if answer == QMessageBox.StandardButton.Save:
+            if not self.save():
+                return False
+            self.autosave()
+            return True
+        self.forget_changes()
+        return True
+
+    def forget_changes(self) -> None:
+        """The changes are not kept: the next run reopens the session's file as saved, or starts anew."""
+        path = autosave_path()
+        try:
+            if self.path is not None and self.path.exists():
+                data = read(self.path)
+                data['session_path'] = str(self.path)
+                data['session_modified'] = False
+                write(data, path)
+            else:
+                path.unlink(missing_ok=True)
+        except (OSError, ValueError):
+            path.unlink(missing_ok=True)
 
     # -- between runs
 

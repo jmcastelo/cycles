@@ -374,8 +374,12 @@ guarda en `sandbox/sessions/`, fuera del control de versiones):
 | *Save session as…* | `Ctrl+Mayús+S` |
 
 El título de la ventana lleva el nombre de la sesión, un `*` mientras hay cambios sin guardar y la versión del programa. **El explorador
-reabre la última sesión al arrancar**: se guarda sola al cerrar la ventana (y cada minuto si hay cambios), con su
-fichero y sus cambios pendientes, así que no se pregunta nada al salir. Si la carpeta de la efeméride de una sesión
+reabre la última sesión al arrancar**. Al cerrar la ventana con cambios sin guardar, pregunta: *Save* los guarda
+en el fichero de la sesión (o en uno nuevo, si nunca se guardó; cancelar ese diálogo cancela el cierre), *Don't
+save* cierra sin guardarlos, y el próximo arranque reabre la sesión como se guardó por última vez (o una nueva, si
+nunca se guardó), y *Cancel* vuelve al explorador. Sin cambios pendientes, cierra sin preguntar. Mientras hay
+cambios, la sesión se guarda aparte cada minuto: si el explorador se cierra de golpe, al arrancar vuelven con
+ella. Si la carpeta de la efeméride de una sesión
 no existe en este equipo se conserva la actual, y las partes que ya no encajan se avisan en la barra de estado.
 Un fichero que no es una sesión, o de una versión posterior, se rechaza sin cambiar nada.
 

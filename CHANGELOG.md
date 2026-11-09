@@ -8,6 +8,16 @@ current one: `tests/test_version.py` checks it, and the docs' LaTeX converter re
 When releasing a version: describe it here, raise `__version__`, update the docs (and their version line), and tag
 the commit `vX.Y.Z`.
 
+## Unreleased
+
+- **The multifractal spectrum of the division** (`cycles.functions.multifractal`, `sandbox/study_of_multifractal.py`,
+  docs 1.9): f(α) exactly by the Legendre transform for the two measures the division puts on the cycle (the time
+  on the index line, the count on the time line), and estimated at finite depths by histograms of the classes of
+  equal duration (the subcycles of one exponent). Almost all the time lies in a set of subcycles of dimension
+  0.9232, and almost all the subcycles in a set of moments of dimension 0.9192; the two measures are dual.
+- **Closing with unsaved changes asks** whether to save them (Save, Don't save, Cancel). Without saving, the next
+  start reopens the session as last saved (or a new one); a crash still brings the unsaved changes back.
+
 ## 0.4.0 — 2026-11-09
 
 New measures and colorings, queries, and every level down to depth 9.

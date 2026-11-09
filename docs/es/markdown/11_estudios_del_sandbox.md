@@ -109,6 +109,13 @@ error. El lanzador del explorador pasa por defecto su propia sesión (casilla *W
 Los estudios del principio usan las bases de la versión original (pesos de pureza iguales, base 1); los dos
 últimos, las del explorador (`common.BASES`, o las de una sesión) y su modelo (o el modelo por defecto).
 
+### `study_of_multifractal.py`: el espectro multifractal
+
+| Estudio | Qué hace |
+|---|---|
+| `key_numbers`* | los extremos, el exponente típico y las dimensiones de información y de correlación de las dos medidas, y su dualidad |
+| `spectra`* | la figura de 1.9: $f(\alpha)$ exacto y estimado a profundidades 10, 40 y 160 |
+
 ### `study_of_permutations.py`: permutaciones
 
 | Estudio | Qué hace |

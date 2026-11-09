@@ -17,7 +17,11 @@
    profundidad 6); la mezcla repite casi la pureza (−0,91), la aspereza la tensión (0,81), la complejidad la
    mezcla (0,71) y el microcosmos el dharma (0,73). El dharma baja despacio y sube de golpe: el contraste
    es casi siempre algo negativo, con saltos positivos al empezar cada Satya.
-5. **Colores.** Dentro de los rangos de los parámetros los colores de cada nivel son únicos; el coloreado del
+5. **Espectro multifractal.** Casi todo el tiempo está en un conjunto de subciclos de dimensión
+   $D_1 = 0{,}9232$ (la entropía de las proporciones entre $\log 4$), y casi todos los subciclos, contados, en un
+   conjunto de instantes de dimensión 0,9192; las dos medidas son duales ($0{,}9232 = 1/1{,}0832$). Los subciclos
+   de un mismo exponente son una clase de igual duración.
+6. **Colores.** Dentro de los rangos de los parámetros los colores de cada nivel son únicos; el coloreado del
    tetraedro llena un tetraedro de Sierpinski.
 
 ## 14.2 El modelo de ciclo y la precesión

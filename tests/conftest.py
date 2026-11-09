@@ -38,7 +38,8 @@ def spin(qapp):
 def window(qapp, spin, monkeypatch):
     """
     A main window with default settings; questions (e.g. replace a file?) are
-    answered yes, and no session of an earlier window is restored. The model
+    answered yes, closing with unsaved changes does not save them, and no session of an earlier window is
+    restored. The model
     landscape does not fill in by itself, nor does the Events panel draw by itself (offscreen,
     the panels of hidden tabs count as visible): its tests compute it.
     """
@@ -48,7 +49,11 @@ def window(qapp, spin, monkeypatch):
     from cycles.gui.session import autosave_path
     QSettings().clear()
     autosave_path().unlink(missing_ok=True)            # each window starts without a last session
-    monkeypatch.setattr(QMessageBox, 'question', lambda *args, **kwargs: QMessageBox.StandardButton.Yes)
+    def answer(parent, title, text, buttons=QMessageBox.StandardButton.Yes, *rest, **kwargs):
+        if buttons & QMessageBox.StandardButton.Discard:      # closing with unsaved changes: don't save
+            return QMessageBox.StandardButton.Discard
+        return QMessageBox.StandardButton.Yes
+    monkeypatch.setattr(QMessageBox, 'question', answer)
     monkeypatch.setattr(landscape, 'FIRST_BATCH_DELAY', 24 * 3600 * 1000)
     import cycles.gui.eventspanel as eventspanel
     monkeypatch.setattr(eventspanel, 'AUTO_RENDER', False)

@@ -13,7 +13,7 @@ explorador gráfico. Incorpora, revisados y actualizados, los documentos de `efe
 | Documento | Contenido |
 |---|---|
 | **I. La estructura** | |
-| [`01_division_fractal.md`](01_division_fractal.md) | la regla 4:3:2:1, direcciones e índices, duración e inicio, niveles, composiciones, la regla (1, 0, −2, 1) y las (*d* + 1)² duraciones |
+| [`01_division_fractal.md`](01_division_fractal.md) | la regla 4:3:2:1, direcciones e índices, duración e inicio, niveles, composiciones, la regla (1, 0, −2, 1) y las (*d* + 1)² duraciones, y el espectro multifractal |
 | [`02_medidas_y_colores.md`](02_medidas_y_colores.md) | pesos por posición, dharma, pureza, medidas por nivel, más medidas (mezcla, tensión, tendencia, aspereza, contraste, balance, microcosmos, complejidad, densidad angular, reunión), los veintiséis coloreados (de la dirección, de las clases de duración, de las medidas, del punto vernal y del trígono de las grandes conjunciones), el tetraedro de Sierpinski en RGB y en OKLab y los rangos de los parámetros |
 | [`03_permutaciones.md`](03_permutaciones.md) | la acción de una permutación de las posiciones, su alcance, órbitas, puntos fijos y el lema de Burnside |
 | **II. Astronomía y tiempo** | |
@@ -95,6 +95,12 @@ profundidad.
 de su edad (un *utsarpiṇī* dentro de un *avasarpiṇī*).
 
 **Contraste.** Salto de dharma al empezar un subciclo respecto del anterior: la *sandhi* o juntura.
+
+**Espectro multifractal.** La dimensión $f(\alpha)$ de los puntos donde una medida escala con exponente $\alpha$;
+aquí, del tiempo sobre los índices y del recuento sobre el tiempo (1.9).
+
+**Dimensión de información.** $D_1$: la dimensión del conjunto que lleva casi toda una medida (0,92 para las dos
+medidas de la división).
 
 **Microcosmos.** Cuánto se parecen las cuotas de las edades de una dirección a las del ciclo entero (0,4; 0,3;
 0,2; 0,1): la parte que refleja el todo.

@@ -100,25 +100,107 @@ def test_a_session_keeps_everything(window, spin, tmp_path):
     assert not window.session.modified and window.session.recent()[0] == path.resolve()
 
 
-def test_the_last_session_comes_back_when_the_explorer_starts(window, spin, tmp_path, qapp):
+def _start_again(spin):
     from cycles.gui.app import MainWindow
-    from cycles.gui.session import autosave_path
-    _change_everything(window, spin)
-    path = tmp_path / 'kept.cycles.json'
-    window.session._write(path)
-    window.state.set_notes('changed after saving')
-    changed = _snapshot(window)
-    window.close()
-    assert autosave_path().exists()
     again = MainWindow()
     again.resize(1400, 850)
     again.show()
     spin()
+    return again
+
+
+def _answer(monkeypatch, button):
+    from PySide6.QtWidgets import QMessageBox
+    asked = []
+
+    def question(parent, title, text, *args, **kwargs):
+        asked.append(text)
+        return button
+    monkeypatch.setattr(QMessageBox, 'question', question)
+    return asked
+
+
+def test_the_last_session_comes_back_when_the_explorer_starts(window, spin, tmp_path):
+    from cycles.gui.session import autosave_path
+    _change_everything(window, spin)
+    path = tmp_path / 'kept.cycles.json'
+    window.session._write(path)
+    saved = _snapshot(window)
+    window.close()                                          # nothing unsaved: closes without asking
+    assert autosave_path().exists()
+    again = _start_again(spin)
     try:
-        assert _snapshot(again) == changed
-        assert again.session.path == path and again.session.modified          # the unsaved change is kept
-        assert again.windowTitle().startswith('kept[*]') and again.isWindowModified()
+        assert _snapshot(again) == saved
+        assert again.session.path == path and not again.session.modified
+        assert again.windowTitle().startswith('kept[*]') and not again.isWindowModified()
     finally:
+        again.close()
+        again.deleteLater()
+
+
+def test_closing_with_unsaved_changes_asks(window, spin, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+    from cycles.gui.session import read
+    path = tmp_path / 'asked.cycles.json'
+    window.session._write(path)
+    window.state.set_notes('changed after saving')
+    assert window.session.modified
+    # Cancel: the window stays open, with its changes
+    asked = _answer(monkeypatch, QMessageBox.StandardButton.Cancel)
+    window.close()
+    spin()
+    assert asked and 'asked' in asked[0] and window.isVisible() and window.session.modified
+    # Save: the file gets the changes, and the window closes
+    _answer(monkeypatch, QMessageBox.StandardButton.Save)
+    window.close()
+    spin()
+    assert not window.isVisible() and read(path)['notes'] == 'changed after saving'
+
+
+def test_dont_save_reopens_the_session_as_saved(window, spin, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+    path = tmp_path / 'discarded.cycles.json'
+    window.state.set_notes('kept')
+    window.session._write(path)
+    window.state.set_notes('thrown away')
+    _answer(monkeypatch, QMessageBox.StandardButton.Discard)
+    window.close()
+    again = _start_again(spin)
+    try:
+        assert again.state.notes == 'kept' and again.session.path == path and not again.session.modified
+    finally:
+        _answer(monkeypatch, QMessageBox.StandardButton.Discard)
+        again.close()
+        again.deleteLater()
+
+
+def test_dont_save_a_new_session_starts_anew(window, spin, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+    from cycles.gui.session import autosave_path
+    window.state.set_notes('never saved')
+    _answer(monkeypatch, QMessageBox.StandardButton.Discard)
+    window.close()
+    assert not autosave_path().exists()
+    again = _start_again(spin)
+    try:
+        assert again.state.notes == '' and again.session.path is None
+    finally:
+        again.close()
+        again.deleteLater()
+
+
+def test_after_a_crash_the_unsaved_changes_come_back(window, spin, tmp_path):
+    """The session is kept every minute while it has unsaved changes: if the explorer is killed, they are back."""
+    path = tmp_path / 'crashed.cycles.json'
+    window.session._write(path)
+    window.state.set_notes('not saved yet')
+    window.session._periodic_save()                         # as the timer does
+    again = _start_again(spin)                              # without closing the first window
+    try:
+        assert again.state.notes == 'not saved yet' and again.session.path == path and again.session.modified
+        assert again.isWindowModified()
+    finally:
+        again.session.modified = False
         again.close()
         again.deleteLater()
 
